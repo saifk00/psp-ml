@@ -1,0 +1,8 @@
+[package]
+name = "audrec"
+version = "0.1.0"
+description = "A simple WAV recorder for the PSP"
+edition = "2021"
+
+[dependencies]
+psp = "0.3"

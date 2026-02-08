@@ -1,0 +1,12 @@
+[package]
+name = "mnist-bench"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "mnist-bench"
+path = "src/main.rs"
+
+[dependencies]
+psp-ml = { package = "cargo-psp-ml", path = "../../cargo-psp-ml", default-features = false }
+psp = "0.3"

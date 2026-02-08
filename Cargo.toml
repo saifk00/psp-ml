@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+members = [
+    "cargo-psp-ml",
+    "audio-recorder",
+    "examples/mnist-bench",
+]
