@@ -1,10 +1,5 @@
-#[path = "../schema_generated.rs"]
-mod schema_generated;
-#[path = "../codegen.rs"]
-mod codegen;
-
-use codegen::generate_mnist_inference;
-use schema_generated::tflite;
+use psp_ml::codegen::generate_code;
+use psp_ml::parse::tflite;
 use std::fs;
 use std::path::PathBuf;
 use std::process;
@@ -47,9 +42,12 @@ fn main() {
     let out_dir = out_dir.unwrap_or_else(|| PathBuf::from("."));
 
     let data = fs::read(&model_path).expect("Failed to read model");
-    let model = tflite::root_as_model(&data).expect("Failed to parse model");
+    let psp_model = tflite::to_psp_ir(data).unwrap_or_else(|err| {
+        eprintln!("Error lowering to IR: {err}");
+        process::exit(1);
+    });
 
-    let generated = generate_mnist_inference(&model, "weights.bin").unwrap_or_else(|err| {
+    let generated = generate_code(&psp_model).unwrap_or_else(|err| {
         eprintln!("Error: {err}");
         process::exit(1);
     });
@@ -70,5 +68,9 @@ fn main() {
         process::exit(1);
     }
 
-    eprintln!("Generated {} and {}", generated_path.display(), weights_path.display());
+    eprintln!(
+        "Generated {} and {}",
+        generated_path.display(),
+        weights_path.display()
+    );
 }

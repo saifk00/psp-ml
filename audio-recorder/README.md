@@ -1,0 +1,1 @@
+A simple audio recording program for the PSP. Run it over psplink to immediately store the `.wav` locally, or upload the EBOOT.PBP, make a few recordings, then plug back in and all the cached recordings will be saved locally. I built this to test whether recordings made on the PSP were of good enough quality for BIRDNET to recognize birdsong from them (the answer is yes!).
