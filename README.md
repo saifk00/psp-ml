@@ -1,6 +1,10 @@
-# PSP-ML
+# cargo-psp-ml
 
-Machine learning inference on the PlayStation Portable.
+A TFLite compiler for the PSP, written in Rust.
+
+## Status: Experimental
+
+Currently runs MNIST at 98.6% accuracy. Working toward real-time BirdNET inference.
 
 ## Structure
 
@@ -16,20 +20,20 @@ psp-ml/
 ## Quick Start
 
 1. Install the cargo subcommand:
-   ```bash
+```bash
    cargo install --path cargo-psp-ml --features compiler
-   ```
+```
 
 2. Compile a TFLite model:
-   ```bash
+```bash
    cargo psp-ml model.tflite --out examples/mnist-bench/src
-   ```
+```
 
 3. Build for PSP:
-   ```bash
+```bash
    cd examples/mnist-bench
-   cargo psp --release
-   ```
+   ./run.sh # assumes `usbhostfs_pc` is running in project root
+```
 
 ## Components
 
