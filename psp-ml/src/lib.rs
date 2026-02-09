@@ -9,3 +9,35 @@
 #![cfg_attr(target_os = "psp", feature(asm_experimental_arch))]
 
 pub mod kernels;
+
+/// Signal program completion to the cargo runner.
+///
+/// On PSP: writes exit code to `host0:/.psp-run-exit` so `tools/psp-run`
+/// can detect completion and propagate the exit code back to cargo.
+/// On host: calls `std::process::exit`.
+///
+/// Call this as the last thing in your PSP program instead of looping forever.
+#[cfg(target_os = "psp")]
+pub fn psp_exit(code: i32) -> ! {
+    use core::ffi::c_void;
+    use psp::sys::{sceIoClose, sceIoOpen, sceIoWrite, IoOpenFlags};
+
+    let path = b"host0:/.psp-run-exit\0";
+    let fd = unsafe {
+        sceIoOpen(
+            path.as_ptr(),
+            IoOpenFlags::WR_ONLY | IoOpenFlags::CREAT | IoOpenFlags::TRUNC,
+            0o644,
+        )
+    };
+    if fd.0 >= 0 {
+        let buf = [code as u8];
+        unsafe {
+            sceIoWrite(fd, buf.as_ptr() as *const c_void, 1);
+            sceIoClose(fd);
+        }
+    }
+
+    unsafe { psp::sys::sceKernelExitGame() }
+    loop {}
+}

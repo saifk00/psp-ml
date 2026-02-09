@@ -272,12 +272,7 @@ fn psp_main() {
         dprintln!("Warning: could not write to host0:/ (psplink not connected?)");
     }
 
-    dprintln!("");
-    dprintln!("Done. Press HOME to exit.");
-
-    loop {
-        unsafe { psp::sys::sceKernelDelayThread(100_000) };
-    }
+    psp_ml::psp_exit(0);
 }
 
 // ============================================================================

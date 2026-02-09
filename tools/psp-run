@@ -1,0 +1,84 @@
+#!/bin/bash
+#
+# psp-run — Cargo runner for mipsel-sony-psp
+#
+# Converts the ELF to PRX, deploys to a PSP running psplink via
+# usbhostfs_pc, and waits for the program to signal completion.
+#
+# Setup:
+#   [target.mipsel-sony-psp]
+#   runner = "tools/psp-run"
+#
+# Usage (via cargo):
+#   cargo run --target mipsel-sony-psp --release -p mnist-bench
+#
+# Requirements:
+#   - prxgen      (from cargo-psp / pspdev toolchain)
+#   - usbhostfs_pc  (USB host filesystem bridge)
+#   - pspsh         (psplink shell)
+#
+# Completion protocol:
+#   The PSP program calls psp_ml::psp_exit(code) which writes its
+#   exit code to host0:/.psp-run-exit. This script polls for that
+#   file and propagates the exit code back to cargo.
+#
+set -euo pipefail
+
+ELF="$1"
+PRX="${ELF%.elf}.prx"
+
+# ── Step 1: ELF → PRX ──────────────────────────────────────────────
+if ! command -v prxgen &>/dev/null; then
+    echo "psp-run: error: prxgen not found (install cargo-psp or pspdev toolchain)" >&2
+    exit 127
+fi
+
+prxgen "$ELF" "$PRX"
+
+# ── Step 2: Ensure usbhostfs_pc is running ─────────────────────────
+STARTED_USB=0
+if ! pgrep -x usbhostfs_pc &>/dev/null; then
+    echo "psp-run: starting usbhostfs_pc..." >&2
+    usbhostfs_pc &
+    STARTED_USB=1
+    sleep 2
+fi
+
+cleanup() {
+    rm -f .psp-run-exit
+    if [ "$STARTED_USB" -eq 1 ]; then
+        kill "$(pgrep -x usbhostfs_pc)" 2>/dev/null || true
+    fi
+}
+trap cleanup EXIT
+
+# ── Step 3: Clean stale sentinel and deploy ─────────────────────────
+rm -f .psp-run-exit
+
+echo "psp-run: deploying ${PRX}..." >&2
+pspsh -e "host0:/${PRX}"
+
+# ── Step 4: Wait for completion sentinel ────────────────────────────
+TIMEOUT="${PSP_RUN_TIMEOUT:-120}"
+ELAPSED=0
+
+while [ ! -f .psp-run-exit ] && [ "$ELAPSED" -lt "$TIMEOUT" ]; do
+    sleep 1
+    ELAPSED=$((ELAPSED + 1))
+done
+
+if [ ! -f .psp-run-exit ]; then
+    echo "psp-run: timed out after ${TIMEOUT}s waiting for program to exit" >&2
+    echo "psp-run: (set PSP_RUN_TIMEOUT to increase, or call psp_ml::psp_exit)" >&2
+    exit 124
+fi
+
+# ── Step 5: Propagate exit code ─────────────────────────────────────
+EXIT_BYTE=$(od -An -tu1 -N1 .psp-run-exit 2>/dev/null | tr -d ' ')
+EXIT_CODE="${EXIT_BYTE:-0}"
+
+if [ "$EXIT_CODE" -ne 0 ]; then
+    echo "psp-run: program exited with code $EXIT_CODE" >&2
+fi
+
+exit "$EXIT_CODE"

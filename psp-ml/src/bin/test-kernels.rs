@@ -556,10 +556,8 @@ fn psp_main() {
         dprintln!("{} test(s) FAILED", failed);
     }
 
-    dprintln!("Press HOME to exit.");
-    loop {
-        unsafe { psp::sys::sceKernelDelayThread(100_000) };
-    }
+    let exit_code = if failed > 0 { 1 } else { 0 };
+    psp_ml::psp_exit(exit_code);
 }
 
 // ============================================================================

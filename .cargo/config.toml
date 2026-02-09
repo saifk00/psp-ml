@@ -1,2 +1,5 @@
 [alias]
 psp-ml = "run -p cargo-psp-ml --bin cargo-psp-ml --"
+
+[target.mipsel-sony-psp]
+runner = "tools/psp-run"
