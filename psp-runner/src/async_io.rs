@@ -12,11 +12,11 @@ impl AsyncMessage {
         if packet.len() < 8 {
             return None;
         }
-        let magic = protocol::read_u32_le(packet, 0);
+        let magic = protocol::read_u32_le(packet, 0)?;
         if magic != ASYNC_MAGIC {
             return None;
         }
-        let channel = protocol::read_u32_le(packet, 4);
+        let channel = protocol::read_u32_le(packet, 4)?;
         let payload = packet[8..].to_vec();
         Some(AsyncMessage { channel, payload })
     }

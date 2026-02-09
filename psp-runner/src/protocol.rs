@@ -54,37 +54,23 @@ pub const HOSTFS_MAX_BLOCK: usize = 64 * 1024;
 // ---------------------------------------------------------------------------
 
 #[inline]
-pub fn read_u32_le(buf: &[u8], offset: usize) -> u32 {
-    u32::from_le_bytes([
-        buf[offset],
-        buf[offset + 1],
-        buf[offset + 2],
-        buf[offset + 3],
-    ])
+pub fn read_u32_le(buf: &[u8], offset: usize) -> Option<u32> {
+    let b = buf.get(offset..offset + 4)?;
+    Some(u32::from_le_bytes([b[0], b[1], b[2], b[3]]))
 }
 
 #[inline]
-pub fn read_i32_le(buf: &[u8], offset: usize) -> i32 {
-    i32::from_le_bytes([
-        buf[offset],
-        buf[offset + 1],
-        buf[offset + 2],
-        buf[offset + 3],
-    ])
+pub fn read_i32_le(buf: &[u8], offset: usize) -> Option<i32> {
+    let b = buf.get(offset..offset + 4)?;
+    Some(i32::from_le_bytes([b[0], b[1], b[2], b[3]]))
 }
 
 #[inline]
-pub fn read_i64_le(buf: &[u8], offset: usize) -> i64 {
-    i64::from_le_bytes([
-        buf[offset],
-        buf[offset + 1],
-        buf[offset + 2],
-        buf[offset + 3],
-        buf[offset + 4],
-        buf[offset + 5],
-        buf[offset + 6],
-        buf[offset + 7],
-    ])
+pub fn read_i64_le(buf: &[u8], offset: usize) -> Option<i64> {
+    let b = buf.get(offset..offset + 8)?;
+    Some(i64::from_le_bytes([
+        b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7],
+    ]))
 }
 
 #[inline]
@@ -123,14 +109,12 @@ pub enum PacketKind {
 }
 
 pub fn classify_packet(buf: &[u8]) -> PacketKind {
-    if buf.len() < 4 {
-        return PacketKind::Unknown(0);
-    }
     match read_u32_le(buf, 0) {
-        HOSTFS_MAGIC => PacketKind::HostFs,
-        ASYNC_MAGIC => PacketKind::Async,
-        BULK_MAGIC => PacketKind::Bulk,
-        other => PacketKind::Unknown(other),
+        Some(HOSTFS_MAGIC) => PacketKind::HostFs,
+        Some(ASYNC_MAGIC) => PacketKind::Async,
+        Some(BULK_MAGIC) => PacketKind::Bulk,
+        Some(other) => PacketKind::Unknown(other),
+        None => PacketKind::Unknown(0),
     }
 }
 
