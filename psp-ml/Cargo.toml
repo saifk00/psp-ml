@@ -7,5 +7,15 @@ edition = "2021"
 name = "psp_ml"
 path = "src/lib.rs"
 
+[[bin]]
+name = "test-kernels"
+path = "src/bin/test-kernels.rs"
+required-features = ["test-kernels"]
+
+[features]
+default = []
+test-kernels = []
+local = []
+
 [target.'cfg(target_os = "psp")'.dependencies]
 psp = "0.3"
