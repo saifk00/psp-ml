@@ -1,8 +1,6 @@
 #![no_std]
 #![no_main]
 
-extern crate psp_ml;
-
 use psp_ml::println;
 
 psp_ml::module!("hello_psp", 1, 0);

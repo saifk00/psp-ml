@@ -52,27 +52,6 @@ pub fn write_stdout(bytes: &[u8]) {
     }
 }
 
-/// Sentinel filename written via HostFS to signal program exit to psp-runner.
-pub const EXIT_SENTINEL: &str = "__psp_exit";
-
-/// Signal to psp-runner that the program has finished.
-///
-/// On PSP: creates `host0:/__psp_exit` via HostFS, which psp-runner detects.
-/// On host: no-op (the process exits normally when main returns).
-pub fn exit() {
-    #[cfg(target_os = "psp")]
-    unsafe {
-        let path = b"host0:/__psp_exit\0";
-        let fd = psp::sys::sceIoOpen(
-            path.as_ptr(),
-            psp::sys::IoOpenFlags::WR_ONLY | psp::sys::IoOpenFlags::CREAT | psp::sys::IoOpenFlags::TRUNC,
-            0o777,
-        );
-        if fd.0 >= 0 {
-            psp::sys::sceIoClose(fd);
-        }
-    }
-}
 
 #[macro_export]
 macro_rules! print {

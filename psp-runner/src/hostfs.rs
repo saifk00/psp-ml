@@ -170,8 +170,8 @@ impl FdTable {
         log::info!("OPEN {} (mode {:#06x}) -> {}", filename, mode, local_path.display());
 
         let mut opts = OpenOptions::new();
-        let is_write = (mode & PSP_O_WRONLY) != 0 || (mode & PSP_O_RDWR) == PSP_O_RDWR;
-        let is_read = (mode & PSP_O_RDONLY) != 0 || (mode & PSP_O_RDWR) == PSP_O_RDWR || !is_write;
+        let is_write = (mode & PSP_O_WRONLY) != 0;
+        let is_read = (mode & PSP_O_RDONLY) != 0 || !is_write;
         if is_read {
             opts.read(true);
         }
