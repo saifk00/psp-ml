@@ -6,8 +6,10 @@
 use std::collections::HashSet;
 
 use super::{
-    ActivationFunctionType, BuiltinOperator, Operator, Padding, TensorType, root_as_model,
+    root_as_model, ActivationFunctionType, Buffer, BuiltinOperator, Operator, Padding, TensorType,
 };
+
+type Buffers<'a> = flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<Buffer<'a>>>;
 use crate::ir::graph::{DType, Graph, Tensor, TensorId, TensorKind};
 use crate::ir::psp::{Activation, Conv2dParams, FullyConnectedParams, PspModel, PspOp};
 
@@ -25,7 +27,10 @@ fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
     let model =
         root_as_model(model_data).map_err(|e| format!("failed to parse TFLite model: {e}"))?;
 
-    let subgraph = model.subgraphs().ok_or("no subgraphs in model")?.get(0);
+    // TODO multiple subgraph support
+    assert!(model.subgraphs().unwrap().len() == 1);
+
+    let subgraph = model.subgraphs().unwrap().get(0);
     let buffers = model.buffers().ok_or("no buffers in model")?;
     let opcodes = model.operator_codes().ok_or("no operator codes in model")?;
     let tflite_tensors = subgraph.tensors().ok_or("no tensors in subgraph")?;
@@ -124,7 +129,7 @@ fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
 /// data within the model file.
 fn get_buffer_location(
     model_data: &[u8],
-    buffers: &flatbuffers::Vector<flatbuffers::ForwardsUOffset<super::Buffer>>,
+    buffers: &Buffers,
     buffer_idx: u32,
 ) -> Option<(usize, usize)> {
     let buffer = buffers.get(buffer_idx as usize);
@@ -309,8 +314,10 @@ fn convert_dtype(t: TensorType) -> DType {
         TensorType::FLOAT32 => DType::F32,
         TensorType::INT8 => DType::I8,
         TensorType::UINT8 => DType::U8,
-        // Default to F32 for unsupported types
-        _ => DType::F32,
+        other => panic!(
+            "unsupported tensor type: {:?}",
+            other.variant_name().unwrap_or("unknown")
+        ),
     }
 }
 
@@ -320,8 +327,10 @@ fn convert_activation(a: ActivationFunctionType) -> Option<Activation> {
         ActivationFunctionType::NONE => None,
         ActivationFunctionType::RELU => Some(Activation::Relu),
         ActivationFunctionType::RELU6 => Some(Activation::Relu6),
-        // Other activations not yet supported
-        _ => None,
+        other => panic!(
+            "unsupported activation function: {:?}",
+            other.variant_name().unwrap_or("unknown")
+        ),
     }
 }
 
