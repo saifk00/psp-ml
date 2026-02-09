@@ -129,7 +129,7 @@ impl PspRunner {
         let shutdown_r = Arc::clone(&shutdown);
         let reader_handle = thread::spawn(move || {
             let mut buf = vec![0u8; 65536 + 512];
-            while !shutdown_r.load(Ordering::Relaxed) {
+            while !shutdown_r.load(Ordering::Acquire) {
                 match usb_r.read_ep1(&mut buf, Duration::from_millis(100)) {
                     Ok(n) if n >= 4 => {
                         let mut data = buf[..n].to_vec();
@@ -206,7 +206,7 @@ impl PspRunner {
         let root = self.root_dir.clone();
         let hostfs_handle = thread::spawn(move || {
             let mut fd_table = FdTable::new(root, Some(file_tx));
-            while !shutdown_h.load(Ordering::Relaxed) {
+            while !shutdown_h.load(Ordering::Acquire) {
                 match hostfs_rx.recv_timeout(Duration::from_millis(100)) {
                     Ok(pkt) => {
                         let cmd_struct_size = guess_cmd_struct_size(&pkt.data);
@@ -296,8 +296,8 @@ impl PspRunner {
         };
 
         // Signal threads to stop
-        shutdown.store(true, Ordering::Relaxed);
-        drop(async_rx); // unblock reader if it's sending
+        shutdown.store(true, Ordering::Release);
+        drop(async_rx);
         let _ = reader_handle.join();
         let _ = hostfs_handle.join();
 

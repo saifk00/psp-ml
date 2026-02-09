@@ -102,13 +102,10 @@ fn main() {
         })
     );
 
-    // Infer package name from cargo metadata if not specified
     let package = package.unwrap_or_else(|| {
-        infer_package_name(&metadata).unwrap_or_else(|| {
-            eprintln!("error: could not determine package name");
-            eprintln!("       use -p <PACKAGE> or run from a package directory");
-            process::exit(1);
-        })
+        eprintln!("error: -p <PACKAGE> is required");
+        eprintln!("       cargo psp-run --help for usage");
+        process::exit(1);
     });
 
     // --- Step 1: Build via `cargo psp` ---
@@ -139,28 +136,18 @@ fn main() {
         process::exit(output.status.code().unwrap_or(1));
     }
 
-    // --- Step 2: Find the PRX from build output ---
+    // --- Step 2: Find the PRX ---
+    // Forward build stdout (PBP table) to stderr for visibility
     let build_stdout = String::from_utf8_lossy(&output.stdout);
-    // Also print build stdout (the PBP table) to stderr for visibility
     if !build_stdout.is_empty() {
         eprint!("{build_stdout}");
     }
-    let prx_path = build_stdout
-        .lines()
-        .find_map(|line| {
-            // Match lines like: [6]  227964 bytes | /abs/path/to/foo.prx
-            let path = line.split('|').nth(1)?.trim();
-            if path.ends_with(".prx") { Some(path.to_string()) } else { None }
-        })
-        .unwrap_or_else(|| {
-            // Fallback: guess from package name + target_directory
-            let profile = if release { "release" } else { "debug" };
-            target_directory.join(format!("mipsel-sony-psp/{profile}/{package}.prx"))
-                .to_string_lossy().into_owned()
-        });
+    let profile = if release { "release" } else { "debug" };
+    let prx_path = target_directory
+        .join(format!("mipsel-sony-psp/{profile}/{package}.prx"));
 
     let prx_abs = fs::canonicalize(&prx_path).unwrap_or_else(|_| {
-        eprintln!("error: PRX not found at {prx_path}");
+        eprintln!("error: PRX not found at {}", prx_path.display());
         process::exit(1);
     });
 
@@ -222,22 +209,4 @@ fn cargo_metadata() -> serde_json::Value {
         eprintln!("error: failed to parse cargo metadata: {e}");
         process::exit(1);
     })
-}
-
-/// Infer the package name from cargo metadata by matching manifest_path to CWD.
-fn infer_package_name(metadata: &serde_json::Value) -> Option<String> {
-    let cwd = std::env::current_dir().ok()?;
-    let packages = metadata["packages"].as_array()?;
-    for pkg in packages {
-        let manifest = pkg["manifest_path"].as_str()?;
-        let pkg_dir = PathBuf::from(manifest).parent()?.to_path_buf();
-        if cwd == pkg_dir {
-            return pkg["name"].as_str().map(String::from);
-        }
-    }
-    // If only one package in the workspace, use that
-    if packages.len() == 1 {
-        return packages[0]["name"].as_str().map(String::from);
-    }
-    None
 }

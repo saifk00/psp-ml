@@ -12,9 +12,25 @@ pub mod kernels;
 pub mod print;
 
 /// Signal to psp-runner that the program has finished.
-/// On PSP: writes a sentinel file via HostFS. On host: no-op.
+///
+/// On PSP: opens `host0:/__psp_exit` via HostFS, which psp-runner intercepts
+/// as a virtual file to detect program completion.
+/// On host: no-op (the process exits normally when main returns).
 pub fn exit() {
-    print::exit();
+    #[cfg(target_os = "psp")]
+    unsafe {
+        let path = b"host0:/__psp_exit\0";
+        let fd = psp::sys::sceIoOpen(
+            path.as_ptr(),
+            psp::sys::IoOpenFlags::WR_ONLY
+                | psp::sys::IoOpenFlags::CREAT
+                | psp::sys::IoOpenFlags::TRUNC,
+            0o777,
+        );
+        if fd.0 >= 0 {
+            psp::sys::sceIoClose(fd);
+        }
+    }
 }
 
 /// Declare a PSP module with automatic exit signaling.
