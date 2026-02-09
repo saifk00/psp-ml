@@ -194,9 +194,46 @@ pub fn matmul(a: &[f32], b: &[f32], c: &mut [f32], m: usize, k: usize, n: usize)
     }
 }
 
+/// VFPU ReLU on 4 aligned floats: buf = max(buf, 0)
+#[cfg(target_os = "psp")]
+#[inline]
+fn vfpu_relu4(buf: &mut Tile) {
+    unsafe {
+        vfpu_asm!(
+            "vzero.q R100",
+            "lv.q R000, 0({0})",
+            "vmax.q R000, R000, R100",
+            "sv.q R000, 0({0})",
+            in(reg) buf.0.as_mut_ptr(),
+            options(nostack),
+        );
+    }
+}
+
+#[cfg(not(target_os = "psp"))]
+#[inline]
+fn vfpu_relu4(buf: &mut Tile) {
+    for x in buf.0[..4].iter_mut() {
+        if *x < 0.0 { *x = 0.0; }
+    }
+}
+
 /// Element-wise ReLU: x = max(0, x)
-pub fn relu(_data: &mut [f32]) {
-    todo!("VFPU relu")
+pub fn relu(data: &mut [f32]) {
+    let chunks = data.len() / VFPU_Q;
+    let mut buf = Tile([0.0; 16]);
+
+    for i in 0..chunks {
+        let off = i * VFPU_Q;
+        buf.0[..4].copy_from_slice(&data[off..off + 4]);
+        vfpu_relu4(&mut buf);
+        data[off..off + 4].copy_from_slice(&buf.0[..4]);
+    }
+
+    // Scalar tail for remaining elements
+    for x in data[chunks * VFPU_Q..].iter_mut() {
+        if *x < 0.0 { *x = 0.0; }
+    }
 }
 
 /// Vector dot product

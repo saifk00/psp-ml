@@ -1,6 +1,6 @@
-use crate::ir::PspModel;
 use crate::ir::graph::{Graph, TensorId, TensorKind};
 use crate::ir::psp::{Activation, PspOp};
+use crate::ir::PspModel;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 
@@ -47,6 +47,7 @@ pub fn generate_code(model: &PspModel) -> GenResult<Generated> {
 
         #[allow(unused_imports)]
         use psp_ml::kernels::naive::{conv2d, conv2d_relu, max_pool2d, reshape, fully_connected, fully_connected_relu};
+        use psp_ml::kernels::{matmul}
 
         pub fn forward(input: &[f32; #input_size]) -> [f32; #output_size] {
             #tensor_allocs
