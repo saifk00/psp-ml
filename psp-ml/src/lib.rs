@@ -9,3 +9,34 @@
 #![cfg_attr(target_os = "psp", feature(asm_experimental_arch))]
 
 pub mod kernels;
+pub mod print;
+
+/// Signal to psp-runner that the program has finished.
+/// On PSP: writes a sentinel file via HostFS. On host: no-op.
+pub fn exit() {
+    print::exit();
+}
+
+/// Declare a PSP module with automatic exit signaling.
+///
+/// Wraps `psp::module!` and generates a `psp_main()` that calls your
+/// `app_main()` function, then signals exit to `psp-runner`.
+///
+/// ```ignore
+/// psp_ml::module!("hello_psp", 1, 0);
+///
+/// fn app_main() {
+///     psp_ml::println!("Hello from PSP!");
+/// }
+/// ```
+#[macro_export]
+macro_rules! module {
+    ($name:expr, $version_major:expr, $version_minor:expr) => {
+        fn psp_main() {
+            app_main();
+            $crate::exit();
+        }
+
+        psp::module!($name, $version_major, $version_minor);
+    };
+}

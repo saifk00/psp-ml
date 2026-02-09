@@ -11,7 +11,6 @@ fn main() {
     let mut prx_path: Option<String> = None;
     let mut root_dir = PathBuf::from(".");
     let mut timeout_secs: u64 = 60;
-    let mut wait_for: Option<String> = None;
 
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -30,12 +29,6 @@ fn main() {
                         process::exit(1);
                     });
             }
-            "--wait-for" => {
-                wait_for = Some(args.next().unwrap_or_else(|| {
-                    eprintln!("--wait-for requires a filename");
-                    process::exit(1);
-                }));
-            }
             "--help" | "-h" => {
                 eprintln!("Usage: psp-runner [OPTIONS] <PRX_PATH>");
                 eprintln!();
@@ -45,14 +38,9 @@ fn main() {
                 eprintln!("Options:");
                 eprintln!("  --root <DIR>       HostFS root directory (default: .)");
                 eprintln!("  --timeout <SECS>   Timeout in seconds (default: 60)");
-                eprintln!("  --wait-for <FILE>  Exit when this file is written via host0:/");
                 eprintln!();
                 eprintln!("Examples:");
-                eprintln!("  psp-runner target/mipsel-sony-psp/release/mnist-bench.prx \\");
-                eprintln!("    --wait-for benchmarks.json");
-                eprintln!();
-                eprintln!("  psp-runner target/mipsel-sony-psp/release/test-kernels.prx \\");
-                eprintln!("    --wait-for test-results.json --timeout 30");
+                eprintln!("  psp-runner target/mipsel-sony-psp/release/hello-psp.prx");
                 eprintln!();
                 eprintln!("Environment:");
                 eprintln!("  RUST_LOG=info    Show protocol activity");
@@ -76,6 +64,19 @@ fn main() {
         process::exit(1);
     });
 
+    // If the path doesn't end with .prx, try appending it.
+    // This lets cargo's runner pass the ELF path and we find the .prx sibling.
+    let prx_path = if prx_path.ends_with(".prx") {
+        prx_path
+    } else {
+        let with_ext = format!("{prx_path}.prx");
+        if PathBuf::from(&with_ext).exists() {
+            with_ext
+        } else {
+            prx_path // fall through, will fail at OPEN with a clear error
+        }
+    };
+
     eprintln!("==> Connecting to PSP...");
     let runner = PspRunner::connect(root_dir).unwrap_or_else(|e| {
         eprintln!("error: {e}");
@@ -86,28 +87,18 @@ fn main() {
     eprintln!("==> Executing: {host0_path}");
 
     let result = runner
-        .execute(
-            &host0_path,
-            wait_for.as_deref(),
-            Duration::from_secs(timeout_secs),
-        )
+        .execute(&host0_path, Duration::from_secs(timeout_secs))
         .unwrap_or_else(|e| {
             eprintln!("error: {e}");
             process::exit(1);
         });
 
     match &result.exit_reason {
-        ExitReason::FileReceived(path) => {
-            eprintln!("==> Received: {}", path.display());
+        ExitReason::ModuleExited => {
+            eprintln!("==> Done");
         }
         ExitReason::Timeout => {
             eprintln!("==> Timed out after {timeout_secs}s");
-            if !result.files_written.is_empty() {
-                eprintln!("    Files written before timeout:");
-                for f in &result.files_written {
-                    eprintln!("      {}", f.display());
-                }
-            }
             process::exit(1);
         }
         ExitReason::Disconnected(msg) => {

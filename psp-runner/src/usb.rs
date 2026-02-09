@@ -21,6 +21,9 @@ pub struct PspUsb {
 
 impl PspUsb {
     /// Scan the USB bus for a PSP running psplink, open and claim the interface.
+    ///
+    /// Resets the USB device first to force the PSP back to handshake state
+    /// (matches usbhostfs_pc behavior on reconnection).
     pub fn open() -> Result<Self, Error> {
         let ctx = Context::new().map_err(Error::UsbOpen)?;
 
@@ -35,12 +38,44 @@ impl PspUsb {
             })
             .ok_or(Error::DeviceNotFound)?;
 
-        let handle = device.open().map_err(Error::UsbOpen)?;
+        let mut handle = device.open().map_err(Error::UsbOpen)?;
 
         // Detach any kernel driver that may have claimed the interface.
-        handle
-            .set_auto_detach_kernel_driver(true)
-            .map_err(Error::UsbOpen)?;
+        // Ignore errors on macOS where this may not be supported.
+        let _ = handle.set_auto_detach_kernel_driver(true);
+
+        // Reset the device to force PSP back to handshake state.
+        // After reset, the handle may be invalidated — re-open if needed.
+        match handle.reset() {
+            Ok(()) => {
+                log::debug!("USB device reset OK, waiting for re-enumeration");
+                // Give the PSP time to re-initialize after reset
+                std::thread::sleep(Duration::from_millis(1000));
+            }
+            Err(rusb::Error::NotFound) => {
+                // Device re-enumerated after reset — need to re-open
+                log::debug!("device re-enumerated after reset, re-opening");
+                drop(handle);
+                std::thread::sleep(Duration::from_millis(500));
+
+                let device = ctx
+                    .devices()
+                    .map_err(Error::UsbOpen)?
+                    .iter()
+                    .find(|dev| {
+                        dev.device_descriptor()
+                            .map(|d| d.vendor_id() == PSP_VID && d.product_id() == PSP_PID)
+                            .unwrap_or(false)
+                    })
+                    .ok_or(Error::DeviceNotFound)?;
+
+                handle = device.open().map_err(Error::UsbOpen)?;
+                let _ = handle.set_auto_detach_kernel_driver(true);
+            }
+            Err(e) => {
+                log::warn!("USB reset failed (continuing anyway): {}", e);
+            }
+        }
 
         handle
             .claim_interface(INTERFACE)

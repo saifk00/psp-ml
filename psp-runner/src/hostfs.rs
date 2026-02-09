@@ -6,6 +6,9 @@ use std::sync::mpsc;
 
 use crate::protocol::{self, *};
 
+/// Virtual filename used by `psp_ml::exit()` to signal program completion.
+const EXIT_SENTINEL: &str = "__psp_exit";
+
 /// Manages open file/directory descriptors and handles HostFS commands from the PSP.
 pub struct FdTable {
     root: PathBuf,
@@ -57,11 +60,14 @@ impl FdTable {
     // Top-level dispatch
     // -----------------------------------------------------------------------
 
-    /// Process a raw HostFS command packet and return the response bytes to send on EP2.
+    /// Process a raw HostFS command packet and return the response to send on EP2.
+    ///
+    /// Returns `(header, extra)` — caller must send as **separate** USB writes since the
+    /// PSP reads them as distinct bulk transfers via `sceUsbbdReqRecv`.
     ///
     /// `extra_data` is the trailing data read separately after the command struct
     /// (filenames, write payloads, etc).
-    pub fn handle_command(&mut self, cmd_buf: &[u8], extra_data: &[u8]) -> Vec<u8> {
+    pub fn handle_command(&mut self, cmd_buf: &[u8], extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let cmd_id = protocol::read_u32_le(cmd_buf, 4);
         log::debug!(
             "HostFS {} (extra {} bytes)",
@@ -95,10 +101,9 @@ impl FdTable {
     // HELLO (0x8FFC0000)
     // -----------------------------------------------------------------------
 
-    fn handle_hello(&self, _cmd_buf: &[u8]) -> Vec<u8> {
+    fn handle_hello(&self, _cmd_buf: &[u8]) -> (Vec<u8>, Vec<u8>) {
         log::info!("HELLO — handshake from PSP");
-        // Response: 12 byte header, no extra data
-        hostfs_header(HELLO_CMD, 0)
+        (hostfs_header(HELLO_CMD, 0), Vec::new())
     }
 
     // -----------------------------------------------------------------------
@@ -108,12 +113,24 @@ impl FdTable {
     // Resp: header(12) + result(4) = 16 bytes
     // -----------------------------------------------------------------------
 
-    fn handle_open(&mut self, cmd_buf: &[u8], extra_data: &[u8]) -> Vec<u8> {
+    fn handle_open(&mut self, cmd_buf: &[u8], extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let mode = protocol::read_u32_le(cmd_buf, 12);
         let _mask = protocol::read_u32_le(cmd_buf, 16);
         let _fsnum = protocol::read_u32_le(cmd_buf, 20);
 
         let filename = extract_cstring(extra_data);
+
+        // Virtual file: exit sentinel — signal the runner without touching disk
+        if filename.trim_start_matches('/') == EXIT_SENTINEL {
+            log::info!("OPEN {} — exit sentinel, signaling runner", filename);
+            if let Some(tx) = &self.written_files_tx {
+                let _ = tx.send(PathBuf::from(EXIT_SENTINEL));
+            }
+            // Return a fake fd — the PSP will close it, which is a harmless no-op
+            let fd = self.alloc_fd();
+            return self.simple_response(OPEN_CMD, fd);
+        }
+
         let local_path = self.resolve_path(&filename);
 
         log::info!("OPEN {} (mode {:#06x}) -> {}", filename, mode, local_path.display());
@@ -168,7 +185,7 @@ impl FdTable {
     // Resp: header(12) + result(4) = 16 bytes
     // -----------------------------------------------------------------------
 
-    fn handle_close(&mut self, cmd_buf: &[u8]) -> Vec<u8> {
+    fn handle_close(&mut self, cmd_buf: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let fd = protocol::read_i32_le(cmd_buf, 12);
 
         let result = if self.files.remove(&fd).is_some() {
@@ -202,7 +219,7 @@ impl FdTable {
     // Resp: header(12, extra_len=bytes_read) + result(4) + [data]
     // -----------------------------------------------------------------------
 
-    fn handle_read(&mut self, cmd_buf: &[u8]) -> Vec<u8> {
+    fn handle_read(&mut self, cmd_buf: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let fd = protocol::read_i32_le(cmd_buf, 12);
         let requested = protocol::read_i32_le(cmd_buf, 16) as usize;
         let read_len = requested.min(HOSTFS_MAX_BLOCK);
@@ -229,13 +246,11 @@ impl FdTable {
 
         log::debug!("READ fd {} requested {} -> {}", fd, requested, result);
 
-        // Response: header(12) with extra_len = data.len(), then result(4), then data
-        let mut resp = Vec::with_capacity(16 + data.len());
-        let hdr = hostfs_header(READ_CMD, data.len() as u32);
-        resp.extend_from_slice(&hdr);
-        write_i32_le(&mut resp, result);
-        resp.extend_from_slice(&data);
-        resp
+        // Header (16 bytes): sent as first USB write
+        let mut hdr = hostfs_header(READ_CMD, data.len() as u32);
+        write_i32_le(&mut hdr, result);
+        // Extra (file data): sent as second USB write
+        (hdr, data)
     }
 
     // -----------------------------------------------------------------------
@@ -244,7 +259,7 @@ impl FdTable {
     // Resp: header(12) + result(4) = 16 bytes
     // -----------------------------------------------------------------------
 
-    fn handle_write(&mut self, cmd_buf: &[u8], extra_data: &[u8]) -> Vec<u8> {
+    fn handle_write(&mut self, cmd_buf: &[u8], extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let fd = protocol::read_i32_le(cmd_buf, 12);
 
         let result = match self.files.get_mut(&fd) {
@@ -271,7 +286,7 @@ impl FdTable {
     // Resp: header(12) + result(4) + pos(8) = 24 bytes
     // -----------------------------------------------------------------------
 
-    fn handle_lseek(&mut self, cmd_buf: &[u8]) -> Vec<u8> {
+    fn handle_lseek(&mut self, cmd_buf: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let fd = protocol::read_i32_le(cmd_buf, 12);
         let offset = protocol::read_i64_le(cmd_buf, 16);
         let whence = protocol::read_i32_le(cmd_buf, 24);
@@ -304,13 +319,13 @@ impl FdTable {
         }
     }
 
-    fn lseek_response(&self, result: i32, pos: i64) -> Vec<u8> {
+    fn lseek_response(&self, result: i32, pos: i64) -> (Vec<u8>, Vec<u8>) {
         let mut resp = Vec::with_capacity(24);
         let hdr = hostfs_header(LSEEK_CMD, 0);
         resp.extend_from_slice(&hdr);
         write_i32_le(&mut resp, result);
         write_i64_le(&mut resp, pos);
-        resp
+        (resp, Vec::new())
     }
 
     // -----------------------------------------------------------------------
@@ -319,7 +334,7 @@ impl FdTable {
     // Resp: header(12) + result(4) = 16 bytes
     // -----------------------------------------------------------------------
 
-    fn handle_remove(&mut self, extra_data: &[u8]) -> Vec<u8> {
+    fn handle_remove(&mut self, extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let filename = extract_cstring(extra_data);
         let local_path = self.resolve_path(&filename);
         log::info!("REMOVE {}", local_path.display());
@@ -340,7 +355,7 @@ impl FdTable {
     // Resp: header(12) + result(4) = 16 bytes
     // -----------------------------------------------------------------------
 
-    fn handle_mkdir(&mut self, _cmd_buf: &[u8], extra_data: &[u8]) -> Vec<u8> {
+    fn handle_mkdir(&mut self, _cmd_buf: &[u8], extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let dirname = extract_cstring(extra_data);
         let local_path = self.resolve_path(&dirname);
         log::info!("MKDIR {}", local_path.display());
@@ -361,7 +376,7 @@ impl FdTable {
     // Resp: header(12) + result(4) = 16 bytes
     // -----------------------------------------------------------------------
 
-    fn handle_rmdir(&mut self, extra_data: &[u8]) -> Vec<u8> {
+    fn handle_rmdir(&mut self, extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let dirname = extract_cstring(extra_data);
         let local_path = self.resolve_path(&dirname);
         log::info!("RMDIR {}", local_path.display());
@@ -382,7 +397,7 @@ impl FdTable {
     // Resp: header(12) + result(4) = 16 bytes
     // -----------------------------------------------------------------------
 
-    fn handle_dopen(&mut self, extra_data: &[u8]) -> Vec<u8> {
+    fn handle_dopen(&mut self, extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let dirname = extract_cstring(extra_data);
         let local_path = self.resolve_path(&dirname);
         log::info!("DOPEN {}", local_path.display());
@@ -408,7 +423,7 @@ impl FdTable {
     // Resp: header(12, extra_len=dirent_size) + result(4), extra = SceIoDirent
     // -----------------------------------------------------------------------
 
-    fn handle_dread(&mut self, cmd_buf: &[u8]) -> Vec<u8> {
+    fn handle_dread(&mut self, cmd_buf: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let fd = protocol::read_i32_le(cmd_buf, 12);
 
         match self.dirs.get_mut(&fd) {
@@ -418,12 +433,9 @@ impl FdTable {
                     dir_state.pos += 1;
 
                     let dirent = build_sce_dirent(entry);
-                    let mut resp = Vec::with_capacity(16 + dirent.len());
-                    let hdr = hostfs_header(DREAD_CMD, dirent.len() as u32);
-                    resp.extend_from_slice(&hdr);
-                    write_i32_le(&mut resp, 1); // 1 = entry available
-                    resp.extend_from_slice(&dirent);
-                    resp
+                    let mut hdr = hostfs_header(DREAD_CMD, dirent.len() as u32);
+                    write_i32_le(&mut hdr, 1); // 1 = entry available
+                    (hdr, dirent)
                 } else {
                     // No more entries
                     self.simple_response(DREAD_CMD, 0)
@@ -442,7 +454,7 @@ impl FdTable {
     // Resp: header(12) + result(4) = 16 bytes
     // -----------------------------------------------------------------------
 
-    fn handle_dclose(&mut self, cmd_buf: &[u8]) -> Vec<u8> {
+    fn handle_dclose(&mut self, cmd_buf: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let fd = protocol::read_i32_le(cmd_buf, 12);
         let result = if self.dirs.remove(&fd).is_some() {
             log::debug!("DCLOSE fd {}", fd);
@@ -460,7 +472,7 @@ impl FdTable {
     // Resp: header(12, extra_len=stat_size) + result(4), extra = SceIoStat
     // -----------------------------------------------------------------------
 
-    fn handle_getstat(&mut self, extra_data: &[u8]) -> Vec<u8> {
+    fn handle_getstat(&mut self, extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let filename = extract_cstring(extra_data);
         let local_path = self.resolve_path(&filename);
         log::debug!("GETSTAT {}", local_path.display());
@@ -468,12 +480,9 @@ impl FdTable {
         match fs::metadata(&local_path) {
             Ok(meta) => {
                 let stat = build_sce_stat(&meta);
-                let mut resp = Vec::with_capacity(16 + stat.len());
-                let hdr = hostfs_header(GETSTAT_CMD, stat.len() as u32);
-                resp.extend_from_slice(&hdr);
-                write_i32_le(&mut resp, 0); // success
-                resp.extend_from_slice(&stat);
-                resp
+                let mut hdr = hostfs_header(GETSTAT_CMD, stat.len() as u32);
+                write_i32_le(&mut hdr, 0); // success
+                (hdr, stat)
             }
             Err(e) => {
                 log::warn!("GETSTAT {} failed: {}", local_path.display(), e);
@@ -488,7 +497,7 @@ impl FdTable {
     // Resp: header(12) + result(4) = 16 bytes
     // -----------------------------------------------------------------------
 
-    fn handle_chdir(&mut self, extra_data: &[u8]) -> Vec<u8> {
+    fn handle_chdir(&mut self, extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let path = extract_cstring(extra_data);
         log::info!("CHDIR {} (ignored — virtual cwd not tracked)", path);
         // Always succeed — we resolve all paths against root anyway
@@ -499,13 +508,13 @@ impl FdTable {
     // Response builders
     // -----------------------------------------------------------------------
 
-    /// Build a standard 16-byte response: header(12) + result(4).
-    fn simple_response(&self, cmd: u32, result: i32) -> Vec<u8> {
+    /// Build a standard 16-byte response: header(12) + result(4), no extra data.
+    fn simple_response(&self, cmd: u32, result: i32) -> (Vec<u8>, Vec<u8>) {
         let mut resp = Vec::with_capacity(16);
         let hdr = hostfs_header(cmd, 0);
         resp.extend_from_slice(&hdr);
         write_i32_le(&mut resp, result);
-        resp
+        (resp, Vec::new())
     }
 }
 

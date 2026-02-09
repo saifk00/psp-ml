@@ -8,14 +8,25 @@ pub const SHELL_TYPE_TAB: u8 = 0xFA;
 pub const SHELL_TYPE_DISASM: u8 = 0xF8;
 pub const SHELL_TYPE_SYMLOAD: u8 = 0xF7;
 
+/// Build a simple shell command with no arguments (e.g. "reset").
+pub fn build_simple_command(cmd: &str) -> Vec<u8> {
+    let mut buf = Vec::new();
+    buf.extend_from_slice(cmd.as_bytes());
+    buf.push(0x00); // NUL-terminate command
+    buf.push(0x01); // command terminator
+    buf
+}
+
 /// Build a "load and start module" shell command.
 ///
-/// pspsh sends: `"ld\0host0:/path/to/module.prx\0"` on async channel 0.
+/// psplink shell protocol: NUL-separated args terminated by 0x01.
+/// Wire format: `ld\0host0:/path/to/module.prx\0\x01`
 pub fn build_load_command(prx_path: &str) -> Vec<u8> {
     let mut cmd = Vec::new();
-    cmd.extend_from_slice(b"ld ");
+    cmd.extend_from_slice(b"ld\0");
     cmd.extend_from_slice(prx_path.as_bytes());
-    cmd.push(b'\n');
+    cmd.push(0x00); // NUL-terminate path arg
+    cmd.push(0x01); // command terminator
     cmd
 }
 

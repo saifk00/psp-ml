@@ -12,17 +12,19 @@ use crate::protocol::*;
 use crate::shell;
 use crate::usb::PspUsb;
 
+/// Sentinel filename that PSP programs write via HostFS to signal exit.
+const EXIT_SENTINEL: &str = "__psp_exit";
+
 /// Result of executing a PRX on the PSP.
 pub struct Execution {
     pub stdout: String,
     pub stderr: String,
-    pub files_written: Vec<PathBuf>,
     pub exit_reason: ExitReason,
 }
 
 pub enum ExitReason {
-    /// The --wait-for file was written and closed by the PSP.
-    FileReceived(PathBuf),
+    /// The PSP program called psp_ml::exit().
+    ModuleExited,
     /// Timed out waiting.
     Timeout,
     /// PSP disconnected or USB error.
@@ -51,16 +53,36 @@ impl PspRunner {
     /// 2. Read HELLO from EP1
     /// 3. Write HELLO response back on EP2
     fn handshake(&self) -> Result<(), Error> {
+        // Drain any stale data on EP1 before starting
+        let mut drain_buf = vec![0u8; 65536];
+        loop {
+            match self.usb.read_ep1(&mut drain_buf, Duration::from_millis(100)) {
+                Ok(n) => log::debug!("drained {} stale bytes from EP1", n),
+                Err(_) => break,
+            }
+        }
+
         // Step 1: Send magic word
+        log::debug!("handshake: sending magic to EP2");
         self.usb.write_ep2(&HOSTFS_MAGIC.to_le_bytes())?;
 
         // Step 2: Read HELLO command from PSP
+        log::debug!("handshake: waiting for HELLO on EP1");
         let mut buf = vec![0u8; 512];
-        let n = self
-            .usb
-            .read_ep1(&mut buf, Duration::from_secs(5))
-            .map_err(|_| Error::HandshakeFailed)?;
+        let n = match self.usb.read_ep1(&mut buf, Duration::from_secs(5)) {
+            Ok(n) => n,
+            Err(e) => {
+                log::error!("handshake: EP1 read failed: {}", e);
+                return Err(Error::HandshakeFailed);
+            }
+        };
+        log::debug!(
+            "handshake: got {} bytes: {:02X?}",
+            n,
+            &buf[..n.min(32)]
+        );
         if n < 12 {
+            log::error!("handshake: response too short ({} bytes)", n);
             return Err(Error::HandshakeFailed);
         }
         let magic = read_u32_le(&buf, 0);
@@ -71,7 +93,10 @@ impl PspRunner {
             )));
         }
 
-        // Step 3: Respond with HELLO
+        // Step 3: Send HELLO response back on EP2.
+        // The PSP's send_hello_cmd() uses command_xchg which waits for this
+        // response before calling set_ayncreq() to enable EP3.
+        log::debug!("handshake: sending HELLO response on EP2");
         let resp = hostfs_header(HELLO_CMD, 0);
         self.usb.write_ep2(&resp)?;
 
@@ -81,13 +106,10 @@ impl PspRunner {
 
     /// Execute a PRX on the PSP and collect output.
     ///
-    /// - `prx_path`: the host0:/ path sent to psplink (e.g. `"host0:/target/.../foo.prx"`)
-    /// - `wait_for`: if set, return once a file with this name is written to host0:/
-    /// - `timeout`: maximum time to wait
+    /// Returns when the PSP program calls `psp_ml::exit()`, or on timeout.
     pub fn execute(
         &self,
         prx_path: &str,
-        wait_for: Option<&str>,
         timeout: Duration,
     ) -> Result<Execution, Error> {
         self.handshake()?;
@@ -100,6 +122,9 @@ impl PspRunner {
         let (file_tx, file_rx) = mpsc::channel::<PathBuf>();
 
         // --- Reader thread: reads EP1, classifies packets, dispatches ---
+        // IMPORTANT: Only this thread reads from EP1. When a HostFS command
+        // has extra data (e.g. a filename), we read it here before dispatching,
+        // so the HostFS thread never races with us on EP1.
         let usb_r = Arc::clone(&self.usb);
         let shutdown_r = Arc::clone(&shutdown);
         let reader_handle = thread::spawn(move || {
@@ -107,7 +132,13 @@ impl PspRunner {
             while !shutdown_r.load(Ordering::Relaxed) {
                 match usb_r.read_ep1(&mut buf, Duration::from_millis(100)) {
                     Ok(n) if n >= 4 => {
-                        let data = buf[..n].to_vec();
+                        let mut data = buf[..n].to_vec();
+                        log::debug!(
+                            "EP1 read {} bytes: {:02X?}{}",
+                            n,
+                            &data[..n.min(64)],
+                            if n > 64 { "..." } else { "" }
+                        );
                         match classify_packet(&data) {
                             PacketKind::HostFs => {
                                 // Parse the command header to get extra_len
@@ -116,6 +147,33 @@ impl PspRunner {
                                 } else {
                                     0
                                 };
+
+                                // If extra data didn't arrive in the same transfer,
+                                // read it now before dispatching.
+                                if extra_len > 0 {
+                                    let cmd_size = guess_cmd_struct_size(&data);
+                                    let have = data.len().saturating_sub(cmd_size);
+                                    if have < extra_len {
+                                        let remaining = extra_len - have;
+                                        let mut tmp = vec![0u8; remaining];
+                                        match usb_r
+                                            .read_ep1(&mut tmp, Duration::from_secs(5))
+                                        {
+                                            Ok(m) => {
+                                                log::debug!(
+                                                    "extra read {} of {} bytes",
+                                                    m,
+                                                    remaining
+                                                );
+                                                data.extend_from_slice(&tmp[..m]);
+                                            }
+                                            Err(e) => {
+                                                log::error!("extra read error: {}", e);
+                                            }
+                                        }
+                                    }
+                                }
+
                                 let _ = hostfs_tx.send(HostFsPacket {
                                     data,
                                     expected_extra: extra_len,
@@ -143,61 +201,54 @@ impl PspRunner {
         });
 
         // --- HostFS thread: processes filesystem commands, writes responses on EP2 ---
+        // This thread never reads from EP1 — the reader thread bundles extra data
+        // into HostFsPacket before dispatching here.
         let usb_h = Arc::clone(&self.usb);
         let shutdown_h = Arc::clone(&shutdown);
-        let usb_extra = Arc::clone(&self.usb);
         let root = self.root_dir.clone();
         let hostfs_handle = thread::spawn(move || {
             let mut fd_table = FdTable::new(root, Some(file_tx));
             while !shutdown_h.load(Ordering::Relaxed) {
                 match hostfs_rx.recv_timeout(Duration::from_millis(100)) {
                     Ok(pkt) => {
-                        // Read any extra data that the command expects
-                        let extra_data = if pkt.expected_extra > 0 {
-                            // The extra data may already be appended after the command struct
-                            // in the same USB transfer, or it may need a separate read.
-                            let cmd_struct_size = guess_cmd_struct_size(&pkt.data);
-                            if pkt.data.len() >= cmd_struct_size + pkt.expected_extra {
-                                // All data arrived in one transfer
-                                pkt.data[cmd_struct_size..cmd_struct_size + pkt.expected_extra]
-                                    .to_vec()
-                            } else {
-                                // Need to read remaining bytes from EP1
-                                // (This shouldn't normally happen since the PSP sends cmd+extra
-                                // in sequence, and the reader sees them in the same bulk read.
-                                // But handle it just in case.)
-                                let already_got = if pkt.data.len() > cmd_struct_size {
-                                    pkt.data.len() - cmd_struct_size
-                                } else {
-                                    0
-                                };
-                                let mut extra = if already_got > 0 {
-                                    pkt.data[cmd_struct_size..].to_vec()
-                                } else {
-                                    Vec::new()
-                                };
-                                let remaining = pkt.expected_extra - already_got;
-                                if remaining > 0 {
-                                    let mut tmp = vec![0u8; remaining];
-                                    match usb_extra.read_ep1(&mut tmp, Duration::from_secs(5)) {
-                                        Ok(n) => extra.extend_from_slice(&tmp[..n]),
-                                        Err(e) => log::error!("extra read error: {}", e),
-                                    }
-                                }
-                                extra
-                            }
+                        let cmd_struct_size = guess_cmd_struct_size(&pkt.data);
+                        let cmd_buf = &pkt.data[..cmd_struct_size.min(pkt.data.len())];
+
+                        // Extra data (e.g. filename) follows the command struct
+                        let extra_data = if pkt.expected_extra > 0
+                            && pkt.data.len() > cmd_struct_size
+                        {
+                            let end =
+                                (cmd_struct_size + pkt.expected_extra).min(pkt.data.len());
+                            pkt.data[cmd_struct_size..end].to_vec()
                         } else {
                             Vec::new()
                         };
 
-                        let cmd_struct_size = guess_cmd_struct_size(&pkt.data);
-                        let cmd_buf = &pkt.data[..cmd_struct_size.min(pkt.data.len())];
-                        let response = fd_table.handle_command(cmd_buf, &extra_data);
+                        log::debug!(
+                            "HostFS {} (extra {} bytes)",
+                            cmd_name(if cmd_buf.len() >= 8 {
+                                read_u32_le(cmd_buf, 4)
+                            } else {
+                                0
+                            }),
+                            extra_data.len()
+                        );
 
-                        // Send response on EP2 (may include header + extra data)
-                        if let Err(e) = usb_h.write_ep2(&response) {
-                            log::error!("EP2 write error: {}", e);
+                        let (resp_hdr, resp_extra) =
+                            fd_table.handle_command(cmd_buf, &extra_data);
+
+                        // Send header and extra as SEPARATE USB bulk writes.
+                        // The PSP reads them as distinct transfers via sceUsbbdReqRecv.
+                        if let Err(e) = usb_h.write_ep2(&resp_hdr) {
+                            log::error!("EP2 write error (header): {}", e);
                             break;
+                        }
+                        if !resp_extra.is_empty() {
+                            if let Err(e) = usb_h.write_ep2(&resp_extra) {
+                                log::error!("EP2 write error (extra): {}", e);
+                                break;
+                            }
                         }
                     }
                     Err(mpsc::RecvTimeoutError::Timeout) => continue,
@@ -212,11 +263,10 @@ impl PspRunner {
         self.usb.write_ep3(&packet)?;
         log::info!("sent load command: {}", prx_path);
 
-        // --- Main loop: collect output, watch for file-write events ---
+        // --- Main loop: collect output, wait for exit sentinel ---
         let mut output = OutputCapture::new();
-        let mut files_written = Vec::new();
+        let mut exited = false;
         let start = Instant::now();
-        let wait_for_owned = wait_for.map(|s| s.to_owned());
 
         let exit_reason = loop {
             if start.elapsed() > timeout {
@@ -226,49 +276,26 @@ impl PspRunner {
             // Drain async messages
             while let Ok(packet) = async_rx.try_recv() {
                 if let Some(msg) = AsyncMessage::parse(&packet) {
-                    // Forward PSP stdout to host stderr in real-time
-                    if msg.channel == ASYNC_STDOUT || msg.channel == ASYNC_SHELL {
+                    if msg.channel == ASYNC_STDOUT {
                         let text = String::from_utf8_lossy(&msg.payload);
                         eprint!("{}", text);
+                    } else if msg.channel == ASYNC_SHELL {
+                        log::debug!("shell: {:?}", String::from_utf8_lossy(&msg.payload));
                     }
                     output.feed(&msg);
                 }
             }
 
-            // Check file notifications
+            // Check for exit sentinel from psp_ml::exit()
             while let Ok(path) = file_rx.try_recv() {
-                log::info!("file written: {}", path.display());
-                files_written.push(path.clone());
-
-                if let Some(ref wait_name) = wait_for_owned {
-                    if let Some(fname) = path.file_name() {
-                        if fname.to_string_lossy() == *wait_name {
-                            break;
-                        }
-                    }
+                log::info!("file event: {}", path.display());
+                if path == PathBuf::from(EXIT_SENTINEL) {
+                    exited = true;
                 }
             }
 
-            // Check if the wait-for file was received (after draining)
-            if let Some(ref wait_name) = wait_for_owned {
-                let found = files_written.iter().any(|p| {
-                    p.file_name()
-                        .map(|f| f.to_string_lossy() == *wait_name)
-                        .unwrap_or(false)
-                });
-                if found {
-                    break ExitReason::FileReceived(
-                        files_written
-                            .iter()
-                            .find(|p| {
-                                p.file_name()
-                                    .map(|f| f.to_string_lossy() == *wait_name)
-                                    .unwrap_or(false)
-                            })
-                            .cloned()
-                            .unwrap(),
-                    );
-                }
+            if exited {
+                break ExitReason::ModuleExited;
             }
 
             thread::sleep(Duration::from_millis(10));
@@ -283,7 +310,6 @@ impl PspRunner {
         Ok(Execution {
             stdout: output.stdout_str(),
             stderr: output.stderr_str(),
-            files_written,
             exit_reason,
         })
     }
