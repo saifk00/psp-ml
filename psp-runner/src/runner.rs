@@ -151,22 +151,22 @@ impl PspRunner {
                                 if extra_len > 0 {
                                     let cmd_size = guess_cmd_struct_size(&data);
                                     let have = data.len().saturating_sub(cmd_size);
-                                    if have < extra_len {
-                                        let remaining = extra_len - have;
+                                    let mut remaining = extra_len.saturating_sub(have);
+                                    while remaining > 0 {
                                         let mut tmp = vec![0u8; remaining];
-                                        match usb_r
-                                            .read_ep1(&mut tmp, Duration::from_secs(5))
-                                        {
-                                            Ok(m) => {
+                                        match usb_r.read_ep1(&mut tmp, Duration::from_secs(5)) {
+                                            Ok(m) if m > 0 => {
                                                 log::debug!(
-                                                    "extra read {} of {} bytes",
-                                                    m,
-                                                    remaining
+                                                    "extra read {} of {} remaining bytes",
+                                                    m, remaining
                                                 );
                                                 data.extend_from_slice(&tmp[..m]);
+                                                remaining -= m;
                                             }
+                                            Ok(_) => break,
                                             Err(e) => {
                                                 log::error!("extra read error: {}", e);
+                                                break;
                                             }
                                         }
                                     }
