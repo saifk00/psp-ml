@@ -28,6 +28,7 @@ dependencies = [
  "flatbuffers",
  "prettyplease",
  "proc-macro2",
+ "psp",
  "quote",
  "syn",
 ]

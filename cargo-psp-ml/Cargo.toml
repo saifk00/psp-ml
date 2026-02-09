@@ -28,3 +28,6 @@ quote = { version = "1", optional = true }
 proc-macro2 = { version = "1", optional = true }
 syn = { version = "2", optional = true }
 prettyplease = { version = "0.2", optional = true }
+
+[target.'cfg(target_os = "psp")'.dependencies]
+psp = "0.3"
