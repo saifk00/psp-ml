@@ -1,8 +1,12 @@
-use crate::ir::graph::{Graph, TensorId, TensorKind};
+mod tensor_expr;
+
+use crate::ir::graph::TensorKind;
 use crate::ir::psp::{Activation, PspOp};
 use crate::ir::PspModel;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
+
+use tensor_expr::TensorExprWriter;
 
 pub type GenResult<T> = Result<T, String>;
 
@@ -36,15 +40,17 @@ pub fn generate_code(model: &PspModel) -> GenResult<Generated> {
     let total_bytes = model.model_data.len();
     let total_floats = total_bytes / std::mem::size_of::<f32>();
 
-    let (weight_consts, weight_views) = gen_weight_code(graph, total_bytes, total_floats)?;
-    let tensor_allocs = gen_allocs(graph)?;
-    let op_infos = gen_op_infos(graph, input_id)?;
+    let writer = TensorExprWriter::new(graph);
+
+    let (weight_consts, weight_views) = gen_weight_code(&writer, total_bytes, total_floats)?;
+    let tensor_allocs = gen_allocs(&writer)?;
+    let op_infos = gen_op_infos(&writer)?;
 
     let plain_calls: Vec<&TokenStream> = op_infos.iter().map(|i| &i.call).collect();
     let timed_calls = gen_timed_calls(&op_infos);
     let op_metadata = gen_op_metadata(&op_infos);
 
-    let output_ident = tensor_ident(output_id);
+    let output_ident = writer.ident(output_id);
 
     let tokens = quote! {
         //! Generated inference module
@@ -95,46 +101,20 @@ pub fn generate_code(model: &PspModel) -> GenResult<Generated> {
 // Helpers for generate_code
 // ---------------------------------------------------------------------------
 
-fn tensor_ident(id: TensorId) -> Ident {
-    Ident::new(&format!("t_{id}"), Span::call_site())
-}
-
 fn shape_tokens(shape: &[usize]) -> TokenStream {
     quote!([#(#shape),*])
 }
 
-/// Read-reference expression for a tensor in a kernel call.
-///
-/// - Input tensor → `input` (the function parameter)
-/// - Constant tensor → `t_{id}` (already a `&[f32]` slice)
-/// - Intermediate/Output → `&t_{id}` (borrow local array)
-fn tensor_read_expr(graph: &Graph<PspOp>, id: TensorId, input_id: TensorId) -> TokenStream {
-    if id == input_id {
-        return quote!(input);
-    }
-    let ident = tensor_ident(id);
-    match &graph.tensor(id).kind {
-        TensorKind::Constant { .. } => quote!(#ident),
-        _ => quote!(&#ident),
-    }
-}
-
-/// Write-reference expression: `&mut t_{id}`.
-fn tensor_write_expr(id: TensorId) -> TokenStream {
-    let ident = tensor_ident(id);
-    quote!(&mut #ident)
-}
-
 /// Generate statics (weight embedding) and weight view bindings.
 fn gen_weight_code(
-    graph: &Graph<PspOp>,
+    writer: &TensorExprWriter,
     total_bytes: usize,
     total_floats: usize,
 ) -> GenResult<(TokenStream, TokenStream)> {
     let mut const_entries = Vec::new();
     let mut view_entries = Vec::new();
 
-    for tensor in &graph.tensors {
+    for tensor in &writer.graph.tensors {
         if let TensorKind::Constant { offset, len } = &tensor.kind {
             let sz = std::mem::size_of::<f32>();
             if offset % sz != 0 {
@@ -153,9 +133,9 @@ fn gen_weight_code(
             let float_offset = offset / sz;
             let float_len = len / sz;
 
-            let offset_ident = Ident::new(&format!("T_{}_OFFSET", tensor.id), Span::call_site());
-            let len_ident = Ident::new(&format!("T_{}_LEN", tensor.id), Span::call_site());
-            let var_ident = tensor_ident(tensor.id);
+            let offset_ident = writer.offset_const(tensor.id);
+            let len_ident = writer.len_const(tensor.id);
+            let var_ident = writer.ident(tensor.id);
 
             const_entries.push(quote! {
                 const #offset_ident: usize = #float_offset;
@@ -198,13 +178,13 @@ fn gen_weight_code(
 }
 
 /// Generate intermediate and output tensor allocations as zero-filled arrays.
-fn gen_allocs(graph: &Graph<PspOp>) -> GenResult<TokenStream> {
+fn gen_allocs(writer: &TensorExprWriter) -> GenResult<TokenStream> {
     let mut entries = Vec::new();
 
-    for tensor in &graph.tensors {
+    for tensor in &writer.graph.tensors {
         match &tensor.kind {
             TensorKind::Intermediate | TensorKind::Output => {
-                let ident = tensor_ident(tensor.id);
+                let ident = writer.ident(tensor.id);
                 let size = tensor.shape.iter().product::<usize>();
                 entries.push(quote! {
                     let mut #ident = [0.0f32; #size];
@@ -234,7 +214,7 @@ struct Conv2dArgs {
     input_shape: TokenStream,
     filter_expr: TokenStream,
     output_expr: TokenStream,
-    output_id: TensorId,
+    output_ident: Ident,
     in_shape: [usize; 4],
     w_shape: [usize; 4],
     out_shape: [usize; 4],
@@ -298,7 +278,7 @@ fn gen_conv2d_vfpu(args: &Conv2dArgs, op_idx: usize) -> GenResult<(String, Token
     }
 
     let Conv2dArgs {
-        input_expr, input_shape, filter_expr, output_id,
+        input_expr, input_shape, filter_expr, output_ident,
         in_shape, w_shape, out_shape, padding, has_relu, bias_expr, ..
     } = args;
 
@@ -332,8 +312,6 @@ fn gen_conv2d_vfpu(args: &Conv2dArgs, op_idx: usize) -> GenResult<(String, Token
     let scratch_size = m_padded * k_padded;
     let scratch_ident = Ident::new(&format!("conv_scratch_{op_idx}"), Span::call_site());
     let scratch_static = Ident::new(&format!("CONV_SCRATCH_{op_idx}"), Span::call_site());
-
-    let output_ident = tensor_ident(*output_id);
 
     // Weight expression: pad K if needed, otherwise use original tensor directly
     let (weight_setup, weight_ref) = if k_padded != gemm_k {
@@ -389,11 +367,11 @@ fn gen_conv2d_vfpu(args: &Conv2dArgs, op_idx: usize) -> GenResult<(String, Token
 }
 
 /// Generate per-op metadata and kernel calls.
-fn gen_op_infos(graph: &Graph<PspOp>, input_id: TensorId) -> GenResult<Vec<OpInfo>> {
+fn gen_op_infos(writer: &TensorExprWriter) -> GenResult<Vec<OpInfo>> {
     let mut infos = Vec::new();
     let use_vfpu_conv2d = true;
 
-    for (i, op) in graph.ops.iter().enumerate() {
+    for (i, op) in writer.graph.ops.iter().enumerate() {
         let (name, call) = match op {
             PspOp::Conv2d {
                 input,
@@ -406,9 +384,9 @@ fn gen_op_infos(graph: &Graph<PspOp>, input_id: TensorId) -> GenResult<Vec<OpInf
                     return Err(format!("Op {i}: asymmetric padding not supported"));
                 }
 
-                let in_shape = &graph.tensor(*input).shape;
-                let w_shape = &graph.tensor(*weights).shape;
-                let out_shape = &graph.tensor(*output).shape;
+                let in_shape = &writer.graph.tensor(*input).shape;
+                let w_shape = &writer.graph.tensor(*weights).shape;
+                let out_shape = &writer.graph.tensor(*output).shape;
 
                 if in_shape.len() != 4 || w_shape.len() != 4 || out_shape.len() != 4 {
                     return Err(format!(
@@ -424,18 +402,18 @@ fn gen_op_infos(graph: &Graph<PspOp>, input_id: TensorId) -> GenResult<Vec<OpInf
                 }
 
                 let args = Conv2dArgs {
-                    input_expr: tensor_read_expr(graph, *input, input_id),
-                    input_shape: shape_tokens(in_shape),
-                    filter_expr: tensor_read_expr(graph, *weights, input_id),
-                    output_expr: tensor_write_expr(*output),
-                    output_id: *output,
+                    input_expr: writer.read(*input),
+                    input_shape: writer.shape(*input),
+                    filter_expr: writer.read(*weights),
+                    output_expr: writer.write(*output),
+                    output_ident: writer.ident(*output),
                     in_shape: [in_shape[0], in_shape[1], in_shape[2], in_shape[3]],
                     w_shape: [w_shape[0], w_shape[1], w_shape[2], w_shape[3]],
                     out_shape: [out_shape[0], out_shape[1], out_shape[2], out_shape[3]],
                     stride: [params.stride_h, params.stride_w],
                     padding: [params.pad_top, params.pad_left],
                     has_relu: matches!(params.fused_activation, Some(Activation::Relu)),
-                    bias_expr: bias.map(|b| tensor_read_expr(graph, b, input_id)),
+                    bias_expr: bias.map(|b| writer.read(b)),
                 };
 
                 if use_vfpu_conv2d {
@@ -455,12 +433,12 @@ fn gen_op_infos(graph: &Graph<PspOp>, input_id: TensorId) -> GenResult<Vec<OpInf
                 let bias_id =
                     bias.ok_or_else(|| format!("Op {i}: FullyConnected requires bias tensor"))?;
 
-                let input_expr = tensor_read_expr(graph, *input, input_id);
-                let in_features = graph.tensor(*input).shape.iter().product::<usize>();
-                let weight_expr = tensor_read_expr(graph, *weights, input_id);
-                let bias_expr = tensor_read_expr(graph, bias_id, input_id);
-                let output_expr = tensor_write_expr(*output);
-                let out_features = graph.tensor(*output).shape.iter().product::<usize>();
+                let input_expr = writer.read(*input);
+                let in_features = writer.graph.tensor(*input).shape.iter().product::<usize>();
+                let weight_expr = writer.read(*weights);
+                let bias_expr = writer.read(bias_id);
+                let output_expr = writer.write(*output);
+                let out_features = writer.graph.tensor(*output).shape.iter().product::<usize>();
 
                 match fused_activation.fused_activation {
                     Some(Activation::Relu) => {
@@ -488,8 +466,8 @@ fn gen_op_infos(graph: &Graph<PspOp>, input_id: TensorId) -> GenResult<Vec<OpInf
             }
 
             PspOp::MaxPool2x2 { input, output } => {
-                let in_shape = &graph.tensor(*input).shape;
-                let out_shape = &graph.tensor(*output).shape;
+                let in_shape = &writer.graph.tensor(*input).shape;
+                let out_shape = &writer.graph.tensor(*output).shape;
 
                 if in_shape.len() != 4 || out_shape.len() != 4 {
                     return Err(format!(
@@ -499,10 +477,10 @@ fn gen_op_infos(graph: &Graph<PspOp>, input_id: TensorId) -> GenResult<Vec<OpInf
                     ));
                 }
 
-                let input_expr = tensor_read_expr(graph, *input, input_id);
-                let input_shape = shape_tokens(in_shape);
-                let output_expr = tensor_write_expr(*output);
-                let output_shape = shape_tokens(out_shape);
+                let input_expr = writer.read(*input);
+                let input_shape = writer.shape(*input);
+                let output_expr = writer.write(*output);
+                let output_shape = writer.shape(*output);
 
                 ("max_pool2d".into(), quote! {
                     max_pool2d(
@@ -514,8 +492,8 @@ fn gen_op_infos(graph: &Graph<PspOp>, input_id: TensorId) -> GenResult<Vec<OpInf
             }
 
             PspOp::Reshape { input, output } => {
-                let input_expr = tensor_read_expr(graph, *input, input_id);
-                let output_expr = tensor_write_expr(*output);
+                let input_expr = writer.read(*input);
+                let output_expr = writer.write(*output);
 
                 ("reshape".into(), quote! {
                     reshape(#input_expr, #output_expr);
