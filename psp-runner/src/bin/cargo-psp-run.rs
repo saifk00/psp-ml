@@ -25,6 +25,8 @@ fn main() {
     };
 
     let mut package: Option<String> = None;
+    let mut bin: Option<String> = None;
+    let mut features: Option<String> = None;
     let mut release = false;
     let mut timeout_secs: u64 = 60;
     let mut root_dir = PathBuf::from(".");
@@ -40,6 +42,20 @@ fn main() {
                 }).clone());
             }
             "--release" => release = true,
+            "--bin" => {
+                i += 1;
+                bin = Some(args.get(i).unwrap_or_else(|| {
+                    eprintln!("--bin requires a binary name");
+                    process::exit(1);
+                }).clone());
+            }
+            "--features" => {
+                i += 1;
+                features = Some(args.get(i).unwrap_or_else(|| {
+                    eprintln!("--features requires a feature list");
+                    process::exit(1);
+                }).clone());
+            }
             "--timeout" => {
                 i += 1;
                 timeout_secs = args.get(i)
@@ -62,16 +78,18 @@ fn main() {
                 eprintln!("Build a PSP PRX and deploy it to a PSP running psplink.");
                 eprintln!();
                 eprintln!("Build options:");
-                eprintln!("  -p, --package <PKG>  Package to build and run");
-                eprintln!("  --release            Build in release mode");
+                eprintln!("  -p, --package <PKG>    Package to build and run");
+                eprintln!("  --bin <NAME>           Binary target (default: package name)");
+                eprintln!("  --features <FEATURES>  Comma-separated features to activate");
+                eprintln!("  --release              Build in release mode");
                 eprintln!();
                 eprintln!("Runner options:");
-                eprintln!("  --timeout <SECS>     Timeout in seconds (default: 60)");
-                eprintln!("  --root <DIR>         HostFS root directory (default: workspace root)");
+                eprintln!("  --timeout <SECS>       Timeout in seconds (default: 60)");
+                eprintln!("  --root <DIR>           HostFS root directory (default: workspace root)");
                 eprintln!();
                 eprintln!("Examples:");
                 eprintln!("  cargo psp-run -p hello-psp --release");
-                eprintln!("  cargo psp-run -p mnist-bench --release");
+                eprintln!("  cargo psp-run -p psp-ml --bin test-kernels --features test-kernels --release");
                 eprintln!();
                 eprintln!("Environment:");
                 eprintln!("  RUST_LOG=info    Show protocol activity");
@@ -108,6 +126,9 @@ fn main() {
         process::exit(1);
     });
 
+    // The PRX filename comes from the binary name, not the package name.
+    let prx_name = bin.as_deref().unwrap_or(&package);
+
     // --- Step 1: Build via `cargo psp` ---
     let mut build_cmd = Command::new("cargo");
     build_cmd.arg("+nightly").arg("psp");
@@ -115,9 +136,18 @@ fn main() {
         build_cmd.arg("--release");
     }
     build_cmd.arg("-p").arg(&package);
+    if let Some(b) = &bin {
+        build_cmd.arg("--bin").arg(b);
+    }
+    if let Some(f) = &features {
+        build_cmd.arg("--features").arg(f);
+    }
 
-    eprintln!("==> Building: cargo +nightly psp{} -p {package}",
-        if release { " --release" } else { "" });
+    eprintln!("==> Building: cargo +nightly psp{} -p {package}{}{}",
+        if release { " --release" } else { "" },
+        bin.as_ref().map(|b| format!(" --bin {b}")).unwrap_or_default(),
+        features.as_ref().map(|f| format!(" --features {f}")).unwrap_or_default(),
+    );
 
     // Capture output so we can parse the PRX path from cargo-psp's output.
     // cargo-psp prints: [6]  NNNN bytes | /absolute/path/to/foo.prx
@@ -144,7 +174,7 @@ fn main() {
     }
     let profile = if release { "release" } else { "debug" };
     let prx_path = target_directory
-        .join(format!("mipsel-sony-psp/{profile}/{package}.prx"));
+        .join(format!("mipsel-sony-psp/{profile}/{prx_name}.prx"));
 
     let prx_abs = fs::canonicalize(&prx_path).unwrap_or_else(|_| {
         eprintln!("error: PRX not found at {}", prx_path.display());

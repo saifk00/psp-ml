@@ -4,12 +4,10 @@
 #[cfg(not(feature = "local"))]
 use core::ffi::c_void;
 #[cfg(not(feature = "local"))]
-use psp::dprintln;
-#[cfg(not(feature = "local"))]
 use psp::sys::{sceIoClose, sceIoOpen, sceIoWrite, IoOpenFlags};
 
 #[cfg(not(feature = "local"))]
-psp::module!("kernel_tests", 1, 0);
+psp_ml::module!("kernel_tests", 1, 0);
 
 use psp_ml::kernels;
 use psp_ml::kernels::naive;
@@ -33,13 +31,12 @@ fn approx_eq(a: &[f32], b: &[f32]) -> bool {
     true
 }
 
-// Macro to reduce boilerplate — works in both std and no_std
 macro_rules! print_msg {
     ($($arg:tt)*) => {
         #[cfg(feature = "local")]
         println!($($arg)*);
         #[cfg(not(feature = "local"))]
-        dprintln!($($arg)*);
+        psp_ml::println!($($arg)*);
     };
 }
 
@@ -519,17 +516,17 @@ fn format_results(passed: u32, failed: u32, results: &[bool; NUM_TESTS]) -> Json
 // ============================================================================
 
 #[cfg(not(feature = "local"))]
-fn psp_main() {
+fn app_main() {
     psp::enable_home_button();
 
-    dprintln!("psp-ml Kernel Tests");
-    dprintln!("====================");
-    dprintln!("");
+    psp_ml::println!("psp-ml Kernel Tests");
+    psp_ml::println!("====================");
+    psp_ml::println!("");
 
     let (passed, failed, results) = run_all_tests();
 
-    dprintln!("");
-    dprintln!("Results: {} passed, {} failed", passed, failed);
+    psp_ml::println!("");
+    psp_ml::println!("Results: {} passed, {} failed", passed, failed);
 
     // Write JSON to host0:/test-results.json
     let json = format_results(passed, failed, &results);
@@ -546,19 +543,14 @@ fn psp_main() {
             sceIoWrite(fd, json.as_bytes().as_ptr() as *const c_void, json.as_bytes().len());
             sceIoClose(fd);
         }
-        dprintln!("Wrote test-results.json to host0:/");
+        psp_ml::println!("Wrote test-results.json to host0:/");
     }
 
-    dprintln!("");
+    psp_ml::println!("");
     if failed == 0 {
-        dprintln!("All tests passed!");
+        psp_ml::println!("All tests passed!");
     } else {
-        dprintln!("{} test(s) FAILED", failed);
-    }
-
-    dprintln!("Press HOME to exit.");
-    loop {
-        unsafe { psp::sys::sceKernelDelayThread(100_000) };
+        psp_ml::println!("{} test(s) FAILED", failed);
     }
 }
 
