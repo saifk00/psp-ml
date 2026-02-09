@@ -43,11 +43,35 @@ impl FdTable {
 
     /// Resolve a PSP path (e.g. `/benchmarks.json`) relative to the host root directory.
     /// The PSP sends paths with the `host0:/` prefix already stripped by the kernel driver.
-    fn resolve_path(&self, psp_path: &str) -> PathBuf {
-        let stripped = psp_path
-            .strip_prefix('/')
-            .unwrap_or(psp_path);
-        self.root.join(stripped)
+    /// Returns `None` if the resolved path escapes the root (path traversal).
+    fn resolve_path(&self, psp_path: &str) -> Option<PathBuf> {
+        let stripped = psp_path.strip_prefix('/').unwrap_or(psp_path);
+        let joined = self.root.join(stripped);
+
+        // For existing paths, canonicalize and verify containment
+        if let Ok(canonical) = fs::canonicalize(&joined) {
+            let root = fs::canonicalize(&self.root).ok()?;
+            if canonical.starts_with(&root) {
+                return Some(canonical);
+            }
+            log::warn!("path traversal blocked: {} -> {}", psp_path, canonical.display());
+            return None;
+        }
+
+        // Path doesn't exist yet (O_CREAT case): canonicalize parent and append filename
+        if let Some(parent) = joined.parent() {
+            if let Ok(canon_parent) = fs::canonicalize(parent) {
+                let root = fs::canonicalize(&self.root).ok()?;
+                if canon_parent.starts_with(&root) {
+                    if let Some(name) = joined.file_name() {
+                        return Some(canon_parent.join(name));
+                    }
+                }
+            }
+        }
+
+        log::warn!("path traversal blocked: {} -> {}", psp_path, joined.display());
+        None
     }
 
     fn alloc_fd(&mut self) -> i32 {
@@ -131,7 +155,10 @@ impl FdTable {
             return self.simple_response(OPEN_CMD, fd);
         }
 
-        let local_path = self.resolve_path(&filename);
+        let local_path = match self.resolve_path(&filename) {
+            Some(p) => p,
+            None => return self.simple_response(OPEN_CMD, -1),
+        };
 
         log::info!("OPEN {} (mode {:#06x}) -> {}", filename, mode, local_path.display());
 
@@ -336,7 +363,10 @@ impl FdTable {
 
     fn handle_remove(&mut self, extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let filename = extract_cstring(extra_data);
-        let local_path = self.resolve_path(&filename);
+        let local_path = match self.resolve_path(&filename) {
+            Some(p) => p,
+            None => return self.simple_response(REMOVE_CMD, -1),
+        };
         log::info!("REMOVE {}", local_path.display());
 
         let result = match fs::remove_file(&local_path) {
@@ -357,7 +387,10 @@ impl FdTable {
 
     fn handle_mkdir(&mut self, _cmd_buf: &[u8], extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let dirname = extract_cstring(extra_data);
-        let local_path = self.resolve_path(&dirname);
+        let local_path = match self.resolve_path(&dirname) {
+            Some(p) => p,
+            None => return self.simple_response(MKDIR_CMD, -1),
+        };
         log::info!("MKDIR {}", local_path.display());
 
         let result = match fs::create_dir_all(&local_path) {
@@ -378,7 +411,10 @@ impl FdTable {
 
     fn handle_rmdir(&mut self, extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let dirname = extract_cstring(extra_data);
-        let local_path = self.resolve_path(&dirname);
+        let local_path = match self.resolve_path(&dirname) {
+            Some(p) => p,
+            None => return self.simple_response(RMDIR_CMD, -1),
+        };
         log::info!("RMDIR {}", local_path.display());
 
         let result = match fs::remove_dir(&local_path) {
@@ -399,7 +435,10 @@ impl FdTable {
 
     fn handle_dopen(&mut self, extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let dirname = extract_cstring(extra_data);
-        let local_path = self.resolve_path(&dirname);
+        let local_path = match self.resolve_path(&dirname) {
+            Some(p) => p,
+            None => return self.simple_response(DOPEN_CMD, -1),
+        };
         log::info!("DOPEN {}", local_path.display());
 
         match fs::read_dir(&local_path) {
@@ -474,7 +513,10 @@ impl FdTable {
 
     fn handle_getstat(&mut self, extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let filename = extract_cstring(extra_data);
-        let local_path = self.resolve_path(&filename);
+        let local_path = match self.resolve_path(&filename) {
+            Some(p) => p,
+            None => return self.simple_response(GETSTAT_CMD, -1),
+        };
         log::debug!("GETSTAT {}", local_path.display());
 
         match fs::metadata(&local_path) {
