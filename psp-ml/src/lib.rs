@@ -33,8 +33,14 @@ pub fn exit() {
 macro_rules! module {
     ($name:expr, $version_major:expr, $version_minor:expr) => {
         fn psp_main() {
+            struct ExitGuard;
+            impl Drop for ExitGuard {
+                fn drop(&mut self) {
+                    $crate::exit();
+                }
+            }
+            let _guard = ExitGuard;
             app_main();
-            $crate::exit();
         }
 
         psp::module!($name, $version_major, $version_minor);
