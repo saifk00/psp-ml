@@ -312,6 +312,7 @@ fn lower_softmax(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String
 fn convert_dtype(t: TensorType) -> DType {
     match t {
         TensorType::FLOAT32 => DType::F32,
+        TensorType::INT32 => DType::I32,
         TensorType::INT8 => DType::I8,
         TensorType::UINT8 => DType::U8,
         other => panic!(

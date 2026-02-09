@@ -4,3 +4,5 @@ pspdev
 .cache
 .DS_Store
 *.bin
+.vscode
+models/BirdNET_v2.4_tflite/

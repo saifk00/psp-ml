@@ -13,6 +13,7 @@ pub struct Tensor {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DType {
     F32,
+    I32,
     I8,
     U8,
 }
