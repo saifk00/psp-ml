@@ -35,7 +35,11 @@ impl core::fmt::Write for WriteBuf {
         let len = bytes.len().min(remaining);
         self.buf[self.pos..self.pos + len].copy_from_slice(&bytes[..len]);
         self.pos += len;
-        Ok(())
+        if bytes.len() > remaining {
+            Err(core::fmt::Error)
+        } else {
+            Ok(())
+        }
     }
 }
 
