@@ -1,0 +1,11 @@
+[package]
+name = "hello-psp"
+edition = "2021"
+
+[[bin]]
+name = "hello-psp"
+path = "src/main.rs"
+
+[target.'cfg(target_os = "psp")'.dependencies]
+psp = "0.3"
+psp-ml = { path = "../../psp-ml" }
