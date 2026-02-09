@@ -1,0 +1,57 @@
+{
+  "model": "mnist_cnn",
+  "config": {
+    "kernel_type": "vfpu"
+  },
+  "inference": {
+    "num_images": 100,
+    "total_us": 12148111,
+    "per_image_us": 121481,
+    "correct": 99,
+    "total": 100
+  },
+  "ops": [
+    {
+      "index": 0,
+      "name": "conv2d_relu",
+      "total_us": 4689476,
+      "calls": 100
+    },
+    {
+      "index": 1,
+      "name": "max_pool2d",
+      "total_us": 105078,
+      "calls": 100
+    },
+    {
+      "index": 2,
+      "name": "conv2d_relu",
+      "total_us": 6654608,
+      "calls": 100
+    },
+    {
+      "index": 3,
+      "name": "max_pool2d",
+      "total_us": 47973,
+      "calls": 100
+    },
+    {
+      "index": 4,
+      "name": "reshape",
+      "total_us": 11647,
+      "calls": 100
+    },
+    {
+      "index": 5,
+      "name": "fully_connected_relu",
+      "total_us": 449506,
+      "calls": 100
+    },
+    {
+      "index": 6,
+      "name": "fully_connected",
+      "total_us": 5644,
+      "calls": 100
+    }
+  ]
+}

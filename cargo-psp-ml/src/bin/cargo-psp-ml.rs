@@ -1,5 +1,5 @@
-use psp_ml::codegen::generate_code;
-use psp_ml::parse::tflite;
+use psp_ml_compiler::codegen::generate_code;
+use psp_ml_compiler::parse::tflite;
 use std::fs;
 use std::path::PathBuf;
 use std::process;

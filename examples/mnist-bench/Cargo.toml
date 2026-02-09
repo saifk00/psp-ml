@@ -7,6 +7,12 @@ edition = "2021"
 name = "mnist-bench"
 path = "src/main.rs"
 
+[features]
+default = []
+local = []
+
 [dependencies]
-psp-ml = { package = "cargo-psp-ml", path = "../../cargo-psp-ml", default-features = false }
+psp-ml = { path = "../../psp-ml" }
+
+[target.'cfg(target_os = "psp")'.dependencies]
 psp = "0.3"

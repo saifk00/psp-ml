@@ -4,4 +4,3 @@ pspdev
 .cache
 .DS_Store
 *.bin
-*generated.rs
