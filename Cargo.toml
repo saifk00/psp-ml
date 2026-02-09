@@ -1,7 +1,12 @@
 [workspace]
 resolver = "2"
 members = [
+    "psp-ml",
     "cargo-psp-ml",
     "audio-recorder",
+    "examples/mnist-bench",
+]
+default-members = [
+    "psp-ml",
     "examples/mnist-bench",
 ]

@@ -1,0 +1,11 @@
+[package]
+name = "psp-ml"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "psp_ml"
+path = "src/lib.rs"
+
+[target.'cfg(target_os = "psp")'.dependencies]
+psp = "0.3"

@@ -1,2 +1,2 @@
 [alias]
-psp-ml = "run -p cargo-psp-ml --features compiler --bin cargo-psp-ml --"
+psp-ml = "run -p cargo-psp-ml --bin cargo-psp-ml --"
