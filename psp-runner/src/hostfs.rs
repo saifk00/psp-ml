@@ -600,19 +600,18 @@ fn extract_cstring(data: &[u8]) -> String {
     String::from_utf8_lossy(&data[..end]).into_owned()
 }
 
-/// Build a minimal SceIoStat structure (96 bytes) from host file metadata.
+/// Build a SceIoStat structure (88 bytes) from host file metadata.
 ///
-/// Layout (all LE):
-///   [0..4]   mode   (u32)
-///   [4..8]   attr   (u32)
-///   [8..16]  size   (i64)
-///   [16..30] ctime  (ScePspDateTime, 14 bytes: 6×u16 + u32 unused)
-///   [30..44] atime  (ScePspDateTime)
-///   [44..58] mtime  (ScePspDateTime)
-///   [58..82] private (6×u32)
-///   Total: 82 bytes (padded to 96 with zeros for safety)
+/// Layout (all LE, from psp_fileio.h):
+///   [0..4]   mode     (u32)
+///   [4..8]   attr     (u32)
+///   [8..16]  size     (i64)
+///   [16..32] ctime    (ScePspDateTime, 16 bytes)
+///   [32..48] atime    (ScePspDateTime, 16 bytes)
+///   [48..64] mtime    (ScePspDateTime, 16 bytes)
+///   [64..88] private  (6×u32 = 24 bytes)
 fn build_sce_stat(meta: &fs::Metadata) -> Vec<u8> {
-    let mut buf = vec![0u8; 96];
+    let mut buf = vec![0u8; 88];
 
     // Mode: set directory/regular bits
     let mut mode: u32 = 0;
@@ -634,15 +633,15 @@ fn build_sce_stat(meta: &fs::Metadata) -> Vec<u8> {
     buf
 }
 
-/// Build a minimal SceIoDirent structure (~360 bytes) for a directory entry.
+/// Build a SceIoDirent structure (352 bytes) for a directory entry.
 ///
-/// Layout:
-///   [0..96]    SceIoStat
-///   [96..352]  name (char[256])
-///   [352..356] private (u32)
-///   [356..360] dummy (u32)
+/// Layout (from psp_fileio.h):
+///   [0..88]    SceIoStat
+///   [88..344]  name (char[256])
+///   [344..348] private (u32)
+///   [348..352] dummy (u32)
 fn build_sce_dirent(entry: &fs::DirEntry) -> Vec<u8> {
-    let mut buf = vec![0u8; 360];
+    let mut buf = vec![0u8; 352];
 
     // Fill in the stat portion
     if let Ok(meta) = entry.metadata() {
@@ -655,8 +654,7 @@ fn build_sce_dirent(entry: &fs::DirEntry) -> Vec<u8> {
     let name_bytes = name.to_string_lossy();
     let name_bytes = name_bytes.as_bytes();
     let copy_len = name_bytes.len().min(255);
-    buf[96..96 + copy_len].copy_from_slice(&name_bytes[..copy_len]);
-    // Already NUL-terminated by the zeroed buffer
+    buf[88..88 + copy_len].copy_from_slice(&name_bytes[..copy_len]);
 
     buf
 }
