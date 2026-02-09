@@ -4,3 +4,6 @@ pspdev
 .cache
 .DS_Store
 *.bin
+benchmarks.json
+test-results.json
+.psp-run-exit
