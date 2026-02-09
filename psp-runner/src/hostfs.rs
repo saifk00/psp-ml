@@ -92,7 +92,13 @@ impl FdTable {
     /// `extra_data` is the trailing data read separately after the command struct
     /// (filenames, write payloads, etc).
     pub fn handle_command(&mut self, cmd_buf: &[u8], extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
-        let cmd_id = protocol::read_u32_le(cmd_buf, 4);
+        let cmd_id = match protocol::read_u32_le(cmd_buf, 4) {
+            Some(id) => id,
+            None => {
+                log::warn!("HostFS packet too short to read command ID ({} bytes)", cmd_buf.len());
+                return self.simple_response(0, -1);
+            }
+        };
         log::debug!(
             "HostFS {} (extra {} bytes)",
             cmd_name(cmd_id),
@@ -138,9 +144,10 @@ impl FdTable {
     // -----------------------------------------------------------------------
 
     fn handle_open(&mut self, cmd_buf: &[u8], extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
-        let mode = protocol::read_u32_le(cmd_buf, 12);
-        let _mask = protocol::read_u32_le(cmd_buf, 16);
-        let _fsnum = protocol::read_u32_le(cmd_buf, 20);
+        let mode = match protocol::read_u32_le(cmd_buf, 12) {
+            Some(m) => m,
+            None => return self.simple_response(OPEN_CMD, -1),
+        };
 
         let filename = extract_cstring(extra_data);
 
@@ -213,7 +220,10 @@ impl FdTable {
     // -----------------------------------------------------------------------
 
     fn handle_close(&mut self, cmd_buf: &[u8]) -> (Vec<u8>, Vec<u8>) {
-        let fd = protocol::read_i32_le(cmd_buf, 12);
+        let fd = match protocol::read_i32_le(cmd_buf, 12) {
+            Some(fd) => fd,
+            None => return self.simple_response(CLOSE_CMD, -1),
+        };
 
         let result = if self.files.remove(&fd).is_some() {
             // If this fd was opened for writing, notify the runner
@@ -247,8 +257,14 @@ impl FdTable {
     // -----------------------------------------------------------------------
 
     fn handle_read(&mut self, cmd_buf: &[u8]) -> (Vec<u8>, Vec<u8>) {
-        let fd = protocol::read_i32_le(cmd_buf, 12);
-        let requested = protocol::read_i32_le(cmd_buf, 16) as usize;
+        let (fd, requested) = match (protocol::read_i32_le(cmd_buf, 12), protocol::read_i32_le(cmd_buf, 16)) {
+            (Some(fd), Some(req)) => (fd, req as usize),
+            _ => {
+                let mut hdr = hostfs_header(READ_CMD, 0);
+                write_i32_le(&mut hdr, -1);
+                return (hdr, Vec::new());
+            }
+        };
         let read_len = requested.min(HOSTFS_MAX_BLOCK);
 
         let mut data = vec![0u8; read_len];
@@ -287,7 +303,10 @@ impl FdTable {
     // -----------------------------------------------------------------------
 
     fn handle_write(&mut self, cmd_buf: &[u8], extra_data: &[u8]) -> (Vec<u8>, Vec<u8>) {
-        let fd = protocol::read_i32_le(cmd_buf, 12);
+        let fd = match protocol::read_i32_le(cmd_buf, 12) {
+            Some(fd) => fd,
+            None => return self.simple_response(WRITE_CMD, -1),
+        };
 
         let result = match self.files.get_mut(&fd) {
             Some(file) => match file.write_all(extra_data) {
@@ -314,9 +333,14 @@ impl FdTable {
     // -----------------------------------------------------------------------
 
     fn handle_lseek(&mut self, cmd_buf: &[u8]) -> (Vec<u8>, Vec<u8>) {
-        let fd = protocol::read_i32_le(cmd_buf, 12);
-        let offset = protocol::read_i64_le(cmd_buf, 16);
-        let whence = protocol::read_i32_le(cmd_buf, 24);
+        let (fd, offset, whence) = match (
+            protocol::read_i32_le(cmd_buf, 12),
+            protocol::read_i64_le(cmd_buf, 16),
+            protocol::read_i32_le(cmd_buf, 24),
+        ) {
+            (Some(fd), Some(off), Some(w)) => (fd, off, w),
+            _ => return self.lseek_response(-1, 0),
+        };
 
         let seek_from = match whence {
             0 => SeekFrom::Start(offset as u64),
@@ -463,7 +487,10 @@ impl FdTable {
     // -----------------------------------------------------------------------
 
     fn handle_dread(&mut self, cmd_buf: &[u8]) -> (Vec<u8>, Vec<u8>) {
-        let fd = protocol::read_i32_le(cmd_buf, 12);
+        let fd = match protocol::read_i32_le(cmd_buf, 12) {
+            Some(fd) => fd,
+            None => return self.simple_response(DREAD_CMD, -1),
+        };
 
         match self.dirs.get_mut(&fd) {
             Some(dir_state) => {
@@ -494,7 +521,10 @@ impl FdTable {
     // -----------------------------------------------------------------------
 
     fn handle_dclose(&mut self, cmd_buf: &[u8]) -> (Vec<u8>, Vec<u8>) {
-        let fd = protocol::read_i32_le(cmd_buf, 12);
+        let fd = match protocol::read_i32_le(cmd_buf, 12) {
+            Some(fd) => fd,
+            None => return self.simple_response(DCLOSE_CMD, -1),
+        };
         let result = if self.dirs.remove(&fd).is_some() {
             log::debug!("DCLOSE fd {}", fd);
             0

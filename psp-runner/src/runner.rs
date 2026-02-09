@@ -85,8 +85,8 @@ impl PspRunner {
             log::error!("handshake: response too short ({} bytes)", n);
             return Err(Error::HandshakeFailed);
         }
-        let magic = read_u32_le(&buf, 0);
-        let cmd = read_u32_le(&buf, 4);
+        let magic = read_u32_le(&buf, 0).unwrap_or(0);
+        let cmd = read_u32_le(&buf, 4).unwrap_or(0);
         if magic != HOSTFS_MAGIC || cmd != HELLO_CMD {
             return Err(Error::Protocol(format!(
                 "expected HELLO, got magic={magic:#010X} cmd={cmd:#010X}"
@@ -142,11 +142,9 @@ impl PspRunner {
                         match classify_packet(&data) {
                             PacketKind::HostFs => {
                                 // Parse the command header to get extra_len
-                                let extra_len = if n >= 12 {
-                                    read_u32_le(&data, 8) as usize
-                                } else {
-                                    0
-                                };
+                                let extra_len = read_u32_le(&data, 8)
+                                    .map(|v| v as usize)
+                                    .unwrap_or(0);
 
                                 // If extra data didn't arrive in the same transfer,
                                 // read it now before dispatching.
@@ -227,11 +225,7 @@ impl PspRunner {
 
                         log::debug!(
                             "HostFS {} (extra {} bytes)",
-                            cmd_name(if cmd_buf.len() >= 8 {
-                                read_u32_le(cmd_buf, 4)
-                            } else {
-                                0
-                            }),
+                            cmd_name(read_u32_le(cmd_buf, 4).unwrap_or(0)),
                             extra_data.len()
                         );
 
@@ -327,7 +321,10 @@ fn guess_cmd_struct_size(data: &[u8]) -> usize {
     if data.len() < 12 {
         return data.len();
     }
-    let cmd = read_u32_le(data, 4);
+    let cmd = match read_u32_le(data, 4) {
+        Some(c) => c,
+        None => return data.len(),
+    };
     match cmd {
         HELLO_CMD | BYE_CMD => 12,
         OPEN_CMD => 24,  // header(12) + mode(4) + mask(4) + fsnum(4)
