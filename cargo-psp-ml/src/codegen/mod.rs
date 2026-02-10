@@ -46,7 +46,7 @@ pub fn generate_code(model: &PspModel) -> GenResult<Generated> {
     let tensor_allocs = gen_allocs(&writer)?;
     let op_infos = gen_op_infos(&writer)?;
 
-    let plain_calls: Vec<&TokenStream> = op_infos.iter().map(|i| &i.call).collect();
+    let plain_calls = gen_plain_calls(&op_infos);
     let timed_calls = gen_timed_calls(&op_infos);
     let op_metadata = gen_op_metadata(&op_infos);
 
@@ -65,7 +65,7 @@ pub fn generate_code(model: &PspModel) -> GenResult<Generated> {
 
             #weight_views
 
-            #(#plain_calls)*
+            #plain_calls
 
             #output_ident
         }
@@ -197,9 +197,14 @@ fn gen_allocs(writer: &TensorExprWriter) -> GenResult<TokenStream> {
     Ok(quote!(#(#entries)*))
 }
 
-struct OpInfo {
+struct SubOp {
     name: String,
     call: TokenStream,
+}
+
+struct OpInfo {
+    setup: TokenStream,
+    sub_ops: Vec<SubOp>,
 }
 
 const VFPU_Q: usize = 4;
@@ -225,10 +230,19 @@ struct Conv2dArgs {
 }
 
 /// Generate naive conv2d/conv2d_relu call.
-fn gen_conv2d_naive(args: &Conv2dArgs) -> (String, TokenStream) {
+fn gen_conv2d_naive(args: &Conv2dArgs) -> OpInfo {
     let Conv2dArgs {
-        input_expr, input_shape, filter_expr, output_expr,
-        w_shape, out_shape, stride, padding, has_relu, bias_expr, ..
+        input_expr,
+        input_shape,
+        filter_expr,
+        output_expr,
+        w_shape,
+        out_shape,
+        stride,
+        padding,
+        has_relu,
+        bias_expr,
+        ..
     } = args;
     let filter_shape = shape_tokens(w_shape);
     let output_shape = shape_tokens(out_shape);
@@ -240,28 +254,39 @@ fn gen_conv2d_naive(args: &Conv2dArgs) -> (String, TokenStream) {
         None => quote!(None),
     };
 
-    if *has_relu {
-        ("conv2d_relu".into(), quote! {
-            conv2d_relu(
-                #input_expr, #input_shape,
-                #filter_expr, #filter_shape,
-                #bias_tok,
-                [#stride_h, #stride_w],
-                [#pad_h, #pad_w],
-                #output_expr, #output_shape
-            );
-        })
+    let (name, call) = if *has_relu {
+        (
+            "conv2d_relu",
+            quote! {
+                conv2d_relu(
+                    #input_expr, #input_shape,
+                    #filter_expr, #filter_shape,
+                    #bias_tok,
+                    [#stride_h, #stride_w],
+                    [#pad_h, #pad_w],
+                    #output_expr, #output_shape
+                );
+            },
+        )
     } else {
-        ("conv2d".into(), quote! {
-            conv2d(
-                #input_expr, #input_shape,
-                #filter_expr, #filter_shape,
-                #bias_tok,
-                [#stride_h, #stride_w],
-                [#pad_h, #pad_w],
-                #output_expr, #output_shape
-            );
-        })
+        (
+            "conv2d",
+            quote! {
+                conv2d(
+                    #input_expr, #input_shape,
+                    #filter_expr, #filter_shape,
+                    #bias_tok,
+                    [#stride_h, #stride_w],
+                    [#pad_h, #pad_w],
+                    #output_expr, #output_shape
+                );
+            },
+        )
+    };
+
+    OpInfo {
+        setup: quote! {},
+        sub_ops: vec![SubOp { name: name.into(), call }],
     }
 }
 
@@ -269,7 +294,7 @@ fn gen_conv2d_naive(args: &Conv2dArgs) -> (String, TokenStream) {
 ///
 /// All GEMM dimensions are padded to multiples of VFPU_Q at compile time.
 /// Stride must be [1,1] — non-unit strides are not supported for the VFPU path.
-fn gen_conv2d_vfpu(args: &Conv2dArgs, op_idx: usize) -> GenResult<(String, TokenStream)> {
+fn gen_conv2d_vfpu(args: &Conv2dArgs, op_idx: usize) -> GenResult<OpInfo> {
     if args.stride != [1, 1] {
         return Err(format!(
             "Op {op_idx}: VFPU conv2d requires stride [1,1], got {:?}",
@@ -278,8 +303,17 @@ fn gen_conv2d_vfpu(args: &Conv2dArgs, op_idx: usize) -> GenResult<(String, Token
     }
 
     let Conv2dArgs {
-        input_expr, input_shape, filter_expr, output_ident,
-        in_shape, w_shape, out_shape, padding, has_relu, bias_expr, ..
+        input_expr,
+        input_shape,
+        filter_expr,
+        output_ident,
+        in_shape,
+        w_shape,
+        out_shape,
+        padding,
+        has_relu,
+        bias_expr,
+        ..
     } = args;
 
     let [n, _, _, ci] = in_shape;
@@ -343,36 +377,57 @@ fn gen_conv2d_vfpu(args: &Conv2dArgs, op_idx: usize) -> GenResult<(String, Token
         quote! {}
     };
 
-    let name = if *has_relu { "conv2d_relu" } else { "conv2d" };
+    let post_name = if *has_relu { "bias_add_relu" } else { "bias_add" };
 
-    Ok((name.into(), quote! {
-        {
-            static mut #scratch_static: [f32; #scratch_size] = [0.0f32; #scratch_size];
-            let #scratch_ident = unsafe { &mut *::core::ptr::addr_of_mut!(#scratch_static) };
-            #weight_setup
-            im2col_padded(
-                #input_expr, #input_shape,
-                [#kh, #kw], [#pad_h, #pad_w], [#ho, #wo],
-                #scratch_ident
-            );
-            matmul_bt_tiled(
-                #scratch_ident, #weight_ref,
-                &mut #output_ident,
-                #m_tiles, #k_tiles, #n_tiles
-            );
-        }
-        #bias_code
-        #relu_code
-    }))
+    // Setup: scratch buffer + weight padding (shared by im2col and matmul)
+    let setup = quote! {
+        static mut #scratch_static: [f32; #scratch_size] = [0.0f32; #scratch_size];
+        let #scratch_ident = unsafe { &mut *::core::ptr::addr_of_mut!(#scratch_static) };
+        #weight_setup
+    };
+
+    let mut sub_ops = vec![
+        SubOp {
+            name: "im2col".into(),
+            call: quote! {
+                im2col_padded(
+                    #input_expr, #input_shape,
+                    [#kh, #kw], [#pad_h, #pad_w], [#ho, #wo],
+                    #scratch_ident
+                );
+            },
+        },
+        SubOp {
+            name: "matmul".into(),
+            call: quote! {
+                matmul_bt_tiled(
+                    #scratch_ident, #weight_ref,
+                    &mut #output_ident,
+                    #m_tiles, #k_tiles, #n_tiles
+                );
+            },
+        },
+    ];
+
+    // Only add bias/relu sub-op if there's actual work
+    if bias_expr.is_some() || *has_relu {
+        sub_ops.push(SubOp {
+            name: post_name.into(),
+            call: quote! { #bias_code #relu_code },
+        });
+    }
+
+    Ok(OpInfo { setup, sub_ops })
 }
 
 /// Generate per-op metadata and kernel calls.
 fn gen_op_infos(writer: &TensorExprWriter) -> GenResult<Vec<OpInfo>> {
     let mut infos = Vec::new();
+    // TODO: Expose this as a compiler flag (or a hint !?)
     let use_vfpu_conv2d = true;
 
     for (i, op) in writer.graph.ops.iter().enumerate() {
-        let (name, call) = match op {
+        let info = match op {
             PspOp::Conv2d {
                 input,
                 weights,
@@ -440,28 +495,35 @@ fn gen_op_infos(writer: &TensorExprWriter) -> GenResult<Vec<OpInfo>> {
                 let output_expr = writer.write(*output);
                 let out_features = writer.graph.tensor(*output).shape.iter().product::<usize>();
 
-                match fused_activation.fused_activation {
-                    Some(Activation::Relu) => {
-                        ("fully_connected_relu".into(), quote! {
+                let (name, call) = match fused_activation.fused_activation {
+                    Some(Activation::Relu) => (
+                        "fully_connected_relu",
+                        quote! {
                             fully_connected_relu(
                                 #input_expr, #in_features,
                                 #weight_expr, #bias_expr,
                                 #output_expr, #out_features
                             );
-                        })
-                    }
-                    None => {
-                        ("fully_connected".into(), quote! {
+                        },
+                    ),
+                    None => (
+                        "fully_connected",
+                        quote! {
                             fully_connected(
                                 #input_expr, #in_features,
                                 #weight_expr, #bias_expr,
                                 #output_expr, #out_features
                             );
-                        })
-                    }
+                        },
+                    ),
                     Some(Activation::Relu6) => {
                         return Err(format!("Op {i}: Relu6 not supported for FullyConnected"));
                     }
+                };
+
+                OpInfo {
+                    setup: quote! {},
+                    sub_ops: vec![SubOp { name: name.into(), call }],
                 }
             }
 
@@ -482,22 +544,34 @@ fn gen_op_infos(writer: &TensorExprWriter) -> GenResult<Vec<OpInfo>> {
                 let output_expr = writer.write(*output);
                 let output_shape = writer.shape(*output);
 
-                ("max_pool2d".into(), quote! {
-                    max_pool2d(
-                        #input_expr, #input_shape,
-                        [2, 2], [2, 2],
-                        #output_expr, #output_shape
-                    );
-                })
+                OpInfo {
+                    setup: quote! {},
+                    sub_ops: vec![SubOp {
+                        name: "max_pool2d".into(),
+                        call: quote! {
+                            max_pool2d(
+                                #input_expr, #input_shape,
+                                [2, 2], [2, 2],
+                                #output_expr, #output_shape
+                            );
+                        },
+                    }],
+                }
             }
 
             PspOp::Reshape { input, output } => {
                 let input_expr = writer.read(*input);
                 let output_expr = writer.write(*output);
 
-                ("reshape".into(), quote! {
-                    reshape(#input_expr, #output_expr);
-                })
+                OpInfo {
+                    setup: quote! {},
+                    sub_ops: vec![SubOp {
+                        name: "reshape".into(),
+                        call: quote! {
+                            reshape(#input_expr, #output_expr);
+                        },
+                    }],
+                }
             }
 
             PspOp::Softmax { .. } => {
@@ -505,24 +579,47 @@ fn gen_op_infos(writer: &TensorExprWriter) -> GenResult<Vec<OpInfo>> {
             }
         };
 
-        infos.push(OpInfo { name, call });
+        infos.push(info);
     }
 
     Ok(infos)
 }
 
-/// Wrap each op call with timing instrumentation.
-fn gen_timed_calls(infos: &[OpInfo]) -> TokenStream {
+/// Emit plain (untimed) calls: setup then all sub-op calls for each op.
+fn gen_plain_calls(infos: &[OpInfo]) -> TokenStream {
     let entries: Vec<TokenStream> = infos
         .iter()
-        .enumerate()
-        .map(|(i, info)| {
-            let call = &info.call;
+        .map(|info| {
+            let setup = &info.setup;
+            let calls: Vec<&TokenStream> = info.sub_ops.iter().map(|s| &s.call).collect();
             quote! {
-                let __t0 = get_tick();
-                #call
-                op_ticks[#i] += get_tick() - __t0;
+                #setup
+                #(#calls)*
             }
+        })
+        .collect();
+    quote!(#(#entries)*)
+}
+
+/// Wrap each sub-op call with timing instrumentation.
+fn gen_timed_calls(infos: &[OpInfo]) -> TokenStream {
+    let mut idx: usize = 0;
+    let entries: Vec<TokenStream> = infos
+        .iter()
+        .flat_map(|info| {
+            let setup = &info.setup;
+            let mut parts = vec![quote! { #setup }];
+            for sub in &info.sub_ops {
+                let call = &sub.call;
+                let i = idx;
+                idx += 1;
+                parts.push(quote! {
+                    let __t0 = get_tick();
+                    #call
+                    op_ticks[#i] += get_tick() - __t0;
+                });
+            }
+            parts
         })
         .collect();
     quote!(#(#entries)*)
@@ -530,8 +627,11 @@ fn gen_timed_calls(infos: &[OpInfo]) -> TokenStream {
 
 /// Generate NUM_OPS and OP_NAMES constants.
 fn gen_op_metadata(infos: &[OpInfo]) -> TokenStream {
-    let num_ops = infos.len();
-    let names: Vec<&str> = infos.iter().map(|i| i.name.as_str()).collect();
+    let names: Vec<&str> = infos
+        .iter()
+        .flat_map(|i| i.sub_ops.iter().map(|s| s.name.as_str()))
+        .collect();
+    let num_ops = names.len();
     quote! {
         pub const NUM_OPS: usize = #num_ops;
         pub const OP_NAMES: [&str; NUM_OPS] = [#(#names),*];
