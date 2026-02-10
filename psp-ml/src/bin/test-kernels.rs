@@ -36,7 +36,7 @@ macro_rules! print_msg {
         #[cfg(feature = "local")]
         println!($($arg)*);
         #[cfg(not(feature = "local"))]
-        psp_ml::println!($($arg)*);
+        psp_ml::dprintln!($($arg)*);
     };
 }
 
@@ -519,14 +519,14 @@ fn format_results(passed: u32, failed: u32, results: &[bool; NUM_TESTS]) -> Json
 fn app_main() {
     psp::enable_home_button();
 
-    psp_ml::println!("psp-ml Kernel Tests");
-    psp_ml::println!("====================");
-    psp_ml::println!("");
+    psp_ml::dprintln!("psp-ml Kernel Tests");
+    psp_ml::dprintln!("====================");
+    psp_ml::dprintln!("");
 
     let (passed, failed, results) = run_all_tests();
 
-    psp_ml::println!("");
-    psp_ml::println!("Results: {} passed, {} failed", passed, failed);
+    psp_ml::dprintln!("");
+    psp_ml::dprintln!("Results: {} passed, {} failed", passed, failed);
 
     // Write JSON to host0:/test-results.json
     let json = format_results(passed, failed, &results);
@@ -543,14 +543,14 @@ fn app_main() {
             sceIoWrite(fd, json.as_bytes().as_ptr() as *const c_void, json.as_bytes().len());
             sceIoClose(fd);
         }
-        psp_ml::println!("Wrote test-results.json to host0:/");
+        psp_ml::dprintln!("Wrote test-results.json to host0:/");
     }
 
-    psp_ml::println!("");
+    psp_ml::dprintln!("");
     if failed == 0 {
-        psp_ml::println!("All tests passed!");
+        psp_ml::dprintln!("All tests passed!");
     } else {
-        psp_ml::println!("{} test(s) FAILED", failed);
+        psp_ml::dprintln!("{} test(s) FAILED", failed);
     }
 }
 

@@ -42,7 +42,7 @@ pub fn exit() {
 /// psp_ml::module!("hello_psp", 1, 0);
 ///
 /// fn app_main() {
-///     psp_ml::println!("Hello from PSP!");
+///     psp_ml::dprintln!("Hello from PSP!");
 /// }
 /// ```
 #[macro_export]

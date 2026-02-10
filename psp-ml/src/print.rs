@@ -54,7 +54,7 @@ pub fn write_stdout(bytes: &[u8]) {
 
 
 #[macro_export]
-macro_rules! print {
+macro_rules! dprint {
     ($($arg:tt)*) => {{
         #[cfg(target_os = "psp")]
         {
@@ -73,8 +73,8 @@ macro_rules! print {
 }
 
 #[macro_export]
-macro_rules! println {
-    () => { $crate::print!("\n") };
+macro_rules! dprintln {
+    () => { $crate::dprint!("\n") };
     ($($arg:tt)*) => {{
         #[cfg(target_os = "psp")]
         {
