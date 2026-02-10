@@ -4,15 +4,13 @@
 #[cfg(not(feature = "local"))]
 use core::ffi::c_void;
 #[cfg(not(feature = "local"))]
-use psp::dprintln;
-#[cfg(not(feature = "local"))]
 use psp::sys::{
     sceIoClose, sceIoOpen, sceIoWrite, sceRtcGetCurrentTick, sceRtcGetTickResolution,
     IoOpenFlags,
 };
 
 #[cfg(not(feature = "local"))]
-psp::module!("mnist_bench", 1, 0);
+psp_ml::module!("mnist_bench", 1, 0);
 
 mod generated;
 
@@ -220,34 +218,34 @@ fn get_tick() -> u64 {
 }
 
 #[cfg(not(feature = "local"))]
-fn psp_main() {
+fn app_main() {
     psp::enable_home_button();
 
-    dprintln!("MNIST Inference Benchmark");
-    dprintln!("=========================");
-    dprintln!("");
+    psp_ml::dprintln!("MNIST Inference Benchmark");
+    psp_ml::dprintln!("=========================");
+    psp_ml::dprintln!("");
 
     let tick_res = unsafe { sceRtcGetTickResolution() } as u64;
 
-    dprintln!("Running inference on {} images...", NUM_IMAGES);
+    psp_ml::dprintln!("Running inference on {} images...", NUM_IMAGES);
     let result = run_benchmark(get_tick, tick_res);
 
-    dprintln!("");
-    dprintln!("Results:");
-    dprintln!("  Total time: {} ms", result.total_us / 1000);
-    dprintln!("  Per image:  {} us", result.per_image_us);
-    dprintln!(
+    psp_ml::dprintln!("");
+    psp_ml::dprintln!("Results:");
+    psp_ml::dprintln!("  Total time: {} ms", result.total_us / 1000);
+    psp_ml::dprintln!("  Per image:  {} us", result.per_image_us);
+    psp_ml::dprintln!(
         "  Accuracy:   {}/{} ({}%)",
         result.correct,
         result.total,
         (result.correct * 100) / result.total
     );
 
-    dprintln!("");
-    dprintln!("Per-op breakdown:");
+    psp_ml::dprintln!("");
+    psp_ml::dprintln!("Per-op breakdown:");
     for (idx, name) in generated::OP_NAMES.iter().enumerate() {
         let op_us = (result.op_ticks[idx] * 1_000_000) / tick_res;
-        dprintln!("  [{}] {}: {} us", idx, name, op_us);
+        psp_ml::dprintln!("  [{}] {}: {} us", idx, name, op_us);
     }
 
     // Write JSON to host0:/benchmarks.json
@@ -265,18 +263,11 @@ fn psp_main() {
             sceIoWrite(fd, json.as_bytes().as_ptr() as *const c_void, json.as_bytes().len());
             sceIoClose(fd);
         }
-        dprintln!("");
-        dprintln!("Wrote benchmarks.json to host0:/");
+        psp_ml::dprintln!("");
+        psp_ml::dprintln!("Wrote benchmarks.json to host0:/");
     } else {
-        dprintln!("");
-        dprintln!("Warning: could not write to host0:/ (psplink not connected?)");
-    }
-
-    dprintln!("");
-    dprintln!("Done. Press HOME to exit.");
-
-    loop {
-        unsafe { psp::sys::sceKernelDelayThread(100_000) };
+        psp_ml::dprintln!("");
+        psp_ml::dprintln!("Warning: could not write to host0:/ (psplink not connected?)");
     }
 }
 
