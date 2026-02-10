@@ -1,7 +1,7 @@
-//! Host-visible print macros for PSP programs.
+//! Dual-output print macros for PSP programs.
 //!
-//! On PSP (via psplink): writes to `sceKernelStdout()` which psplink routes
-//! through USB to the host. Output appears in `psp-runner`'s stdout.
+//! On PSP: writes to both the PSP screen (via psp::debug) and to psplink's
+//! USB stdout (so psp-runner captures the output on the host).
 //!
 //! On host (`--features local`): delegates to `std::print!`.
 
@@ -62,6 +62,7 @@ macro_rules! print {
             let mut buf = $crate::print::WriteBuf::new();
             let _ = write!(buf, $($arg)*);
             $crate::print::write_stdout(buf.as_bytes());
+            psp::debug::print_args(core::format_args!($($arg)*));
         }
         #[cfg(not(target_os = "psp"))]
         {
@@ -82,6 +83,8 @@ macro_rules! println {
             let _ = write!(buf, $($arg)*);
             let _ = buf.write_str("\n");
             $crate::print::write_stdout(buf.as_bytes());
+            psp::debug::print_args(core::format_args!($($arg)*));
+            psp::debug::print_args(core::format_args!("\n"));
         }
         #[cfg(not(target_os = "psp"))]
         {
