@@ -5,10 +5,6 @@ edition = "2021"
 description = "PSP USB host: HostFS server + shell client via psplink protocol"
 
 [[bin]]
-name = "psp-runner"
-path = "src/bin/psp-runner.rs"
-
-[[bin]]
 name = "cargo-psp-run"
 path = "src/bin/cargo-psp-run.rs"
 
