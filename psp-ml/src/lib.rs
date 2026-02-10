@@ -9,3 +9,56 @@
 #![cfg_attr(target_os = "psp", feature(asm_experimental_arch))]
 
 pub mod kernels;
+pub mod print;
+
+/// Signal to psp-runner that the program has finished.
+///
+/// On PSP: opens `host0:/__psp_exit` via HostFS, which psp-runner intercepts
+/// as a virtual file to detect program completion.
+/// On host: no-op (the process exits normally when main returns).
+pub fn exit() {
+    #[cfg(target_os = "psp")]
+    unsafe {
+        let path = b"host0:/__psp_exit\0";
+        let fd = psp::sys::sceIoOpen(
+            path.as_ptr(),
+            psp::sys::IoOpenFlags::WR_ONLY
+                | psp::sys::IoOpenFlags::CREAT
+                | psp::sys::IoOpenFlags::TRUNC,
+            0o777,
+        );
+        if fd.0 >= 0 {
+            psp::sys::sceIoClose(fd);
+        }
+    }
+}
+
+/// Declare a PSP module with automatic exit signaling.
+///
+/// Wraps `psp::module!` and generates a `psp_main()` that calls your
+/// `app_main()` function, then signals exit to `psp-runner`.
+///
+/// ```ignore
+/// psp_ml::module!("hello_psp", 1, 0);
+///
+/// fn app_main() {
+///     psp_ml::dprintln!("Hello from PSP!");
+/// }
+/// ```
+#[macro_export]
+macro_rules! module {
+    ($name:expr, $version_major:expr, $version_minor:expr) => {
+        fn psp_main() {
+            struct ExitGuard;
+            impl Drop for ExitGuard {
+                fn drop(&mut self) {
+                    $crate::exit();
+                }
+            }
+            let _guard = ExitGuard;
+            app_main();
+        }
+
+        psp::module!($name, $version_major, $version_minor);
+    };
+}
