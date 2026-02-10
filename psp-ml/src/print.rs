@@ -52,6 +52,12 @@ pub fn write_stdout(bytes: &[u8]) {
     }
 }
 
+/// Write pre-formatted bytes to the PSP debug screen.
+#[cfg(target_os = "psp")]
+pub fn write_screen(bytes: &[u8]) {
+    let s = core::str::from_utf8(bytes).unwrap_or("");
+    psp::debug::print_args(core::format_args!("{}", s));
+}
 
 #[macro_export]
 macro_rules! dprint {
@@ -62,7 +68,7 @@ macro_rules! dprint {
             let mut buf = $crate::print::WriteBuf::new();
             let _ = write!(buf, $($arg)*);
             $crate::print::write_stdout(buf.as_bytes());
-            psp::debug::print_args(core::format_args!($($arg)*));
+            $crate::print::write_screen(buf.as_bytes());
         }
         #[cfg(not(target_os = "psp"))]
         {
@@ -83,8 +89,7 @@ macro_rules! dprintln {
             let _ = write!(buf, $($arg)*);
             let _ = buf.write_str("\n");
             $crate::print::write_stdout(buf.as_bytes());
-            psp::debug::print_args(core::format_args!($($arg)*));
-            psp::debug::print_args(core::format_args!("\n"));
+            $crate::print::write_screen(buf.as_bytes());
         }
         #[cfg(not(target_os = "psp"))]
         {
