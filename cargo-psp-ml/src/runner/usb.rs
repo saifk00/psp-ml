@@ -22,8 +22,7 @@ pub struct PspUsb {
 impl PspUsb {
     /// Scan the USB bus for a PSP running psplink, open and claim the interface.
     ///
-    /// Resets the USB device first to force the PSP back to handshake state
-    /// (matches usbhostfs_pc behavior on reconnection).
+    /// Resets the USB device to force the PSP back to handshake state.
     pub fn open() -> Result<Self, Error> {
         let ctx = Context::new().map_err(Error::UsbOpen)?;
 
