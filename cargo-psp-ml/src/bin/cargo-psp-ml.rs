@@ -49,8 +49,8 @@ fn print_usage() {
 // ---------------------------------------------------------------------------
 
 fn cmd_compile(args: &[String]) {
-    use psp_ml_compiler::codegen::generate_code;
-    use psp_ml_compiler::parse::tflite;
+    use cargo_psp_ml::codegen::generate_code;
+    use cargo_psp_ml::parse::tflite;
 
     let mut model_path: Option<String> = None;
     let mut out_dir: Option<PathBuf> = None;
@@ -133,7 +133,7 @@ fn cmd_compile(args: &[String]) {
 // ---------------------------------------------------------------------------
 
 fn cmd_run(args: &[String]) {
-    use psp_ml_compiler::runner::{ExitReason, PspRunner};
+    use cargo_psp_ml::runner::{ExitReason, PspRunner};
     use std::process::Command;
     use std::time::Duration;
 
