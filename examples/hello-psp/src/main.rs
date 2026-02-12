@@ -10,7 +10,7 @@ fn app_main() {
 
     dprintln!("=========================");
     dprintln!("Hello from PSP!");
-    dprintln!("If you can read this, psp-runner is working.");
+    dprintln!("If you can read this, cargo psp-ml run is working.");
     dprintln!("2 + 2 = {}", 2 + 2);
     dprintln!("=========================");
 }

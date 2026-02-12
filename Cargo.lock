@@ -84,10 +84,14 @@ checksum = "812e12b5285cc515a9c72a5c1d3b6d46a19dac5acfef5265968c166106e31dd3"
 name = "cargo-psp-ml"
 version = "0.1.0"
 dependencies = [
+ "env_logger",
  "flatbuffers",
+ "log",
  "prettyplease",
  "proc-macro2",
  "quote",
+ "rusb",
+ "serde_json",
  "syn",
 ]
 
@@ -326,16 +330,6 @@ name = "psp-ml"
 version = "0.1.0"
 dependencies = [
  "psp",
-]
-
-[[package]]
-name = "psp-runner"
-version = "0.1.0"
-dependencies = [
- "env_logger",
- "log",
- "rusb",
- "serde_json",
 ]
 
 [[package]]

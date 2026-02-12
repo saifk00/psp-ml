@@ -11,9 +11,9 @@
 pub mod kernels;
 pub mod print;
 
-/// Signal to psp-runner that the program has finished.
+/// Signal to `cargo psp-ml run` that the program has finished.
 ///
-/// On PSP: opens `host0:/__psp_exit` via HostFS, which psp-runner intercepts
+/// On PSP: opens `host0:/__psp_exit` via HostFS, which the runner intercepts
 /// as a virtual file to detect program completion.
 /// On host: no-op (the process exits normally when main returns).
 pub fn exit() {
@@ -36,7 +36,7 @@ pub fn exit() {
 /// Declare a PSP module with automatic exit signaling.
 ///
 /// Wraps `psp::module!` and generates a `psp_main()` that calls your
-/// `app_main()` function, then signals exit to `psp-runner`.
+/// `app_main()` function, then signals exit to `cargo psp-ml run`.
 ///
 /// ```ignore
 /// psp_ml::module!("hello_psp", 1, 0);
