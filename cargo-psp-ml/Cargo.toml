@@ -3,10 +3,6 @@ name = "cargo-psp-ml"
 version = "0.1.0"
 edition = "2021"
 
-[lib]
-name = "psp_ml_compiler"
-path = "src/lib.rs"
-
 [[bin]]
 name = "cargo-psp-ml"
 path = "src/bin/cargo-psp-ml.rs"
