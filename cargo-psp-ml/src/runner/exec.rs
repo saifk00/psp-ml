@@ -5,12 +5,12 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crate::async_io::{self, AsyncMessage, OutputCapture};
-use crate::error::Error;
-use crate::hostfs::FdTable;
-use crate::protocol::*;
-use crate::shell;
-use crate::usb::PspUsb;
+use super::async_io::{self, AsyncMessage, OutputCapture};
+use super::error::Error;
+use super::hostfs::FdTable;
+use super::protocol::*;
+use super::shell;
+use super::usb::PspUsb;
 
 /// Sentinel filename that PSP programs write via HostFS to signal exit.
 const EXIT_SENTINEL: &str = "__psp_exit";
