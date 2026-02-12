@@ -1,3 +1,2 @@
 [alias]
 psp-ml = "run -p cargo-psp-ml --bin cargo-psp-ml --"
-psp-run = "run -p psp-runner --bin cargo-psp-run --"

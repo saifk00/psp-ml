@@ -1,7 +1,7 @@
 //! Dual-output print macros for PSP programs.
 //!
 //! On PSP: writes to both the PSP screen (via psp::debug) and to psplink's
-//! USB stdout (so psp-runner captures the output on the host).
+//! USB stdout (so `cargo psp-ml run` captures the output on the host).
 //!
 //! On host (`--features local`): delegates to `std::print!`.
 

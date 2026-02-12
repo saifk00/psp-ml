@@ -34,7 +34,7 @@ done
 # Step 1: Generate inference code from TFLite model
 echo "==> Generating inference code..."
 cd "$ROOT_DIR"
-cargo psp-ml "$SCRIPT_DIR/mnist_cnn.tflite" -o "$SCRIPT_DIR/src/"
+cargo psp-ml compile "$SCRIPT_DIR/mnist_cnn.tflite" -o "$SCRIPT_DIR/src/"
 
 if [ "$MODE" = "local" ]; then
     # -------------------------------------------------------------------------

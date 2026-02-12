@@ -4,7 +4,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 use std::sync::mpsc;
 
-use crate::protocol::{self, *};
+use super::protocol::{self, *};
 
 /// Virtual filename used by `psp_ml::exit()` to signal program completion.
 const EXIT_SENTINEL: &str = "__psp_exit";
