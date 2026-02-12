@@ -8,6 +8,7 @@
 #![no_std]
 #![cfg_attr(target_os = "psp", feature(asm_experimental_arch))]
 
+pub mod bench;
 pub mod kernels;
 pub mod print;
 
