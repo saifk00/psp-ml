@@ -150,8 +150,12 @@ fn gen_weight_code(
 
     let statics = quote! {
         #[allow(dead_code)]
-        #[repr(align(4))]
+        #[repr(align(16))]
         struct AlignedBytes<const N: usize>([u8; N]);
+
+        /// 16-byte aligned f32 array for VFPU `lv.q`/`sv.q`.
+        #[repr(C, align(16))]
+        struct Aligned16<const N: usize>([f32; N]);
 
         static TENSOR_DATA_BYTES: AlignedBytes<#total_bytes> =
             AlignedBytes(*include_bytes!("weights.bin"));
@@ -177,15 +181,31 @@ fn gen_weight_code(
     Ok((statics, views))
 }
 
-/// Generate intermediate and output tensor allocations as zero-filled arrays.
+/// Generate intermediate and output tensor allocations.
+///
+/// - Intermediate: 16-byte aligned `static mut` (for VFPU `sv.q`), exposed as `&mut [f32]`.
+/// - Output: local zero-filled array (returned by value from `forward`).
 fn gen_allocs(writer: &TensorExprWriter) -> GenResult<TokenStream> {
     let mut entries = Vec::new();
 
     for tensor in &writer.graph.tensors {
+        let ident = writer.ident(tensor.id);
+        let size = tensor.shape.iter().product::<usize>();
+
         match &tensor.kind {
-            TensorKind::Intermediate | TensorKind::Output => {
-                let ident = writer.ident(tensor.id);
-                let size = tensor.shape.iter().product::<usize>();
+            TensorKind::Intermediate => {
+                let buf_static = writer.buf_static(tensor.id);
+                entries.push(quote! {
+                    static mut #buf_static: Aligned16<#size> = Aligned16([0.0f32; #size]);
+                    let #ident = unsafe {
+                        core::slice::from_raw_parts_mut(
+                            core::ptr::addr_of_mut!(#buf_static) as *mut f32,
+                            #size,
+                        )
+                    };
+                });
+            }
+            TensorKind::Output => {
                 entries.push(quote! {
                     let mut #ident = [0.0f32; #size];
                 });
@@ -219,7 +239,6 @@ struct Conv2dArgs {
     input_shape: TokenStream,
     filter_expr: TokenStream,
     output_expr: TokenStream,
-    output_ident: Ident,
     in_shape: [usize; 4],
     w_shape: [usize; 4],
     out_shape: [usize; 4],
@@ -286,7 +305,10 @@ fn gen_conv2d_naive(args: &Conv2dArgs) -> OpInfo {
 
     OpInfo {
         setup: quote! {},
-        sub_ops: vec![SubOp { name: name.into(), call }],
+        sub_ops: vec![SubOp {
+            name: name.into(),
+            call,
+        }],
     }
 }
 
@@ -306,7 +328,6 @@ fn gen_conv2d_vfpu(args: &Conv2dArgs, op_idx: usize) -> GenResult<OpInfo> {
         input_expr,
         input_shape,
         filter_expr,
-        output_ident,
         in_shape,
         w_shape,
         out_shape,
@@ -321,13 +342,14 @@ fn gen_conv2d_vfpu(args: &Conv2dArgs, op_idx: usize) -> GenResult<OpInfo> {
     let [_, ho, wo, _] = out_shape;
     let [pad_h, pad_w] = padding;
 
+    // in the GEMM path, we're doing C[M,N] = A[M,K] @ B[N,K]^T
     let gemm_m = n * ho * wo;
     let gemm_k = kh * kw * ci;
     let k_padded = ceil_vfpu_q(gemm_k);
     let m_padded = ceil_vfpu_q(gemm_m);
     let n_padded = ceil_vfpu_q(*co);
 
-    // Assert M and N are already VFPU_Q-aligned (defer padding support)
+    // Assert M and N are already VFPU_Q-aligned (caller should have padded them)
     if m_padded != gemm_m {
         return Err(format!(
             "Op {op_idx}: VFPU conv2d requires M ({gemm_m}) to be a multiple of {VFPU_Q}"
@@ -347,42 +369,61 @@ fn gen_conv2d_vfpu(args: &Conv2dArgs, op_idx: usize) -> GenResult<OpInfo> {
     let scratch_ident = Ident::new(&format!("conv_scratch_{op_idx}"), Span::call_site());
     let scratch_static = Ident::new(&format!("CONV_SCRATCH_{op_idx}"), Span::call_site());
 
-    // Weight expression: pad K if needed, otherwise use original tensor directly
-    let (weight_setup, weight_ref) = if k_padded != gemm_k {
-        let padded_size = co * k_padded;
-        let padded_static = Ident::new(&format!("PADDED_W_{op_idx}"), Span::call_site());
-        let padded_ident = Ident::new(&format!("padded_w_{op_idx}"), Span::call_site());
+    // Always copy the kernel to a fp32 (16-byte) aligned static buffer for VFPU lv.q.
+    let padded_size = co * k_padded;
+    let padded_static = Ident::new(&format!("PADDED_W_{op_idx}"), Span::call_site());
+    let padded_ident = Ident::new(&format!("padded_w_{op_idx}"), Span::call_site());
 
-        let setup = quote! {
-            static mut #padded_static: [f32; #padded_size] = [0.0f32; #padded_size];
-            let #padded_ident = unsafe { &mut *::core::ptr::addr_of_mut!(#padded_static) };
+    let mut weight_setup = quote! {
+        static mut #padded_static: Aligned16<#padded_size> = Aligned16([0.0f32; #padded_size]);
+        let #padded_ident = unsafe {
+            core::slice::from_raw_parts_mut(
+                core::ptr::addr_of_mut!(#padded_static) as *mut f32,
+                #padded_size,
+            )
+        };
+    };
+    if k_padded != gemm_k {
+        weight_setup.extend(quote! {
             for row in 0..#co {
                 #padded_ident[row * #k_padded..row * #k_padded + #gemm_k]
                     .copy_from_slice(&#filter_expr[row * #gemm_k..(row + 1) * #gemm_k]);
             }
-        };
-        (setup, quote!(#padded_ident))
+        });
     } else {
-        (quote! {}, quote!(#filter_expr))
-    };
+        weight_setup.extend(quote! {
+            #padded_ident.copy_from_slice(#filter_expr);
+        });
+    }
+    let weight_ref = quote!(#padded_ident);
 
+    let output_expr = &args.output_expr;
     let bias_code = match bias_expr {
-        Some(b) => quote! { bias_add(&mut #output_ident, #b, #gemm_m, #co); },
+        Some(b) => quote! { bias_add(#output_expr, #b, #gemm_m, #co); },
         None => quote! {},
     };
 
     let relu_code = if *has_relu {
-        quote! { relu(&mut #output_ident); }
+        quote! { relu(#output_expr); }
     } else {
         quote! {}
     };
 
-    let post_name = if *has_relu { "bias_add_relu" } else { "bias_add" };
+    let post_name = if *has_relu {
+        "bias_add_relu"
+    } else {
+        "bias_add"
+    };
 
     // Setup: scratch buffer + weight padding (shared by im2col and matmul)
     let setup = quote! {
-        static mut #scratch_static: [f32; #scratch_size] = [0.0f32; #scratch_size];
-        let #scratch_ident = unsafe { &mut *::core::ptr::addr_of_mut!(#scratch_static) };
+        static mut #scratch_static: Aligned16<#scratch_size> = Aligned16([0.0f32; #scratch_size]);
+        let #scratch_ident = unsafe {
+            core::slice::from_raw_parts_mut(
+                core::ptr::addr_of_mut!(#scratch_static) as *mut f32,
+                #scratch_size,
+            )
+        };
         #weight_setup
     };
 
@@ -402,7 +443,7 @@ fn gen_conv2d_vfpu(args: &Conv2dArgs, op_idx: usize) -> GenResult<OpInfo> {
             call: quote! {
                 matmul_bt_tiled(
                     #scratch_ident, #weight_ref,
-                    &mut #output_ident,
+                    #output_expr,
                     #m_tiles, #k_tiles, #n_tiles
                 );
             },
@@ -461,7 +502,6 @@ fn gen_op_infos(writer: &TensorExprWriter) -> GenResult<Vec<OpInfo>> {
                     input_shape: writer.shape(*input),
                     filter_expr: writer.read(*weights),
                     output_expr: writer.write(*output),
-                    output_ident: writer.ident(*output),
                     in_shape: [in_shape[0], in_shape[1], in_shape[2], in_shape[3]],
                     w_shape: [w_shape[0], w_shape[1], w_shape[2], w_shape[3]],
                     out_shape: [out_shape[0], out_shape[1], out_shape[2], out_shape[3]],
@@ -523,7 +563,10 @@ fn gen_op_infos(writer: &TensorExprWriter) -> GenResult<Vec<OpInfo>> {
 
                 OpInfo {
                     setup: quote! {},
-                    sub_ops: vec![SubOp { name: name.into(), call }],
+                    sub_ops: vec![SubOp {
+                        name: name.into(),
+                        call,
+                    }],
                 }
             }
 

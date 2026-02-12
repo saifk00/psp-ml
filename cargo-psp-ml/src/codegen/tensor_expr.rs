@@ -26,22 +26,34 @@ impl<'a> TensorExprWriter<'a> {
     ///
     /// - Input tensor → `input` (the function parameter)
     /// - Constant tensor → `t_{id}` (already a `&[f32]` slice)
-    /// - Intermediate/Output → `&t_{id}` (borrow local array)
+    /// - Intermediate → `t_{id}` (already `&mut [f32]` from aligned static; auto-reborrows)
+    /// - Output → `&t_{id}` (borrow local array)
     pub fn read(&self, id: TensorId) -> TokenStream {
         if id == self.input_id {
             return quote!(input);
         }
         let ident = self.ident(id);
         match &self.graph.tensor(id).kind {
-            TensorKind::Constant { .. } => quote!(#ident),
+            TensorKind::Constant { .. } | TensorKind::Intermediate => quote!(#ident),
             _ => quote!(&#ident),
         }
     }
 
-    /// Write-reference expression: `&mut t_{id}`.
+    /// Write-reference expression for a tensor in a kernel call.
+    ///
+    /// - Intermediate → `t_{id}` (already `&mut [f32]` from aligned static)
+    /// - Output → `&mut t_{id}` (borrow local array)
     pub fn write(&self, id: TensorId) -> TokenStream {
         let ident = self.ident(id);
-        quote!(&mut #ident)
+        match &self.graph.tensor(id).kind {
+            TensorKind::Intermediate => quote!(#ident),
+            _ => quote!(&mut #ident),
+        }
+    }
+
+    /// Static buffer identifier for an intermediate tensor: `T_{id}_BUF`.
+    pub fn buf_static(&self, id: TensorId) -> Ident {
+        Ident::new(&format!("T_{id}_BUF"), Span::call_site())
     }
 
     /// Offset constant identifier for a weight tensor: `T_{id}_OFFSET`.
