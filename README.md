@@ -21,12 +21,12 @@ psp-ml/
 
 1. Install the cargo subcommand:
 ```bash
-   cargo install --path cargo-psp-ml --features compiler
+   cargo install --path cargo-psp-ml
 ```
 
 2. Compile a TFLite model:
 ```bash
-   cargo psp-ml model.tflite --out examples/mnist-bench/src
+   cargo psp-ml compile model.tflite --out examples/mnist-bench/src
 ```
 
 3. Build for PSP:

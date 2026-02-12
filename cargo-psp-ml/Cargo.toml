@@ -12,8 +12,15 @@ name = "cargo-psp-ml"
 path = "src/bin/cargo-psp-ml.rs"
 
 [dependencies]
+# Compiler
 flatbuffers = "24.3"
 quote = "1"
 proc-macro2 = "1"
 syn = "2"
 prettyplease = "0.2"
+
+# Runner
+rusb = "0.9"
+log = "0.4"
+env_logger = "0.11"
+serde_json = "1"

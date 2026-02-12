@@ -1,4 +1,4 @@
-use crate::protocol::{self, ASYNC_MAGIC, ASYNC_SHELL, ASYNC_STDERR, ASYNC_STDOUT};
+use super::protocol::{self, ASYNC_MAGIC, ASYNC_SHELL, ASYNC_STDERR, ASYNC_STDOUT};
 
 /// A parsed async message received from the PSP on EP1.
 pub struct AsyncMessage {

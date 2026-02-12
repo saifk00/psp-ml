@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use rusb::{Context, DeviceHandle, UsbContext};
 
-use crate::error::Error;
+use super::error::Error;
 
 const PSP_VID: u16 = 0x054C;
 const PSP_PID: u16 = 0x01C9;
