@@ -10,7 +10,7 @@ usage() {
     echo ""
     echo "Modes:"
     echo "  --local   Build and run on host CPU (default)"
-    echo "  --psp     Build for PSP, deploy via usbhostfs_pc, collect results"
+    echo "  --psp     Build for PSP, deploy via cargo psp-ml run, collect results"
     echo ""
     echo "Options:"
     echo "  --config  Kernel configuration tag (default: naive)"
@@ -48,54 +48,31 @@ if [ "$MODE" = "local" ]; then
 
 elif [ "$MODE" = "psp" ]; then
     # -------------------------------------------------------------------------
-    # PSP mode: build, deploy via usbhostfs_pc + pspsh, collect JSON
+    # PSP mode: build, deploy via cargo psp-ml run, wait for results
     # -------------------------------------------------------------------------
-    echo "==> Building for PSP (release)..."
-    cargo +nightly psp --release
 
-    PRX="target/mipsel-sony-psp/release/mnist-bench.prx"
+    rm -f "$BENCH_JSON"
 
-    # Ensure usbhostfs_pc is running (start it if not)
-    if ! pgrep -x usbhostfs_pc > /dev/null 2>&1; then
-        echo "==> Starting usbhostfs_pc in background..."
-        usbhostfs_pc &
-        USBHOST_PID=$!
-        sleep 2  # Give it time to connect
-        echo "    PID: $USBHOST_PID"
-    else
-        USBHOST_PID=""
-        echo "==> usbhostfs_pc already running"
-    fi
+    # cd to script dir so host0:/ maps here (benchmarks.json lands in place)
+    cd "$SCRIPT_DIR"
+    echo "==> Building and deploying to PSP..."
+    cargo psp-ml run -p mnist-bench --release
 
-    # Remove stale results
-    rm -f benchmarks.json
-
-    # Deploy and run on PSP
-    echo "==> Deploying to PSP via psplink..."
-    pspsh -e "host0:/$PRX"
-
-    # Wait for the PSP to write results (poll for benchmarks.json)
-    echo "==> Waiting for benchmark results..."
-    TIMEOUT=60
+    # Wait for PSP to write benchmarks.json via HostFS (host0:/)
+    echo "==> Waiting for benchmarks.json..."
+    TIMEOUT=120
     ELAPSED=0
-    while [ ! -f benchmarks.json ] && [ "$ELAPSED" -lt "$TIMEOUT" ]; do
+    while [ ! -f "$BENCH_JSON" ] && [ "$ELAPSED" -lt "$TIMEOUT" ]; do
         sleep 1
         ELAPSED=$((ELAPSED + 1))
     done
 
-    if [ -f benchmarks.json ]; then
-        echo "==> Benchmark results collected!"
-        mv benchmarks.json "$BENCH_JSON"
+    if [ -f "$BENCH_JSON" ]; then
         echo ""
+        echo "==> benchmarks.json:"
         cat "$BENCH_JSON"
     else
-        echo "==> Timed out waiting for benchmarks.json after ${TIMEOUT}s"
+        echo "==> Timed out waiting for benchmarks.json"
         exit 1
-    fi
-
-    # Clean up usbhostfs_pc if we started it
-    if [ -n "$USBHOST_PID" ]; then
-        echo "==> Stopping usbhostfs_pc (PID $USBHOST_PID)..."
-        kill "$USBHOST_PID" 2>/dev/null || true
     fi
 fi
