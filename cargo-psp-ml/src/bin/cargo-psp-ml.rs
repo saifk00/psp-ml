@@ -5,12 +5,11 @@
 //!   cargo psp-ml run -p hello-psp --release
 
 use std::fs;
+use std::net::TcpStream;
 use std::path::PathBuf;
 use std::process;
 
 fn main() {
-    env_logger::init();
-
     // When invoked as `cargo psp-ml`, cargo passes "psp-ml" as argv[1]. Strip it.
     let args: Vec<String> = std::env::args().collect();
     let args = if args.get(1).map(|s| s.as_str()) == Some("psp-ml") {
@@ -37,11 +36,11 @@ fn print_usage() {
     eprintln!();
     eprintln!("Usage:");
     eprintln!("  cargo psp-ml compile <model.tflite> [-o <dir>]");
-    eprintln!("  cargo psp-ml run -p <package> [--release] [--timeout <secs>]");
+    eprintln!("  cargo psp-ml run -p <package> [--release]");
     eprintln!();
     eprintln!("Subcommands:");
     eprintln!("  compile   Compile a TFLite model into Rust code + weights");
-    eprintln!("  run       Build, deploy, and run on a PSP over USB");
+    eprintln!("  run       Build and deploy a PRX to a PSP running psplink");
 }
 
 // ---------------------------------------------------------------------------
@@ -133,16 +132,13 @@ fn cmd_compile(args: &[String]) {
 // ---------------------------------------------------------------------------
 
 fn cmd_run(args: &[String]) {
-    use cargo_psp_ml::runner::{ExitReason, PspRunner};
+    use std::io::Write;
     use std::process::Command;
-    use std::time::Duration;
 
     let mut package: Option<String> = None;
     let mut bin: Option<String> = None;
     let mut features: Option<String> = None;
     let mut release = false;
-    let mut timeout_secs: u64 = 60;
-    let mut root_dir = PathBuf::from(".");
 
     let mut i = 0;
     while i < args.len() {
@@ -169,44 +165,21 @@ fn cmd_run(args: &[String]) {
                     process::exit(1);
                 }).clone());
             }
-            "--timeout" => {
-                i += 1;
-                timeout_secs = args.get(i)
-                    .and_then(|s| s.parse().ok())
-                    .unwrap_or_else(|| {
-                        eprintln!("--timeout requires a number of seconds");
-                        process::exit(1);
-                    });
-            }
-            "--root" => {
-                i += 1;
-                root_dir = PathBuf::from(args.get(i).unwrap_or_else(|| {
-                    eprintln!("--root requires a directory path");
-                    process::exit(1);
-                }));
-            }
             "--help" | "-h" => {
                 eprintln!("Usage: cargo psp-ml run [OPTIONS] -p <PACKAGE>");
                 eprintln!();
                 eprintln!("Build a PSP PRX and deploy it to a PSP running psplink.");
+                eprintln!("Requires usbhostfs_pc (launched automatically if not running).");
                 eprintln!();
-                eprintln!("Build options:");
+                eprintln!("Options:");
                 eprintln!("  -p, --package <PKG>    Package to build and run");
                 eprintln!("  --bin <NAME>           Binary target (default: package name)");
                 eprintln!("  --features <FEATURES>  Comma-separated features to activate");
                 eprintln!("  --release              Build in release mode");
                 eprintln!();
-                eprintln!("Runner options:");
-                eprintln!("  --timeout <SECS>       Timeout in seconds (default: 60)");
-                eprintln!("  --root <DIR>           HostFS root directory (default: workspace root)");
-                eprintln!();
                 eprintln!("Examples:");
                 eprintln!("  cargo psp-ml run -p hello-psp --release");
                 eprintln!("  cargo psp-ml run -p psp-ml --bin test-kernels --features test-kernels --release");
-                eprintln!();
-                eprintln!("Environment:");
-                eprintln!("  RUST_LOG=info    Show protocol activity");
-                eprintln!("  RUST_LOG=debug   Show all HostFS commands");
                 process::exit(0);
             }
             other => {
@@ -267,7 +240,6 @@ fn cmd_run(args: &[String]) {
         eprintln!("       is cargo-psp installed? (`cargo install cargo-psp`)");
         process::exit(1);
     });
-    // Forward build stderr (warnings, errors, progress) to our stderr
     let build_stderr = String::from_utf8_lossy(&output.stderr);
     if !build_stderr.is_empty() {
         eprint!("{build_stderr}");
@@ -278,7 +250,6 @@ fn cmd_run(args: &[String]) {
     }
 
     // --- Step 2: Find the PRX ---
-    // Forward build stdout (PBP table) to stderr for visibility
     let build_stdout = String::from_utf8_lossy(&output.stdout);
     if !build_stdout.is_empty() {
         eprint!("{build_stdout}");
@@ -292,44 +263,104 @@ fn cmd_run(args: &[String]) {
         process::exit(1);
     });
 
-    // Use workspace root as HostFS root, unless --root was explicitly set.
-    let root_dir = if root_dir == PathBuf::from(".") {
-        workspace_root
-    } else {
-        root_dir
-    };
-    let host0_rel = prx_abs.strip_prefix(&root_dir).unwrap_or(&prx_abs);
+    // host0: = CWD (where user code writes files)
+    // host1: = workspace root (where PRX lives, used by ld command)
+    let cwd = std::env::current_dir().unwrap_or_else(|e| {
+        eprintln!("error: cannot determine current directory: {e}");
+        process::exit(1);
+    });
+    let prx_rel = prx_abs.strip_prefix(&workspace_root).unwrap_or(&prx_abs);
+    let host1_path = format!("host1:/{}", prx_rel.display());
 
-    // --- Step 3: Deploy to PSP ---
-    eprintln!("==> Connecting to PSP...");
-    let runner = PspRunner::connect(root_dir).unwrap_or_else(|e| {
-        eprintln!("error: {e}");
+    // --- Step 3: Ensure usbhostfs_pc is running ---
+    ensure_usbhostfs(&cwd, &workspace_root);
+
+    // --- Step 4: Send load command over TCP ---
+    eprintln!("==> Loading: {host1_path}");
+    let mut stream = TcpStream::connect("127.0.0.1:10000").unwrap_or_else(|e| {
+        eprintln!("error: cannot connect to usbhostfs_pc shell port: {e}");
+        process::exit(1);
+    });
+    // psplink shell protocol: NUL-separated args terminated by 0x01
+    let mut cmd = Vec::new();
+    cmd.extend_from_slice(b"ld\0");
+    cmd.extend_from_slice(host1_path.as_bytes());
+    cmd.push(0x00);
+    cmd.push(0x01);
+    stream.write_all(&cmd).unwrap_or_else(|e| {
+        eprintln!("error: failed to send load command: {e}");
         process::exit(1);
     });
 
-    let host0_path = format!("host0:/{}", host0_rel.display());
-    eprintln!("==> Executing: {host0_path}");
+    eprintln!("==> Done");
+}
 
-    let result = runner
-        .execute(&host0_path, Duration::from_secs(timeout_secs))
+/// Ensure usbhostfs_pc is running.
+///
+/// Drives: host0: = cwd (user files), host1: = workspace root (PRX location).
+fn ensure_usbhostfs(cwd: &std::path::Path, workspace_root: &std::path::Path) {
+    use std::process::Command;
+
+    const SHELL_PORT: &str = "127.0.0.1:10000";
+
+    // Check if already running by probing the shell TCP port.
+    if TcpStream::connect(SHELL_PORT).is_ok() {
+        eprintln!("==> usbhostfs_pc already running");
+        return;
+    }
+
+    // Find the binary.
+    let bin = find_usbhostfs_pc().unwrap_or_else(|| {
+        eprintln!("error: usbhostfs_pc not found");
+        eprintln!("       set $PSPDEV or add usbhostfs_pc to $PATH");
+        process::exit(1);
+    });
+
+    eprintln!("==> Starting usbhostfs_pc (host0: {}, host1: {})",
+        cwd.display(), workspace_root.display());
+    Command::new(&bin)
+        .arg(cwd)            // host0:
+        .arg(workspace_root) // host1:
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
         .unwrap_or_else(|e| {
-            eprintln!("error: {e}");
+            eprintln!("error: failed to start usbhostfs_pc: {e}");
             process::exit(1);
         });
 
-    match &result.exit_reason {
-        ExitReason::ModuleExited => {
-            eprintln!("==> Done");
-        }
-        ExitReason::Timeout => {
-            eprintln!("==> Timed out after {timeout_secs}s");
-            process::exit(1);
-        }
-        ExitReason::Disconnected(msg) => {
-            eprintln!("==> PSP disconnected: {msg}");
-            process::exit(1);
+    // Poll until the shell port is ready.
+    for _ in 0..50 {
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        if TcpStream::connect(SHELL_PORT).is_ok() {
+            return;
         }
     }
+
+    eprintln!("error: usbhostfs_pc started but shell port not ready after 5s");
+    process::exit(1);
+}
+
+/// Search for usbhostfs_pc binary in $PSPDEV/bin and $PATH.
+fn find_usbhostfs_pc() -> Option<PathBuf> {
+    if let Ok(pspdev) = std::env::var("PSPDEV") {
+        let candidate = PathBuf::from(&pspdev).join("bin/usbhostfs_pc");
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+    // Fall back to $PATH
+    which("usbhostfs_pc")
+}
+
+/// Simple which(1) — search $PATH for an executable.
+fn which(name: &str) -> Option<PathBuf> {
+    std::env::var_os("PATH").and_then(|paths| {
+        std::env::split_paths(&paths)
+            .map(|dir| dir.join(name))
+            .find(|p| p.is_file())
+    })
 }
 
 // ---------------------------------------------------------------------------

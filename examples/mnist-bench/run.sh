@@ -48,23 +48,31 @@ if [ "$MODE" = "local" ]; then
 
 elif [ "$MODE" = "psp" ]; then
     # -------------------------------------------------------------------------
-    # PSP mode: build, deploy via cargo psp-ml run, collect JSON
+    # PSP mode: build, deploy via cargo psp-ml run, wait for results
     # -------------------------------------------------------------------------
 
-    # Remove stale results
-    rm -f "$ROOT_DIR/benchmarks.json"
+    rm -f "$BENCH_JSON"
 
-    echo "==> Building and running on PSP..."
+    # cd to script dir so host0:/ maps here (benchmarks.json lands in place)
+    cd "$SCRIPT_DIR"
+    echo "==> Building and deploying to PSP..."
     cargo psp-ml run -p mnist-bench --release
 
-    # benchmarks.json is written to workspace root via HostFS
-    if [ -f "$ROOT_DIR/benchmarks.json" ]; then
-        mv "$ROOT_DIR/benchmarks.json" "$BENCH_JSON"
+    # Wait for PSP to write benchmarks.json via HostFS (host0:/)
+    echo "==> Waiting for benchmarks.json..."
+    TIMEOUT=120
+    ELAPSED=0
+    while [ ! -f "$BENCH_JSON" ] && [ "$ELAPSED" -lt "$TIMEOUT" ]; do
+        sleep 1
+        ELAPSED=$((ELAPSED + 1))
+    done
+
+    if [ -f "$BENCH_JSON" ]; then
         echo ""
         echo "==> benchmarks.json:"
         cat "$BENCH_JSON"
     else
-        echo "==> Error: benchmarks.json not found after PSP execution"
+        echo "==> Timed out waiting for benchmarks.json"
         exit 1
     fi
 fi
