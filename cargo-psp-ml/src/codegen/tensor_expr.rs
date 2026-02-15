@@ -65,10 +65,4 @@ impl<'a> TensorExprWriter<'a> {
     pub fn len_const(&self, id: TensorId) -> Ident {
         Ident::new(&format!("T_{id}_LEN"), Span::call_site())
     }
-
-    /// Shape literal for a tensor: `[dim0, dim1, ...]`.
-    pub fn shape(&self, id: TensorId) -> TokenStream {
-        let dims = &self.graph.tensor(id).shape;
-        quote!([#(#dims),*])
-    }
 }
