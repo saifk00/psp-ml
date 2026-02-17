@@ -191,6 +191,21 @@ binary_op_kernel!(binary_sub, |a: f32, b: f32| a - b);
 binary_op_kernel!(binary_div, |a: f32, b: f32| a / b);
 binary_op_kernel!(binary_max, |a: f32, b: f32| if a > b { a } else { b });
 
+// ─── Element-wise unary ops ─────────────────────────────────────
+
+macro_rules! unary_op_kernel {
+    ($name:ident, $op:expr) => {
+        pub fn $name(input: &[f32], output: &mut [f32]) {
+            let op: fn(f32) -> f32 = $op;
+            for i in 0..input.len() {
+                output[i] = op(input[i]);
+            }
+        }
+    };
+}
+
+unary_op_kernel!(unary_logistic, |x: f32| 1.0 / (1.0 + libm::expf(-x)));
+
 /// Fully Connected with ReLU (naive)
 ///
 /// - `input`:   [in_features]
@@ -269,5 +284,16 @@ mod tests {
         let mut out = [0.0f32; 6];
         binary_mul(&a, &b, &mut out, 3);
         assert_eq!(out, [10.0, 20.0, 30.0, 40.0, 50.0, 60.0]);
+    }
+
+    #[test]
+    fn test_unary_logistic() {
+        let input = [0.0, 1.0, -1.0, 10.0];
+        let mut out = [0.0f32; 4];
+        unary_logistic(&input, &mut out);
+        assert!((out[0] - 0.5).abs() < 1e-6);
+        assert!((out[1] - 0.7310586).abs() < 1e-5);
+        assert!((out[2] - 0.2689414).abs() < 1e-5);
+        assert!((out[3] - 1.0).abs() < 1e-4);
     }
 }

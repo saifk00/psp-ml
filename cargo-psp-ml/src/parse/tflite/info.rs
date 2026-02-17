@@ -14,6 +14,7 @@ const SUPPORTED_OPS: &[BuiltinOperator] = &[
     BuiltinOperator::SUB,
     BuiltinOperator::DIV,
     BuiltinOperator::MAXIMUM,
+    BuiltinOperator::LOGISTIC,
 ];
 
 fn type_name(t: TensorType) -> &'static str {

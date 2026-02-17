@@ -11,7 +11,7 @@ use super::{
 
 type Buffers<'a> = flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<Buffer<'a>>>;
 use crate::ir::graph::{DType, Graph, Tensor, TensorId, TensorKind};
-use crate::ir::psp::{Activation, BinaryOp, Conv2dParams, FullyConnectedParams, PspModel, PspOp};
+use crate::ir::psp::{Activation, BinaryOp, Conv2dParams, FullyConnectedParams, PspModel, PspOp, UnaryOp};
 
 /// Convert a TFLite model buffer into PSP IR.
 ///
@@ -108,6 +108,9 @@ fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
             | BuiltinOperator::DIV
             | BuiltinOperator::MAXIMUM => {
                 Some(lower_elementwise(&op, &tensor_map, builtin_code)?)
+            }
+            BuiltinOperator::LOGISTIC => {
+                Some(lower_unary_elementwise(&op, &tensor_map, builtin_code)?)
             }
             BuiltinOperator::SOFTMAX => Some(lower_softmax(&op, &tensor_map)?),
             other => {
@@ -375,6 +378,30 @@ fn lower_elementwise(
         op: binary_op,
         input_a,
         input_b,
+        output,
+    })
+}
+
+/// Lower TFLite unary element-wise ops (LOGISTIC, ...) to PspOp::UnaryElementWise
+fn lower_unary_elementwise(
+    op: &Operator,
+    tensor_map: &[TensorId],
+    builtin_code: BuiltinOperator,
+) -> Result<PspOp, String> {
+    let inputs = op.inputs().ok_or("unary elementwise: no inputs")?;
+    let outputs = op.outputs().ok_or("unary elementwise: no outputs")?;
+
+    let unary_op = match builtin_code {
+        BuiltinOperator::LOGISTIC => UnaryOp::Logistic,
+        _ => unreachable!(),
+    };
+
+    let input = tensor_map[inputs.get(0) as usize];
+    let output = tensor_map[outputs.get(0) as usize];
+
+    Ok(PspOp::UnaryElementWise {
+        op: unary_op,
+        input,
         output,
     })
 }

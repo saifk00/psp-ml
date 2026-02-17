@@ -48,6 +48,13 @@ pub enum PspOp {
         input_b: TensorId,
         output: TensorId,
     },
+
+    /// Element-wise unary operation (logistic, ...)
+    UnaryElementWise {
+        op: UnaryOp,
+        input: TensorId,
+        output: TensorId,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -76,6 +83,31 @@ pub enum BinaryOp {
     Sub,
     Div,
     Max,
+}
+
+impl BinaryOp {
+    pub fn name(self) -> &'static str {
+        match self {
+            BinaryOp::Add => "binary_add",
+            BinaryOp::Mul => "binary_mul",
+            BinaryOp::Sub => "binary_sub",
+            BinaryOp::Div => "binary_div",
+            BinaryOp::Max => "binary_max",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnaryOp {
+    Logistic,
+}
+
+impl UnaryOp {
+    pub fn name(self) -> &'static str {
+        match self {
+            UnaryOp::Logistic => "logistic",
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -107,7 +139,8 @@ impl PspOp {
             }
             PspOp::MaxPool2x2 { input, .. }
             | PspOp::Reshape { input, .. }
-            | PspOp::Softmax { input, .. } => vec![*input],
+            | PspOp::Softmax { input, .. }
+            | PspOp::UnaryElementWise { input, .. } => vec![*input],
             PspOp::ElementWise {
                 input_a, input_b, ..
             } => vec![*input_a, *input_b],
@@ -121,7 +154,8 @@ impl PspOp {
             | PspOp::MaxPool2x2 { output, .. }
             | PspOp::Reshape { output, .. }
             | PspOp::Softmax { output, .. }
-            | PspOp::ElementWise { output, .. } => *output,
+            | PspOp::ElementWise { output, .. }
+            | PspOp::UnaryElementWise { output, .. } => *output,
         }
     }
 }

@@ -141,6 +141,7 @@ dependencies = [
 name = "psp-ml"
 version = "0.1.0"
 dependencies = [
+ "libm",
  "psp",
 ]
 
