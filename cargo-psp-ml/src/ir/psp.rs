@@ -40,6 +40,14 @@ pub enum PspOp {
 
     /// Softmax over last dimension
     Softmax { input: TensorId, output: TensorId },
+
+    /// Element-wise binary operation (add, mul, sub, div, max)
+    ElementWise {
+        op: BinaryOp,
+        input_a: TensorId,
+        input_b: TensorId,
+        output: TensorId,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -59,6 +67,15 @@ pub struct Conv2dParams {
 pub enum Activation {
     Relu,
     Relu6,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BinaryOp {
+    Add,
+    Mul,
+    Sub,
+    Div,
+    Max,
 }
 
 #[derive(Debug, Clone)]
@@ -91,6 +108,9 @@ impl PspOp {
             PspOp::MaxPool2x2 { input, .. }
             | PspOp::Reshape { input, .. }
             | PspOp::Softmax { input, .. } => vec![*input],
+            PspOp::ElementWise {
+                input_a, input_b, ..
+            } => vec![*input_a, *input_b],
         }
     }
 
@@ -100,7 +120,8 @@ impl PspOp {
             | PspOp::FullyConnected { output, .. }
             | PspOp::MaxPool2x2 { output, .. }
             | PspOp::Reshape { output, .. }
-            | PspOp::Softmax { output, .. } => *output,
+            | PspOp::Softmax { output, .. }
+            | PspOp::ElementWise { output, .. } => *output,
         }
     }
 }

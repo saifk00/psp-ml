@@ -161,6 +161,36 @@ pub fn fully_connected(
     }
 }
 
+// ─── Element-wise binary ops ────────────────────────────────────
+
+macro_rules! binary_op_kernel {
+    ($name:ident, $op:expr) => {
+        pub fn $name(a: &[f32], b: &[f32], out: &mut [f32], b_len: usize) {
+            let op: fn(f32, f32) -> f32 = $op;
+            if b_len == out.len() {
+                for i in 0..out.len() {
+                    out[i] = op(a[i], b[i]);
+                }
+            } else if b_len == 1 {
+                let s = b[0];
+                for i in 0..out.len() {
+                    out[i] = op(a[i], s);
+                }
+            } else {
+                for i in 0..out.len() {
+                    out[i] = op(a[i], b[i % b_len]);
+                }
+            }
+        }
+    };
+}
+
+binary_op_kernel!(binary_add, |a: f32, b: f32| a + b);
+binary_op_kernel!(binary_mul, |a: f32, b: f32| a * b);
+binary_op_kernel!(binary_sub, |a: f32, b: f32| a - b);
+binary_op_kernel!(binary_div, |a: f32, b: f32| a / b);
+binary_op_kernel!(binary_max, |a: f32, b: f32| if a > b { a } else { b });
+
 /// Fully Connected with ReLU (naive)
 ///
 /// - `input`:   [in_features]
@@ -180,5 +210,64 @@ pub fn fully_connected_relu(
         if output[o] < 0.0 {
             output[o] = 0.0;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_binary_add_same_shape() {
+        let a = [1.0, 2.0, 3.0, 4.0];
+        let b = [10.0, 20.0, 30.0, 40.0];
+        let mut out = [0.0f32; 4];
+        binary_add(&a, &b, &mut out, 4);
+        assert_eq!(out, [11.0, 22.0, 33.0, 44.0]);
+    }
+
+    #[test]
+    fn test_binary_mul_scalar_broadcast() {
+        let a = [1.0, 2.0, 3.0];
+        let b = [10.0];
+        let mut out = [0.0f32; 3];
+        binary_mul(&a, &b, &mut out, 1);
+        assert_eq!(out, [10.0, 20.0, 30.0]);
+    }
+
+    #[test]
+    fn test_binary_sub_inner_broadcast() {
+        let a = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let b = [1.0, 1.0, 1.0];
+        let mut out = [0.0f32; 6];
+        binary_sub(&a, &b, &mut out, 3);
+        assert_eq!(out, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]);
+    }
+
+    #[test]
+    fn test_binary_div() {
+        let a = [10.0, 20.0];
+        let b = [2.0, 5.0];
+        let mut out = [0.0f32; 2];
+        binary_div(&a, &b, &mut out, 2);
+        assert_eq!(out, [5.0, 4.0]);
+    }
+
+    #[test]
+    fn test_binary_max() {
+        let a = [1.0, 5.0, 3.0];
+        let b = [2.0, 4.0, 6.0];
+        let mut out = [0.0f32; 3];
+        binary_max(&a, &b, &mut out, 3);
+        assert_eq!(out, [2.0, 5.0, 6.0]);
+    }
+
+    #[test]
+    fn test_binary_mul_spatial_broadcast() {
+        let a = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let b = [10.0, 10.0, 10.0];
+        let mut out = [0.0f32; 6];
+        binary_mul(&a, &b, &mut out, 3);
+        assert_eq!(out, [10.0, 20.0, 30.0, 40.0, 50.0, 60.0]);
     }
 }

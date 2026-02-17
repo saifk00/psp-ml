@@ -9,6 +9,11 @@ const SUPPORTED_OPS: &[BuiltinOperator] = &[
     BuiltinOperator::RESHAPE,
     BuiltinOperator::SQUEEZE,
     BuiltinOperator::EXPAND_DIMS,
+    BuiltinOperator::ADD,
+    BuiltinOperator::MUL,
+    BuiltinOperator::SUB,
+    BuiltinOperator::DIV,
+    BuiltinOperator::MAXIMUM,
 ];
 
 fn type_name(t: TensorType) -> &'static str {

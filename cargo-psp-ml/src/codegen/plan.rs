@@ -6,6 +6,7 @@
 //! 3. **KernelCall** — actual kernel invocations, referencing tensors and scratch buffers
 
 use crate::ir::graph::TensorId;
+use crate::ir::psp::BinaryOp;
 
 /// Index into `OpPlan::scratch`.
 pub type ScratchId = usize;
@@ -140,5 +141,12 @@ pub enum KernelCall {
         output: TensorId,
         out_features: usize,
         has_relu: bool,
+    },
+    ElementWise {
+        op: BinaryOp,
+        input_a: TensorId,
+        input_b: TensorId,
+        output: TensorId,
+        b_len: usize,
     },
 }

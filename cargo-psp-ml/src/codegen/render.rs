@@ -3,7 +3,7 @@
 //! This is the only codegen file that depends on proc_macro2/quote.
 
 use crate::ir::graph::Graph;
-use crate::ir::psp::PspOp;
+use crate::ir::psp::{BinaryOp, PspOp};
 
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
@@ -37,7 +37,7 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
         //! Generated inference module
 
         #[allow(unused_imports)]
-        use psp_ml::kernels::naive::{conv2d, conv2d_relu, max_pool2d, reshape, fully_connected, fully_connected_relu};
+        use psp_ml::kernels::naive::{conv2d, conv2d_relu, max_pool2d, reshape, fully_connected, fully_connected_relu, binary_add, binary_mul, binary_sub, binary_div, binary_max};
         #[allow(unused_imports)]
         use psp_ml::kernels::{im2col, im2col_padded, matmul_bt, matmul_bt_tiled, bias_add, relu};
 
@@ -414,6 +414,29 @@ fn render_kernel_call(
                     );
                 }
             }
+        }
+
+        KernelCall::ElementWise {
+            op,
+            input_a,
+            input_b,
+            output,
+            b_len,
+        } => {
+            let fn_ident = Ident::new(
+                match op {
+                    BinaryOp::Add => "binary_add",
+                    BinaryOp::Mul => "binary_mul",
+                    BinaryOp::Sub => "binary_sub",
+                    BinaryOp::Div => "binary_div",
+                    BinaryOp::Max => "binary_max",
+                },
+                Span::call_site(),
+            );
+            let a_expr = writer.read(*input_a);
+            let b_expr = writer.read(*input_b);
+            let out_expr = writer.write(*output);
+            quote! { #fn_ident(#a_expr, #b_expr, #out_expr, #b_len); }
         }
     }
 }

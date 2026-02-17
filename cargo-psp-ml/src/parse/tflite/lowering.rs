@@ -11,7 +11,7 @@ use super::{
 
 type Buffers<'a> = flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<Buffer<'a>>>;
 use crate::ir::graph::{DType, Graph, Tensor, TensorId, TensorKind};
-use crate::ir::psp::{Activation, Conv2dParams, FullyConnectedParams, PspModel, PspOp};
+use crate::ir::psp::{Activation, BinaryOp, Conv2dParams, FullyConnectedParams, PspModel, PspOp};
 
 /// Convert a TFLite model buffer into PSP IR.
 ///
@@ -101,6 +101,13 @@ fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
                 } else {
                     Some(lower_reshape(&op, &tensor_map)?) // graph-output fallback
                 }
+            }
+            BuiltinOperator::ADD
+            | BuiltinOperator::MUL
+            | BuiltinOperator::SUB
+            | BuiltinOperator::DIV
+            | BuiltinOperator::MAXIMUM => {
+                Some(lower_elementwise(&op, &tensor_map, builtin_code)?)
             }
             BuiltinOperator::SOFTMAX => Some(lower_softmax(&op, &tensor_map)?),
             other => {
@@ -340,6 +347,36 @@ fn lower_softmax(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String
     let output = tensor_map[outputs.get(0) as usize];
 
     Ok(PspOp::Softmax { input, output })
+}
+
+/// Lower TFLite element-wise binary ops (ADD, MUL, SUB, DIV, MAXIMUM) to PspOp::ElementWise
+fn lower_elementwise(
+    op: &Operator,
+    tensor_map: &[TensorId],
+    builtin_code: BuiltinOperator,
+) -> Result<PspOp, String> {
+    let inputs = op.inputs().ok_or("elementwise: no inputs")?;
+    let outputs = op.outputs().ok_or("elementwise: no outputs")?;
+
+    let binary_op = match builtin_code {
+        BuiltinOperator::ADD => BinaryOp::Add,
+        BuiltinOperator::MUL => BinaryOp::Mul,
+        BuiltinOperator::SUB => BinaryOp::Sub,
+        BuiltinOperator::DIV => BinaryOp::Div,
+        BuiltinOperator::MAXIMUM => BinaryOp::Max,
+        _ => unreachable!(),
+    };
+
+    let input_a = tensor_map[inputs.get(0) as usize];
+    let input_b = tensor_map[inputs.get(1) as usize];
+    let output = tensor_map[outputs.get(0) as usize];
+
+    Ok(PspOp::ElementWise {
+        op: binary_op,
+        input_a,
+        input_b,
+        output,
+    })
 }
 
 /// Convert TFLite tensor type to our DType

@@ -1,5 +1,5 @@
 use crate::ir::graph::{TensorId, TensorKind};
-use crate::ir::psp::{Activation, PspModel, PspOp};
+use crate::ir::psp::{Activation, BinaryOp, PspModel, PspOp};
 
 use super::plan::*;
 
@@ -260,6 +260,35 @@ fn lower_ops(model: &PspModel, use_vfpu_conv2d: bool) -> Result<Vec<OpPlan>, Str
                     }],
                 }],
             },
+
+            PspOp::ElementWise {
+                op,
+                input_a,
+                input_b,
+                output,
+            } => {
+                let b_len = graph.tensor(*input_b).shape.iter().product::<usize>();
+                let name = match op {
+                    BinaryOp::Add => "binary_add",
+                    BinaryOp::Mul => "binary_mul",
+                    BinaryOp::Sub => "binary_sub",
+                    BinaryOp::Div => "binary_div",
+                    BinaryOp::Max => "binary_max",
+                };
+                OpPlan {
+                    scratch: vec![],
+                    sub_ops: vec![SubOpPlan {
+                        name: name.into(),
+                        kernels: vec![KernelCall::ElementWise {
+                            op: *op,
+                            input_a: *input_a,
+                            input_b: *input_b,
+                            output: *output,
+                            b_len,
+                        }],
+                    }],
+                }
+            }
 
             PspOp::Softmax { .. } => {
                 return Err(format!("Op {i}: Softmax kernel not yet implemented"));
