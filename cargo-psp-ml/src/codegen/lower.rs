@@ -58,9 +58,28 @@ fn lower_allocs(model: &PspModel) -> Result<Vec<TensorAlloc>, String> {
     let mut allocs = Vec::new();
     let sz = std::mem::size_of::<f32>();
 
+    // Collect TensorIds actually referenced by ops, graph inputs, or graph outputs.
+    // Tensors made dead by buffer aliasing (e.g. reshape output) will be skipped.
+    let mut referenced: std::collections::HashSet<TensorId> = std::collections::HashSet::new();
+    for id in &model.graph.inputs {
+        referenced.insert(*id);
+    }
+    for id in &model.graph.outputs {
+        referenced.insert(*id);
+    }
+    for op in &model.graph.ops {
+        for id in op.inputs() {
+            referenced.insert(id);
+        }
+        referenced.insert(op.output());
+    }
+
     for tensor in &model.graph.tensors {
         match &tensor.kind {
             TensorKind::Constant { offset, len } => {
+                if !referenced.contains(&tensor.id) {
+                    continue;
+                }
                 if offset % sz != 0 {
                     return Err(format!(
                         "Tensor {} constant offset {} not 4-byte aligned",
@@ -80,6 +99,9 @@ fn lower_allocs(model: &PspModel) -> Result<Vec<TensorAlloc>, String> {
                 });
             }
             TensorKind::Intermediate => {
+                if !referenced.contains(&tensor.id) {
+                    continue;
+                }
                 let size = tensor.shape.iter().product::<usize>();
                 allocs.push(TensorAlloc::Intermediate {
                     id: tensor.id,

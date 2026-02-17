@@ -7,6 +7,8 @@ const SUPPORTED_OPS: &[BuiltinOperator] = &[
     BuiltinOperator::FULLY_CONNECTED,
     BuiltinOperator::MAX_POOL_2D,
     BuiltinOperator::RESHAPE,
+    BuiltinOperator::SQUEEZE,
+    BuiltinOperator::EXPAND_DIMS,
 ];
 
 fn type_name(t: TensorType) -> &'static str {

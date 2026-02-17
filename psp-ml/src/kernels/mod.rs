@@ -336,8 +336,7 @@ pub fn matmul_bt_tiled(
 
             for r in 0..VFPU_Q {
                 let base = (ti * VFPU_Q + r) * n + tj * VFPU_Q;
-                c[base..base + VFPU_Q]
-                    .copy_from_slice(&acc[r * VFPU_Q..r * VFPU_Q + VFPU_Q]);
+                c[base..base + VFPU_Q].copy_from_slice(&acc[r * VFPU_Q..r * VFPU_Q + VFPU_Q]);
             }
         }
     }

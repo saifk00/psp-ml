@@ -34,13 +34,6 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
             784usize,
         )
     };
-    static mut T_14_BUF: Aligned16<784usize> = Aligned16([0.0f32; 784usize]);
-    let t_14 = unsafe {
-        core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_14_BUF) as *mut f32,
-            784usize,
-        )
-    };
     static mut T_15_BUF: Aligned16<64usize> = Aligned16([0.0f32; 64usize]);
     let t_15 = unsafe {
         core::slice::from_raw_parts_mut(
@@ -56,7 +49,6 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
     let t_4 = &tensor_data[T_4_OFFSET..T_4_OFFSET + T_4_LEN];
     let t_5 = &tensor_data[T_5_OFFSET..T_5_OFFSET + T_5_LEN];
     let t_6 = &tensor_data[T_6_OFFSET..T_6_OFFSET + T_6_LEN];
-    let t_7 = &tensor_data[T_7_OFFSET..T_7_OFFSET + T_7_LEN];
     let t_8 = &tensor_data[T_8_OFFSET..T_8_OFFSET + T_8_LEN];
     let t_9 = &tensor_data[T_9_OFFSET..T_9_OFFSET + T_9_LEN];
     static mut CONV_SCRATCH_0: Aligned16<21952usize> = Aligned16([0.0f32; 21952usize]);
@@ -130,8 +122,7 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
         t_13,
         [1usize, 7usize, 7usize, 16usize],
     );
-    reshape(t_13, t_14);
-    fully_connected_relu(t_14, 784usize, t_6, t_1, t_15, 64usize);
+    fully_connected_relu(t_13, 784usize, t_6, t_1, t_15, 64usize);
     fully_connected(t_15, 64usize, t_5, t_3, &mut t_16, 10usize);
     t_16
 }
@@ -169,13 +160,6 @@ pub fn forward_timed(
             784usize,
         )
     };
-    static mut T_14_BUF: Aligned16<784usize> = Aligned16([0.0f32; 784usize]);
-    let t_14 = unsafe {
-        core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_14_BUF) as *mut f32,
-            784usize,
-        )
-    };
     static mut T_15_BUF: Aligned16<64usize> = Aligned16([0.0f32; 64usize]);
     let t_15 = unsafe {
         core::slice::from_raw_parts_mut(
@@ -191,7 +175,6 @@ pub fn forward_timed(
     let t_4 = &tensor_data[T_4_OFFSET..T_4_OFFSET + T_4_LEN];
     let t_5 = &tensor_data[T_5_OFFSET..T_5_OFFSET + T_5_LEN];
     let t_6 = &tensor_data[T_6_OFFSET..T_6_OFFSET + T_6_LEN];
-    let t_7 = &tensor_data[T_7_OFFSET..T_7_OFFSET + T_7_LEN];
     let t_8 = &tensor_data[T_8_OFFSET..T_8_OFFSET + T_8_LEN];
     let t_9 = &tensor_data[T_9_OFFSET..T_9_OFFSET + T_9_LEN];
     static mut CONV_SCRATCH_0: Aligned16<21952usize> = Aligned16([0.0f32; 21952usize]);
@@ -282,17 +265,14 @@ pub fn forward_timed(
     );
     op_ticks[7usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    reshape(t_13, t_14);
+    fully_connected_relu(t_13, 784usize, t_6, t_1, t_15, 64usize);
     op_ticks[8usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    fully_connected_relu(t_14, 784usize, t_6, t_1, t_15, 64usize);
-    op_ticks[9usize] += get_tick() - __t0;
-    let __t0 = get_tick();
     fully_connected(t_15, 64usize, t_5, t_3, &mut t_16, 10usize);
-    op_ticks[10usize] += get_tick() - __t0;
+    op_ticks[9usize] += get_tick() - __t0;
     t_16
 }
-pub const NUM_OPS: usize = 11usize;
+pub const NUM_OPS: usize = 10usize;
 pub const OP_NAMES: [&str; NUM_OPS] = [
     "im2col",
     "matmul",
@@ -302,7 +282,6 @@ pub const OP_NAMES: [&str; NUM_OPS] = [
     "matmul",
     "bias_add_relu",
     "max_pool2d",
-    "reshape",
     "fully_connected_relu",
     "fully_connected",
 ];
@@ -328,8 +307,6 @@ const T_5_OFFSET: usize = 50530usize;
 const T_5_LEN: usize = 640usize;
 const T_6_OFFSET: usize = 351usize;
 const T_6_LEN: usize = 50176usize;
-const T_7_OFFSET: usize = 346usize;
-const T_7_LEN: usize = 2usize;
 const T_8_OFFSET: usize = 143usize;
 const T_8_LEN: usize = 200usize;
 const T_9_OFFSET: usize = 132usize;
