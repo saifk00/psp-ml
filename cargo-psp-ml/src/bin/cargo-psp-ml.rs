@@ -20,6 +20,7 @@ fn main() {
 
     match args.first().map(|s| s.as_str()) {
         Some("compile") => cmd_compile(&args[1..]),
+        Some("info") => cmd_info(&args[1..]),
         Some("run") => cmd_run(&args[1..]),
         Some("--help") | Some("-h") | None => print_usage(),
         Some(other) => {
@@ -36,10 +37,12 @@ fn print_usage() {
     eprintln!();
     eprintln!("Usage:");
     eprintln!("  cargo psp-ml compile <model.tflite> [-o <dir>]");
+    eprintln!("  cargo psp-ml info <model.tflite>");
     eprintln!("  cargo psp-ml run -p <package> [--release]");
     eprintln!();
     eprintln!("Subcommands:");
     eprintln!("  compile   Compile a TFLite model into Rust code + weights");
+    eprintln!("  info      Dump model ops, shapes, dtypes, and supported/missing analysis");
     eprintln!("  run       Build and deploy a PRX to a PSP running psplink");
 }
 
@@ -125,6 +128,32 @@ fn cmd_compile(args: &[String]) {
         generated_path.display(),
         weights_path.display()
     );
+}
+
+// ---------------------------------------------------------------------------
+// info
+// ---------------------------------------------------------------------------
+
+fn cmd_info(args: &[String]) {
+    use cargo_psp_ml::parse::tflite;
+
+    let model_path = match args.first() {
+        Some(p) if p != "--help" && p != "-h" => p,
+        _ => {
+            eprintln!("Usage: cargo psp-ml info <model.tflite>");
+            eprintln!();
+            eprintln!("Dump model operators, tensor shapes, data types, and");
+            eprintln!("supported/missing op analysis without compiling.");
+            process::exit(if args.first().map(|s| s.as_str()) == Some("--help") { 0 } else { 1 });
+        }
+    };
+
+    let data = fs::read(model_path).unwrap_or_else(|e| {
+        eprintln!("Failed to read {model_path}: {e}");
+        process::exit(1);
+    });
+
+    tflite::dump_model_info(&data);
 }
 
 // ---------------------------------------------------------------------------
