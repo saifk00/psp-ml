@@ -122,6 +122,7 @@ pub enum BinaryOp {
     Div,
     FloorDiv,
     Max,
+    Pow,
 }
 
 impl BinaryOp {
@@ -133,6 +134,7 @@ impl BinaryOp {
             BinaryOp::Div => "binary_div",
             BinaryOp::FloorDiv => "binary_floor_div",
             BinaryOp::Max => "binary_max",
+            BinaryOp::Pow => "binary_pow",
         }
     }
 }

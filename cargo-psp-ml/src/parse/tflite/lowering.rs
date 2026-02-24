@@ -110,7 +110,8 @@ fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
             | BuiltinOperator::SUB
             | BuiltinOperator::DIV
             | BuiltinOperator::FLOOR_DIV
-            | BuiltinOperator::MAXIMUM => {
+            | BuiltinOperator::MAXIMUM
+            | BuiltinOperator::POW => {
                 Some(lower_elementwise(&op, &tensor_map, builtin_code)?)
             }
             BuiltinOperator::LOGISTIC => {
@@ -383,6 +384,7 @@ fn lower_elementwise(
         BuiltinOperator::DIV => BinaryOp::Div,
         BuiltinOperator::FLOOR_DIV => BinaryOp::FloorDiv,
         BuiltinOperator::MAXIMUM => BinaryOp::Max,
+        BuiltinOperator::POW => BinaryOp::Pow,
         _ => unreachable!(),
     };
 

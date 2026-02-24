@@ -238,6 +238,7 @@ fn eval_binary_i32(a: &[i32], b: &[i32], op: BinaryOp) -> Vec<i32> {
         BinaryOp::Div => |a, b| a / b,
         BinaryOp::FloorDiv => |a, b| a.div_euclid(b),
         BinaryOp::Max => |a, b| a.max(b),
+        BinaryOp::Pow => |a, b| a.pow(b as u32),
     };
     if b.len() == a.len() {
         a.iter().zip(b.iter()).map(|(&x, &y)| op_fn(x, y)).collect()

@@ -190,6 +190,7 @@ binary_op_kernel!(binary_mul, |a: f32, b: f32| a * b);
 binary_op_kernel!(binary_sub, |a: f32, b: f32| a - b);
 binary_op_kernel!(binary_div, |a: f32, b: f32| a / b);
 binary_op_kernel!(binary_max, |a: f32, b: f32| if a > b { a } else { b });
+binary_op_kernel!(binary_pow, |a: f32, b: f32| libm::powf(a, b));
 
 // ─── Element-wise unary ops ─────────────────────────────────────
 
