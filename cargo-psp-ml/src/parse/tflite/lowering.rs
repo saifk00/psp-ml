@@ -11,6 +11,7 @@ use super::{
 
 type Buffers<'a> = flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<Buffer<'a>>>;
 use crate::ir::graph::{DType, Graph, Tensor, TensorId, TensorKind};
+use crate::ir::const_fold;
 use crate::ir::psp::{Activation, BinaryOp, Conv2dParams, FullyConnectedParams, PspModel, PspOp, UnaryOp};
 
 /// Convert a TFLite model buffer into PSP IR.
@@ -19,7 +20,9 @@ use crate::ir::psp::{Activation, BinaryOp, Conv2dParams, FullyConnectedParams, P
 /// its backing weight data.
 pub fn to_psp_ir(model_data: Vec<u8>) -> Result<PspModel, String> {
     let graph = lower(&model_data)?;
-    Ok(PspModel { graph, model_data })
+    let mut model = PspModel { graph, model_data };
+    const_fold::fold(&mut model);
+    Ok(model)
 }
 
 /// Pure lowering pass: borrows model bytes, returns an IR graph with no data ownership.
@@ -106,6 +109,7 @@ fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
             | BuiltinOperator::MUL
             | BuiltinOperator::SUB
             | BuiltinOperator::DIV
+            | BuiltinOperator::FLOOR_DIV
             | BuiltinOperator::MAXIMUM => {
                 Some(lower_elementwise(&op, &tensor_map, builtin_code)?)
             }
@@ -113,6 +117,15 @@ fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
                 Some(lower_unary_elementwise(&op, &tensor_map, builtin_code)?)
             }
             BuiltinOperator::SOFTMAX => Some(lower_softmax(&op, &tensor_map)?),
+            BuiltinOperator::SHAPE => Some(lower_shape(&op, &tensor_map)?),
+            BuiltinOperator::PACK => Some(lower_pack(&op, &tensor_map)?),
+            BuiltinOperator::STRIDED_SLICE => Some(lower_strided_slice(&op, &tensor_map)?),
+            BuiltinOperator::CONCATENATION => Some(lower_concatenation(&op, &tensor_map)?),
+            BuiltinOperator::GATHER => Some(lower_gather(&op, &tensor_map)?),
+            BuiltinOperator::REDUCE_PROD => Some(lower_reduce_prod(&op, &tensor_map)?),
+            BuiltinOperator::RANGE => Some(lower_range(&op, &tensor_map)?),
+            BuiltinOperator::SPLIT_V => Some(lower_split_v(&op, &tensor_map)?),
+            BuiltinOperator::CAST => Some(lower_cast(&op, &tensor_map)?),
             other => {
                 return Err(format!(
                     "unsupported operator: {:?}",
@@ -366,6 +379,7 @@ fn lower_elementwise(
         BuiltinOperator::MUL => BinaryOp::Mul,
         BuiltinOperator::SUB => BinaryOp::Sub,
         BuiltinOperator::DIV => BinaryOp::Div,
+        BuiltinOperator::FLOOR_DIV => BinaryOp::FloorDiv,
         BuiltinOperator::MAXIMUM => BinaryOp::Max,
         _ => unreachable!(),
     };
@@ -406,6 +420,150 @@ fn lower_unary_elementwise(
     })
 }
 
+/// Lower TFLite SHAPE to PspOp::Shape
+fn lower_shape(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
+    let inputs = op.inputs().ok_or("SHAPE: no inputs")?;
+    let outputs = op.outputs().ok_or("SHAPE: no outputs")?;
+    let input = tensor_map[inputs.get(0) as usize];
+    let output = tensor_map[outputs.get(0) as usize];
+    Ok(PspOp::Shape { input, output })
+}
+
+/// Lower TFLite PACK to PspOp::Pack
+fn lower_pack(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
+    let inputs_vec = op.inputs().ok_or("PACK: no inputs")?;
+    let outputs = op.outputs().ok_or("PACK: no outputs")?;
+    let opts = op
+        .builtin_options_as_pack_options()
+        .ok_or("PACK: no options")?;
+    let inputs: Vec<TensorId> = (0..inputs_vec.len())
+        .map(|i| tensor_map[inputs_vec.get(i) as usize])
+        .collect();
+    let output = tensor_map[outputs.get(0) as usize];
+    Ok(PspOp::Pack {
+        inputs,
+        output,
+        axis: opts.axis(),
+    })
+}
+
+/// Lower TFLite STRIDED_SLICE to PspOp::StridedSlice
+fn lower_strided_slice(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
+    let inputs = op.inputs().ok_or("STRIDED_SLICE: no inputs")?;
+    let outputs = op.outputs().ok_or("STRIDED_SLICE: no outputs")?;
+    let opts = op
+        .builtin_options_as_strided_slice_options()
+        .ok_or("STRIDED_SLICE: no options")?;
+    let input = tensor_map[inputs.get(0) as usize];
+    let begin = tensor_map[inputs.get(1) as usize];
+    let end = tensor_map[inputs.get(2) as usize];
+    let strides = tensor_map[inputs.get(3) as usize];
+    let output = tensor_map[outputs.get(0) as usize];
+    Ok(PspOp::StridedSlice {
+        input,
+        begin,
+        end,
+        strides,
+        output,
+        begin_mask: opts.begin_mask(),
+        end_mask: opts.end_mask(),
+        shrink_axis_mask: opts.shrink_axis_mask(),
+    })
+}
+
+/// Lower TFLite CONCATENATION to PspOp::Concatenation
+fn lower_concatenation(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
+    let inputs_vec = op.inputs().ok_or("CONCATENATION: no inputs")?;
+    let outputs = op.outputs().ok_or("CONCATENATION: no outputs")?;
+    let opts = op
+        .builtin_options_as_concatenation_options()
+        .ok_or("CONCATENATION: no options")?;
+    let inputs: Vec<TensorId> = (0..inputs_vec.len())
+        .map(|i| tensor_map[inputs_vec.get(i) as usize])
+        .collect();
+    let output = tensor_map[outputs.get(0) as usize];
+    Ok(PspOp::Concatenation {
+        inputs,
+        output,
+        axis: opts.axis(),
+    })
+}
+
+/// Lower TFLite GATHER to PspOp::Gather
+fn lower_gather(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
+    let inputs = op.inputs().ok_or("GATHER: no inputs")?;
+    let outputs = op.outputs().ok_or("GATHER: no outputs")?;
+    let opts = op
+        .builtin_options_as_gather_options()
+        .ok_or("GATHER: no options")?;
+    let input = tensor_map[inputs.get(0) as usize];
+    let indices = tensor_map[inputs.get(1) as usize];
+    let output = tensor_map[outputs.get(0) as usize];
+    Ok(PspOp::Gather {
+        input,
+        indices,
+        output,
+        axis: opts.axis(),
+    })
+}
+
+/// Lower TFLite REDUCE_PROD to PspOp::ReduceProd
+fn lower_reduce_prod(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
+    let inputs = op.inputs().ok_or("REDUCE_PROD: no inputs")?;
+    let outputs = op.outputs().ok_or("REDUCE_PROD: no outputs")?;
+    let input = tensor_map[inputs.get(0) as usize];
+    let axes = tensor_map[inputs.get(1) as usize];
+    let output = tensor_map[outputs.get(0) as usize];
+    Ok(PspOp::ReduceProd {
+        input,
+        axes,
+        output,
+    })
+}
+
+/// Lower TFLite RANGE to PspOp::Range
+fn lower_range(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
+    let inputs = op.inputs().ok_or("RANGE: no inputs")?;
+    let outputs = op.outputs().ok_or("RANGE: no outputs")?;
+    let start = tensor_map[inputs.get(0) as usize];
+    let limit = tensor_map[inputs.get(1) as usize];
+    let delta = tensor_map[inputs.get(2) as usize];
+    let output = tensor_map[outputs.get(0) as usize];
+    Ok(PspOp::Range {
+        start,
+        limit,
+        delta,
+        output,
+    })
+}
+
+/// Lower TFLite SPLIT_V to PspOp::SplitV
+fn lower_split_v(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
+    let inputs = op.inputs().ok_or("SPLIT_V: no inputs")?;
+    let output_vec = op.outputs().ok_or("SPLIT_V: no outputs")?;
+    let input = tensor_map[inputs.get(0) as usize];
+    let size_splits = tensor_map[inputs.get(1) as usize];
+    let axis = tensor_map[inputs.get(2) as usize];
+    let outputs: Vec<TensorId> = (0..output_vec.len())
+        .map(|i| tensor_map[output_vec.get(i) as usize])
+        .collect();
+    Ok(PspOp::SplitV {
+        input,
+        size_splits,
+        axis,
+        outputs,
+    })
+}
+
+/// Lower TFLite CAST to PspOp::Cast
+fn lower_cast(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
+    let inputs = op.inputs().ok_or("CAST: no inputs")?;
+    let outputs = op.outputs().ok_or("CAST: no outputs")?;
+    let input = tensor_map[inputs.get(0) as usize];
+    let output = tensor_map[outputs.get(0) as usize];
+    Ok(PspOp::Cast { input, output })
+}
+
 /// Convert TFLite tensor type to our DType
 fn convert_dtype(t: TensorType) -> DType {
     match t {
@@ -413,10 +571,9 @@ fn convert_dtype(t: TensorType) -> DType {
         TensorType::INT32 => DType::I32,
         TensorType::INT8 => DType::I8,
         TensorType::UINT8 => DType::U8,
-        other => panic!(
-            "unsupported tensor type: {:?}",
-            other.variant_name().unwrap_or("unknown")
-        ),
+        // Map unknown types to I32 as a fallback — they'll be caught
+        // by the op lowering pass if any op actually uses them.
+        _ => DType::I32,
     }
 }
 

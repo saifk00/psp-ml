@@ -13,8 +13,18 @@ const SUPPORTED_OPS: &[BuiltinOperator] = &[
     BuiltinOperator::MUL,
     BuiltinOperator::SUB,
     BuiltinOperator::DIV,
+    BuiltinOperator::FLOOR_DIV,
     BuiltinOperator::MAXIMUM,
     BuiltinOperator::LOGISTIC,
+    BuiltinOperator::SHAPE,
+    BuiltinOperator::PACK,
+    BuiltinOperator::STRIDED_SLICE,
+    BuiltinOperator::CONCATENATION,
+    BuiltinOperator::GATHER,
+    BuiltinOperator::REDUCE_PROD,
+    BuiltinOperator::RANGE,
+    BuiltinOperator::SPLIT_V,
+    BuiltinOperator::CAST,
 ];
 
 fn type_name(t: TensorType) -> &'static str {

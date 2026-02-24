@@ -55,6 +55,44 @@ pub enum PspOp {
         input: TensorId,
         output: TensorId,
     },
+
+    // ─── Constant-foldable ops (eliminated before codegen) ──────
+
+    /// Extract tensor shape as INT32 vector
+    Shape { input: TensorId, output: TensorId },
+
+    /// Stack N tensors along a new axis
+    Pack { inputs: Vec<TensorId>, output: TensorId, axis: i32 },
+
+    /// Slice with begin/end/strides and masks
+    StridedSlice {
+        input: TensorId,
+        begin: TensorId,
+        end: TensorId,
+        strides: TensorId,
+        output: TensorId,
+        begin_mask: i32,
+        end_mask: i32,
+        shrink_axis_mask: i32,
+    },
+
+    /// Concatenate tensors along axis
+    Concatenation { inputs: Vec<TensorId>, output: TensorId, axis: i32 },
+
+    /// Index lookup along axis
+    Gather { input: TensorId, indices: TensorId, output: TensorId, axis: i32 },
+
+    /// Reduce product along axes
+    ReduceProd { input: TensorId, axes: TensorId, output: TensorId },
+
+    /// Generate integer range [start, limit) with step delta
+    Range { start: TensorId, limit: TensorId, delta: TensorId, output: TensorId },
+
+    /// Split tensor into multiple outputs along axis
+    SplitV { input: TensorId, size_splits: TensorId, axis: TensorId, outputs: Vec<TensorId> },
+
+    /// Type cast
+    Cast { input: TensorId, output: TensorId },
 }
 
 #[derive(Debug, Clone)]
@@ -82,6 +120,7 @@ pub enum BinaryOp {
     Mul,
     Sub,
     Div,
+    FloorDiv,
     Max,
 }
 
@@ -92,6 +131,7 @@ impl BinaryOp {
             BinaryOp::Mul => "binary_mul",
             BinaryOp::Sub => "binary_sub",
             BinaryOp::Div => "binary_div",
+            BinaryOp::FloorDiv => "binary_floor_div",
             BinaryOp::Max => "binary_max",
         }
     }
@@ -140,10 +180,36 @@ impl PspOp {
             PspOp::MaxPool2x2 { input, .. }
             | PspOp::Reshape { input, .. }
             | PspOp::Softmax { input, .. }
+            | PspOp::Shape { input, .. }
+            | PspOp::Cast { input, .. }
             | PspOp::UnaryElementWise { input, .. } => vec![*input],
             PspOp::ElementWise {
                 input_a, input_b, ..
             } => vec![*input_a, *input_b],
+            PspOp::Pack { inputs, .. } | PspOp::Concatenation { inputs, .. } => inputs.clone(),
+            PspOp::StridedSlice {
+                input,
+                begin,
+                end,
+                strides,
+                ..
+            } => vec![*input, *begin, *end, *strides],
+            PspOp::Gather {
+                input, indices, ..
+            } => vec![*input, *indices],
+            PspOp::ReduceProd { input, axes, .. } => vec![*input, *axes],
+            PspOp::Range {
+                start,
+                limit,
+                delta,
+                ..
+            } => vec![*start, *limit, *delta],
+            PspOp::SplitV {
+                input,
+                size_splits,
+                axis,
+                ..
+            } => vec![*input, *size_splits, *axis],
         }
     }
 
@@ -155,7 +221,23 @@ impl PspOp {
             | PspOp::Reshape { output, .. }
             | PspOp::Softmax { output, .. }
             | PspOp::ElementWise { output, .. }
-            | PspOp::UnaryElementWise { output, .. } => *output,
+            | PspOp::UnaryElementWise { output, .. }
+            | PspOp::Shape { output, .. }
+            | PspOp::Pack { output, .. }
+            | PspOp::StridedSlice { output, .. }
+            | PspOp::Concatenation { output, .. }
+            | PspOp::Gather { output, .. }
+            | PspOp::ReduceProd { output, .. }
+            | PspOp::Range { output, .. }
+            | PspOp::Cast { output, .. } => *output,
+            PspOp::SplitV { .. } => panic!("SplitV has multiple outputs; use outputs()"),
+        }
+    }
+
+    pub fn all_outputs(&self) -> Vec<TensorId> {
+        match self {
+            PspOp::SplitV { outputs, .. } => outputs.clone(),
+            other => vec![other.output()],
         }
     }
 }

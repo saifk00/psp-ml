@@ -71,7 +71,9 @@ fn lower_allocs(model: &PspModel) -> Result<Vec<TensorAlloc>, String> {
         for id in op.inputs() {
             referenced.insert(id);
         }
-        referenced.insert(op.output());
+        for id in op.all_outputs() {
+            referenced.insert(id);
+        }
     }
 
     for tensor in &model.graph.tensors {
@@ -297,6 +299,21 @@ fn lower_ops(model: &PspModel, use_vfpu_conv2d: bool) -> Result<Vec<OpPlan>, Str
 
             PspOp::Softmax { .. } => {
                 return Err(format!("Op {i}: Softmax kernel not yet implemented"));
+            }
+
+            PspOp::Shape { .. }
+            | PspOp::Pack { .. }
+            | PspOp::StridedSlice { .. }
+            | PspOp::Concatenation { .. }
+            | PspOp::Gather { .. }
+            | PspOp::ReduceProd { .. }
+            | PspOp::Range { .. }
+            | PspOp::SplitV { .. }
+            | PspOp::Cast { .. } => {
+                return Err(format!(
+                    "Op {i}: {:?} should have been constant-folded",
+                    op
+                ));
             }
         };
 
@@ -700,7 +717,7 @@ mod tests {
         let mut graph = Graph::new();
         let input = graph.add_tensor(vec![4], DType::F32, TensorKind::Input);
         graph.inputs.push(input);
-        let _bad = graph.add_tensor(
+        let bad = graph.add_tensor(
             vec![2],
             DType::F32,
             TensorKind::Constant {
@@ -710,7 +727,13 @@ mod tests {
         );
         let output = graph.add_tensor(vec![4], DType::F32, TensorKind::Output);
         graph.outputs.push(output);
-        // No ops — the alloc pass runs first and should catch it
+        // Reference the bad tensor so it isn't pruned by the alloc pass
+        graph.ops.push(PspOp::ElementWise {
+            op: crate::ir::psp::BinaryOp::Add,
+            input_a: input,
+            input_b: bad,
+            output,
+        });
         let model = PspModel {
             graph,
             model_data: vec![0u8; 16],
