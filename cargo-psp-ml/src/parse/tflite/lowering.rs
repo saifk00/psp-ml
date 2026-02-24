@@ -12,7 +12,7 @@ use super::{
 type Buffers<'a> = flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<Buffer<'a>>>;
 use crate::ir::graph::{DType, Graph, Tensor, TensorId, TensorKind};
 use crate::ir::const_fold;
-use crate::ir::psp::{Activation, BinaryOp, Conv2dParams, FullyConnectedParams, PspModel, PspOp, UnaryOp};
+use crate::ir::psp::{Activation, BinaryOp, Conv2dParams, FullyConnectedParams, PspModel, PspOp, ReduceOp, UnaryOp};
 
 /// Convert a TFLite model buffer into PSP IR.
 ///
@@ -122,7 +122,9 @@ fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
             BuiltinOperator::STRIDED_SLICE => Some(lower_strided_slice(&op, &tensor_map)?),
             BuiltinOperator::CONCATENATION => Some(lower_concatenation(&op, &tensor_map)?),
             BuiltinOperator::GATHER => Some(lower_gather(&op, &tensor_map)?),
-            BuiltinOperator::REDUCE_PROD => Some(lower_reduce_prod(&op, &tensor_map)?),
+            BuiltinOperator::REDUCE_PROD
+            | BuiltinOperator::REDUCE_MAX
+            | BuiltinOperator::REDUCE_MIN => Some(lower_reduce(&op, &tensor_map, builtin_code)?),
             BuiltinOperator::RANGE => Some(lower_range(&op, &tensor_map)?),
             BuiltinOperator::SPLIT_V => Some(lower_split_v(&op, &tensor_map)?),
             BuiltinOperator::CAST => Some(lower_cast(&op, &tensor_map)?),
@@ -507,14 +509,21 @@ fn lower_gather(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String>
     })
 }
 
-/// Lower TFLite REDUCE_PROD to PspOp::ReduceProd
-fn lower_reduce_prod(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
-    let inputs = op.inputs().ok_or("REDUCE_PROD: no inputs")?;
-    let outputs = op.outputs().ok_or("REDUCE_PROD: no outputs")?;
+/// Lower TFLite REDUCE_PROD/REDUCE_MAX/REDUCE_MIN to PspOp::Reduce
+fn lower_reduce(op: &Operator, tensor_map: &[TensorId], builtin_code: BuiltinOperator) -> Result<PspOp, String> {
+    let inputs = op.inputs().ok_or("reduce: no inputs")?;
+    let outputs = op.outputs().ok_or("reduce: no outputs")?;
+    let reduce_op = match builtin_code {
+        BuiltinOperator::REDUCE_PROD => ReduceOp::Prod,
+        BuiltinOperator::REDUCE_MAX => ReduceOp::Max,
+        BuiltinOperator::REDUCE_MIN => ReduceOp::Min,
+        _ => unreachable!(),
+    };
     let input = tensor_map[inputs.get(0) as usize];
     let axes = tensor_map[inputs.get(1) as usize];
     let output = tensor_map[outputs.get(0) as usize];
-    Ok(PspOp::ReduceProd {
+    Ok(PspOp::Reduce {
+        op: reduce_op,
         input,
         axes,
         output,

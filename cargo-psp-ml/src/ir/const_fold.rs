@@ -4,7 +4,7 @@
 //! computation subgraphs), promotes their outputs to constants, and removes the ops.
 
 use super::graph::{DType, Graph, TensorKind};
-use super::psp::{BinaryOp, PspModel, PspOp};
+use super::psp::{BinaryOp, PspModel, PspOp, ReduceOp};
 
 pub fn fold(model: &mut PspModel) {
     // Clone ops so we can iterate without borrowing model
@@ -95,14 +95,22 @@ pub fn fold(model: &mut PspModel) {
                     to_remove.push(op_idx);
                 }
             }
-            PspOp::ReduceProd {
+            PspOp::Reduce {
+                op: reduce_op,
                 input,
                 output,
                 ..
             } => {
+                if model.graph.tensor(*input).dtype != DType::I32 {
+                    continue;
+                }
                 let data = read_i32(&model.model_data, &model.graph, *input);
-                let product = data.iter().copied().product::<i32>();
-                store_i32(&mut model.model_data, &mut model.graph, *output, &[product]);
+                let result = match reduce_op {
+                    ReduceOp::Prod => data.iter().copied().product::<i32>(),
+                    ReduceOp::Max => data.iter().copied().max().unwrap_or(0),
+                    ReduceOp::Min => data.iter().copied().min().unwrap_or(0),
+                };
+                store_i32(&mut model.model_data, &mut model.graph, *output, &[result]);
                 to_remove.push(op_idx);
             }
             PspOp::Range {
@@ -440,7 +448,7 @@ mod tests {
         let input = add_const_i32(&mut model, vec![3], &[2, 3, 4]);
         let axes = add_const_i32(&mut model, vec![1], &[0]);
         let output = add_intermediate(&mut model, vec![1], DType::I32);
-        model.graph.ops.push(PspOp::ReduceProd { input, axes, output });
+        model.graph.ops.push(PspOp::Reduce { op: ReduceOp::Prod, input, axes, output });
 
         fold(&mut model);
         assert!(model.graph.ops.is_empty());

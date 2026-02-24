@@ -228,6 +228,30 @@ pub fn fully_connected_relu(
     }
 }
 
+// ─── Reduction ops ─────────────────────────────────────────────
+
+/// Reduce max: output[0] = max(input)
+pub fn reduce_max(input: &[f32], output: &mut [f32]) {
+    let mut val = f32::NEG_INFINITY;
+    for &x in input {
+        if x > val {
+            val = x;
+        }
+    }
+    output[0] = val;
+}
+
+/// Reduce min: output[0] = min(input)
+pub fn reduce_min(input: &[f32], output: &mut [f32]) {
+    let mut val = f32::INFINITY;
+    for &x in input {
+        if x < val {
+            val = x;
+        }
+    }
+    output[0] = val;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

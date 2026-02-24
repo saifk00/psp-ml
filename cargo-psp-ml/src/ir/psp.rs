@@ -82,8 +82,8 @@ pub enum PspOp {
     /// Index lookup along axis
     Gather { input: TensorId, indices: TensorId, output: TensorId, axis: i32 },
 
-    /// Reduce product along axes
-    ReduceProd { input: TensorId, axes: TensorId, output: TensorId },
+    /// Reduction along axes (product, max, min)
+    Reduce { op: ReduceOp, input: TensorId, axes: TensorId, output: TensorId },
 
     /// Generate integer range [start, limit) with step delta
     Range { start: TensorId, limit: TensorId, delta: TensorId, output: TensorId },
@@ -150,6 +150,23 @@ impl UnaryOp {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReduceOp {
+    Prod,
+    Max,
+    Min,
+}
+
+impl ReduceOp {
+    pub fn name(self) -> &'static str {
+        match self {
+            ReduceOp::Prod => "reduce_prod",
+            ReduceOp::Max => "reduce_max",
+            ReduceOp::Min => "reduce_min",
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct FullyConnectedParams {
     pub fused_activation: Option<Activation>,
@@ -197,7 +214,7 @@ impl PspOp {
             PspOp::Gather {
                 input, indices, ..
             } => vec![*input, *indices],
-            PspOp::ReduceProd { input, axes, .. } => vec![*input, *axes],
+            PspOp::Reduce { input, axes, .. } => vec![*input, *axes],
             PspOp::Range {
                 start,
                 limit,
@@ -227,7 +244,7 @@ impl PspOp {
             | PspOp::StridedSlice { output, .. }
             | PspOp::Concatenation { output, .. }
             | PspOp::Gather { output, .. }
-            | PspOp::ReduceProd { output, .. }
+            | PspOp::Reduce { output, .. }
             | PspOp::Range { output, .. }
             | PspOp::Cast { output, .. } => *output,
             PspOp::SplitV { .. } => panic!("SplitV has multiple outputs; use outputs()"),

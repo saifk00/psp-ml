@@ -301,12 +301,23 @@ fn lower_ops(model: &PspModel, use_vfpu_conv2d: bool) -> Result<Vec<OpPlan>, Str
                 return Err(format!("Op {i}: Softmax kernel not yet implemented"));
             }
 
+            PspOp::Reduce { op, input, output, .. } => OpPlan {
+                scratch: vec![],
+                sub_ops: vec![SubOpPlan {
+                    name: op.name().into(),
+                    kernels: vec![KernelCall::Reduce {
+                        op: *op,
+                        input: *input,
+                        output: *output,
+                    }],
+                }],
+            },
+
             PspOp::Shape { .. }
             | PspOp::Pack { .. }
             | PspOp::StridedSlice { .. }
             | PspOp::Concatenation { .. }
             | PspOp::Gather { .. }
-            | PspOp::ReduceProd { .. }
             | PspOp::Range { .. }
             | PspOp::SplitV { .. }
             | PspOp::Cast { .. } => {

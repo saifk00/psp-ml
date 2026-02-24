@@ -37,7 +37,7 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
         //! Generated inference module
 
         #[allow(unused_imports)]
-        use psp_ml::kernels::naive::{conv2d, conv2d_relu, max_pool2d, reshape, fully_connected, fully_connected_relu, binary_add, binary_mul, binary_sub, binary_div, binary_max, unary_logistic};
+        use psp_ml::kernels::naive::{conv2d, conv2d_relu, max_pool2d, reshape, fully_connected, fully_connected_relu, binary_add, binary_mul, binary_sub, binary_div, binary_max, unary_logistic, reduce_max, reduce_min};
         #[allow(unused_imports)]
         use psp_ml::kernels::{im2col, im2col_padded, matmul_bt, matmul_bt_tiled, bias_add, relu};
 
@@ -432,6 +432,13 @@ fn render_kernel_call(
 
         KernelCall::UnaryElementWise { op, input, output } => {
             let fn_ident = Ident::new(&format!("unary_{}", op.name()), Span::call_site());
+            let in_expr = writer.read(*input);
+            let out_expr = writer.write(*output);
+            quote! { #fn_ident(#in_expr, #out_expr); }
+        }
+
+        KernelCall::Reduce { op, input, output } => {
+            let fn_ident = Ident::new(op.name(), Span::call_site());
             let in_expr = writer.read(*input);
             let out_expr = writer.write(*output);
             quote! { #fn_ident(#in_expr, #out_expr); }
