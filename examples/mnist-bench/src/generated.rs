@@ -2,8 +2,8 @@
 #[allow(unused_imports)]
 use psp_ml::kernels::naive::{
     conv2d, conv2d_relu, max_pool2d, reshape, fully_connected, fully_connected_relu,
-    binary_add, binary_mul, binary_sub, binary_div, binary_max, unary_logistic,
-    reduce_max, reduce_min,
+    binary_add, binary_mul, binary_sub, binary_div, binary_max, binary_pow,
+    unary_logistic, reduce_max, reduce_min, reduce_mean_hw,
 };
 #[allow(unused_imports)]
 use psp_ml::kernels::{im2col, im2col_padded, matmul_bt, matmul_bt_tiled, bias_add, relu};

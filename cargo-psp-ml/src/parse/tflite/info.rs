@@ -28,6 +28,7 @@ const SUPPORTED_OPS: &[BuiltinOperator] = &[
     BuiltinOperator::REDUCE_MAX,
     BuiltinOperator::REDUCE_MIN,
     BuiltinOperator::POW,
+    BuiltinOperator::MEAN,
 ];
 
 fn type_name(t: TensorType) -> &'static str {

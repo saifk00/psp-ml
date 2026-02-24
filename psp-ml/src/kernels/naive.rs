@@ -253,6 +253,22 @@ pub fn reduce_min(input: &[f32], output: &mut [f32]) {
     output[0] = val;
 }
 
+/// Reduce mean over all dims except the last (channel dim).
+///
+/// Input has N*C elements (NHWC flattened), output has C elements.
+/// Each output[c] = mean of input[c, c+C, c+2C, ...].
+pub fn reduce_mean_hw(input: &[f32], output: &mut [f32]) {
+    let c = output.len();
+    let n = input.len() / c;
+    for ch in 0..c {
+        let mut sum = 0.0f32;
+        for i in 0..n {
+            sum += input[i * c + ch];
+        }
+        output[ch] = sum / n as f32;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

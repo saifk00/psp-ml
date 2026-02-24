@@ -125,7 +125,8 @@ fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
             BuiltinOperator::GATHER => Some(lower_gather(&op, &tensor_map)?),
             BuiltinOperator::REDUCE_PROD
             | BuiltinOperator::REDUCE_MAX
-            | BuiltinOperator::REDUCE_MIN => Some(lower_reduce(&op, &tensor_map, builtin_code)?),
+            | BuiltinOperator::REDUCE_MIN
+            | BuiltinOperator::MEAN => Some(lower_reduce(&op, &tensor_map, builtin_code)?),
             BuiltinOperator::RANGE => Some(lower_range(&op, &tensor_map)?),
             BuiltinOperator::SPLIT_V => Some(lower_split_v(&op, &tensor_map)?),
             BuiltinOperator::CAST => Some(lower_cast(&op, &tensor_map)?),
@@ -519,6 +520,7 @@ fn lower_reduce(op: &Operator, tensor_map: &[TensorId], builtin_code: BuiltinOpe
         BuiltinOperator::REDUCE_PROD => ReduceOp::Prod,
         BuiltinOperator::REDUCE_MAX => ReduceOp::Max,
         BuiltinOperator::REDUCE_MIN => ReduceOp::Min,
+        BuiltinOperator::MEAN => ReduceOp::Mean,
         _ => unreachable!(),
     };
     let input = tensor_map[inputs.get(0) as usize];

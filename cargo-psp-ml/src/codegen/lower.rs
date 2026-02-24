@@ -1,5 +1,5 @@
 use crate::ir::graph::{TensorId, TensorKind};
-use crate::ir::psp::{Activation, PspModel, PspOp};
+use crate::ir::psp::{Activation, PspModel, PspOp, ReduceOp};
 
 use super::plan::*;
 
@@ -301,17 +301,39 @@ fn lower_ops(model: &PspModel, use_vfpu_conv2d: bool) -> Result<Vec<OpPlan>, Str
                 return Err(format!("Op {i}: Softmax kernel not yet implemented"));
             }
 
-            PspOp::Reduce { op, input, output, .. } => OpPlan {
-                scratch: vec![],
-                sub_ops: vec![SubOpPlan {
-                    name: op.name().into(),
-                    kernels: vec![KernelCall::Reduce {
-                        op: *op,
-                        input: *input,
-                        output: *output,
+            PspOp::Reduce { op, input, axes, output } => {
+                // Validate Mean axes at compile time
+                if *op == ReduceOp::Mean {
+                    let axes_tensor = graph.tensor(*axes);
+                    if let TensorKind::Constant { offset, len } = axes_tensor.kind {
+                        let axes_vals: Vec<i32> = model.model_data[offset..offset + len]
+                            .chunks_exact(4)
+                            .map(|c| i32::from_le_bytes(c.try_into().unwrap()))
+                            .collect();
+                        let input_ndim = graph.tensor(*input).shape.len();
+                        let expected: Vec<i32> = (0..input_ndim as i32 - 1).collect();
+                        if axes_vals != expected {
+                            return Err(format!(
+                                "Op {i}: reduce_mean_hw only supports reduction over all axes \
+                                 except the last (got axes={:?}, input shape={:?})",
+                                axes_vals,
+                                graph.tensor(*input).shape,
+                            ));
+                        }
+                    }
+                }
+                OpPlan {
+                    scratch: vec![],
+                    sub_ops: vec![SubOpPlan {
+                        name: op.name().into(),
+                        kernels: vec![KernelCall::Reduce {
+                            op: *op,
+                            input: *input,
+                            output: *output,
+                        }],
                     }],
-                }],
-            },
+                }
+            }
 
             PspOp::Shape { .. }
             | PspOp::Pack { .. }

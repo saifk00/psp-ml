@@ -157,6 +157,7 @@ pub enum ReduceOp {
     Prod,
     Max,
     Min,
+    Mean,
 }
 
 impl ReduceOp {
@@ -165,6 +166,7 @@ impl ReduceOp {
             ReduceOp::Prod => "reduce_prod",
             ReduceOp::Max => "reduce_max",
             ReduceOp::Min => "reduce_min",
+            ReduceOp::Mean => "reduce_mean_hw",
         }
     }
 }

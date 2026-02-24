@@ -109,6 +109,7 @@ pub fn fold(model: &mut PspModel) {
                     ReduceOp::Prod => data.iter().copied().product::<i32>(),
                     ReduceOp::Max => data.iter().copied().max().unwrap_or(0),
                     ReduceOp::Min => data.iter().copied().min().unwrap_or(0),
+                    ReduceOp::Mean => data.iter().copied().sum::<i32>() / data.len() as i32,
                 };
                 store_i32(&mut model.model_data, &mut model.graph, *output, &[result]);
                 to_remove.push(op_idx);
