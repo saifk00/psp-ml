@@ -92,6 +92,14 @@ pub struct SubOpPlan {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum KernelCall {
+    DepthwiseConv2d {
+        input: Tensor4d,
+        filter: Tensor4d,
+        bias: Option<TensorId>,
+        stride: [usize; 2],
+        padding: [usize; 2],
+        output: Tensor4d,
+    },
     Conv2d {
         input: Tensor4d,
         filter: Tensor4d,

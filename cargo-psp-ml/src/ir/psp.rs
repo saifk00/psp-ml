@@ -32,6 +32,15 @@ pub enum PspOp {
         fused_activation: FullyConnectedParams,
     },
 
+    /// Depthwise 2D convolution (per-channel, depth_multiplier=1)
+    DepthwiseConv2d {
+        input: TensorId,
+        weights: TensorId,
+        bias: Option<TensorId>,
+        output: TensorId,
+        params: Conv2dParams,
+    },
+
     /// 2D pooling (max or average)
     Pool2d {
         pool_type: PoolType,
@@ -206,6 +215,12 @@ impl PspOp {
                 bias,
                 ..
             }
+            | PspOp::DepthwiseConv2d {
+                input,
+                weights,
+                bias,
+                ..
+            }
             | PspOp::FullyConnected {
                 input,
                 weights,
@@ -261,6 +276,7 @@ impl PspOp {
     pub fn output(&self) -> TensorId {
         match self {
             PspOp::Conv2d { output, .. }
+            | PspOp::DepthwiseConv2d { output, .. }
             | PspOp::FullyConnected { output, .. }
             | PspOp::Pool2d { output, .. }
             | PspOp::Reshape { output, .. }

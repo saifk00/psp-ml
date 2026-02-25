@@ -385,6 +385,61 @@ pub fn transpose(
     }
 }
 
+/// Depthwise 2D Convolution (NHWC, naive)
+///
+/// Each output channel depends only on the corresponding input channel.
+/// - `input`:  [N, H, W, C]
+/// - `filter`: [1, Kh, Kw, C]
+/// - `bias`:   [C]
+/// - `padding`: [pad_h, pad_w] - zero padding on each side
+/// - `output`: [N, Ho, Wo, C]
+pub fn depthwise_conv2d(
+    input: &[f32],
+    input_shape: [usize; 4],
+    filter: &[f32],
+    filter_shape: [usize; 4],
+    bias: Option<&[f32]>,
+    stride: [usize; 2],
+    padding: [usize; 2],
+    output: &mut [f32],
+    output_shape: [usize; 4],
+) {
+    let [n, h, w, c] = input_shape;
+    let [_, kh, kw, _] = filter_shape;
+    let [_, ho, wo, _] = output_shape;
+    let [sh, sw] = stride;
+    let [pad_h, pad_w] = padding;
+
+    for batch in 0..n {
+        for oy in 0..ho {
+            for ox in 0..wo {
+                for ch in 0..c {
+                    let mut sum = bias.map_or(0.0, |b| b[ch]);
+                    for ky in 0..kh {
+                        for kx in 0..kw {
+                            let iy_padded = oy * sh + ky;
+                            let ix_padded = ox * sw + kx;
+                            if iy_padded < pad_h || ix_padded < pad_w {
+                                continue;
+                            }
+                            let iy = iy_padded - pad_h;
+                            let ix = ix_padded - pad_w;
+                            if iy >= h || ix >= w {
+                                continue;
+                            }
+                            let in_idx = batch * (h * w * c) + iy * (w * c) + ix * c + ch;
+                            let f_idx = ky * (kw * c) + kx * c + ch;
+                            sum += input[in_idx] * filter[f_idx];
+                        }
+                    }
+                    let out_idx = batch * (ho * wo * c) + oy * (wo * c) + ox * c + ch;
+                    output[out_idx] = sum;
+                }
+            }
+        }
+    }
+}
+
 /// Zero-pad an NHWC tensor.
 ///
 /// - `input`:  [N, H, W, C]

@@ -513,6 +513,43 @@ fn render_kernel_call(
                 reverse_v2(#input_expr, &#is_tok, #output_expr, #axis);
             }
         }
+
+        KernelCall::DepthwiseConv2d {
+            input,
+            filter,
+            bias,
+            stride,
+            padding,
+            output,
+        } => {
+            let input_expr = writer.read(input.id);
+            let input_shape_tok = shape_tokens(&input.shape);
+            let filter_expr = writer.read(filter.id);
+            let filter_shape_tok = shape_tokens(&filter.shape);
+            let output_expr = writer.write(output.id);
+            let output_shape_tok = shape_tokens(&output.shape);
+            let [sh, sw] = stride;
+            let [ph, pw] = padding;
+
+            let bias_tok = match bias {
+                Some(b) => {
+                    let b_expr = writer.read(*b);
+                    quote!(Some(#b_expr))
+                }
+                None => quote!(None),
+            };
+
+            quote! {
+                depthwise_conv2d(
+                    #input_expr, #input_shape_tok,
+                    #filter_expr, #filter_shape_tok,
+                    #bias_tok,
+                    [#sh, #sw],
+                    [#ph, #pw],
+                    #output_expr, #output_shape_tok
+                );
+            }
+        }
     }
 }
 

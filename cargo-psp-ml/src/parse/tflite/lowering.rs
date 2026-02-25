@@ -94,6 +94,7 @@ fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
 
         let psp_op = match builtin_code {
             BuiltinOperator::CONV_2D => Some(lower_conv2d(&op, &tensor_map, &graph_tensors)?),
+            BuiltinOperator::DEPTHWISE_CONV_2D => Some(lower_depthwise_conv2d(&op, &tensor_map, &graph_tensors)?),
             BuiltinOperator::FULLY_CONNECTED => Some(lower_fc(&op, &tensor_map)?),
             BuiltinOperator::MAX_POOL_2D
             | BuiltinOperator::AVERAGE_POOL_2D => Some(lower_pool2d(&op, &tensor_map, builtin_code)?),
@@ -278,6 +279,88 @@ fn lower_conv2d(
     };
 
     Ok(PspOp::Conv2d {
+        input,
+        weights,
+        bias,
+        output,
+        params: Conv2dParams {
+            kernel_h,
+            kernel_w,
+            stride_h,
+            stride_w,
+            pad_top,
+            pad_bottom,
+            pad_left,
+            pad_right,
+            fused_activation: convert_activation(options.fused_activation_function()),
+        },
+    })
+}
+
+/// Lower TFLite DEPTHWISE_CONV_2D to PspOp::DepthwiseConv2d
+fn lower_depthwise_conv2d(
+    op: &Operator,
+    tensor_map: &[TensorId],
+    graph_tensors: &[Tensor],
+) -> Result<PspOp, String> {
+    let inputs = op.inputs().ok_or("DEPTHWISE_CONV_2D: no inputs")?;
+    let outputs = op.outputs().ok_or("DEPTHWISE_CONV_2D: no outputs")?;
+    let options = op
+        .builtin_options_as_depthwise_conv_2_doptions()
+        .ok_or("DEPTHWISE_CONV_2D: no options")?;
+
+    if options.depth_multiplier() != 1 {
+        return Err(format!(
+            "DEPTHWISE_CONV_2D: only depth_multiplier=1 supported, got {}",
+            options.depth_multiplier()
+        ));
+    }
+
+    let input = tensor_map[inputs.get(0) as usize];
+    let weights = tensor_map[inputs.get(1) as usize];
+    let bias = if inputs.len() > 2 && inputs.get(2) >= 0 {
+        Some(tensor_map[inputs.get(2) as usize])
+    } else {
+        None
+    };
+    let output = tensor_map[outputs.get(0) as usize];
+
+    let weight_tensor = &graph_tensors[weights];
+    let (kernel_h, kernel_w) = if weight_tensor.shape.len() == 4 {
+        (weight_tensor.shape[1], weight_tensor.shape[2])
+    } else {
+        return Err(format!(
+            "DEPTHWISE_CONV_2D: unexpected weight shape {:?}",
+            weight_tensor.shape
+        ));
+    };
+
+    let stride_h = options.stride_h() as usize;
+    let stride_w = options.stride_w() as usize;
+
+    let (pad_top, pad_bottom, pad_left, pad_right) = match options.padding() {
+        Padding::VALID => (0, 0, 0, 0),
+        Padding::SAME => {
+            let input_tensor = &graph_tensors[input];
+            if input_tensor.shape.len() == 4 {
+                compute_same_padding(
+                    input_tensor.shape[1],
+                    input_tensor.shape[2],
+                    kernel_h,
+                    kernel_w,
+                    stride_h,
+                    stride_w,
+                )
+            } else {
+                let pad_h = (kernel_h - 1) / 2;
+                let pad_w = (kernel_w - 1) / 2;
+                (pad_h, kernel_h - 1 - pad_h, pad_w, kernel_w - 1 - pad_w)
+            }
+        }
+        _ => (0, 0, 0, 0),
+    };
+
+    Ok(PspOp::DepthwiseConv2d {
         input,
         weights,
         bias,

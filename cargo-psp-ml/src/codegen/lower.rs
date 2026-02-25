@@ -181,6 +181,57 @@ fn lower_ops(model: &PspModel, use_vfpu_conv2d: bool) -> Result<Vec<OpPlan>, Str
                 }
             }
 
+            PspOp::DepthwiseConv2d {
+                input,
+                weights,
+                bias,
+                output,
+                params,
+            } => {
+                if params.pad_top != params.pad_bottom || params.pad_left != params.pad_right {
+                    return Err(format!("Op {i}: asymmetric padding not supported for depthwise conv2d"));
+                }
+
+                let in_shape = &graph.tensor(*input).shape;
+                let w_shape = &graph.tensor(*weights).shape;
+                let out_shape = &graph.tensor(*output).shape;
+
+                if in_shape.len() != 4 || w_shape.len() != 4 || out_shape.len() != 4 {
+                    return Err(format!(
+                        "Op {i}: DepthwiseConv2d expects 4D tensors (input={}, weights={}, output={})",
+                        in_shape.len(), w_shape.len(), out_shape.len()
+                    ));
+                }
+
+                let in4 = Tensor4d {
+                    id: *input,
+                    shape: [in_shape[0], in_shape[1], in_shape[2], in_shape[3]],
+                };
+                let w4 = Tensor4d {
+                    id: *weights,
+                    shape: [w_shape[0], w_shape[1], w_shape[2], w_shape[3]],
+                };
+                let out4 = Tensor4d {
+                    id: *output,
+                    shape: [out_shape[0], out_shape[1], out_shape[2], out_shape[3]],
+                };
+
+                OpPlan {
+                    scratch: vec![],
+                    sub_ops: vec![SubOpPlan {
+                        name: "depthwise_conv2d".into(),
+                        kernels: vec![KernelCall::DepthwiseConv2d {
+                            input: in4,
+                            filter: w4,
+                            bias: *bias,
+                            stride: [params.stride_h, params.stride_w],
+                            padding: [params.pad_top, params.pad_left],
+                            output: out4,
+                        }],
+                    }],
+                }
+            }
+
             PspOp::FullyConnected {
                 input,
                 weights,
