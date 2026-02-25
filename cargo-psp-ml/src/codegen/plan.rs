@@ -6,7 +6,7 @@
 //! 3. **KernelCall** — actual kernel invocations, referencing tensors and scratch buffers
 
 use crate::ir::graph::TensorId;
-use crate::ir::psp::{BinaryOp, ReduceOp, UnaryOp};
+use crate::ir::psp::{BinaryOp, PoolType, ReduceOp, UnaryOp};
 
 /// Index into `OpPlan::scratch`.
 pub type ScratchId = usize;
@@ -125,9 +125,12 @@ pub enum KernelCall {
     Relu {
         output: TensorId,
     },
-    MaxPool2d {
+    Pool2d {
         input: Tensor4d,
         output: Tensor4d,
+        filter: [usize; 2],
+        stride: [usize; 2],
+        pool_type: PoolType,
     },
     Reshape {
         input: TensorId,

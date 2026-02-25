@@ -12,7 +12,7 @@ use super::{
 type Buffers<'a> = flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<Buffer<'a>>>;
 use crate::ir::graph::{DType, Graph, Tensor, TensorId, TensorKind};
 use crate::ir::const_fold;
-use crate::ir::psp::{Activation, BinaryOp, Conv2dParams, FullyConnectedParams, PspModel, PspOp, ReduceOp, UnaryOp};
+use crate::ir::psp::{Activation, BinaryOp, Conv2dParams, FullyConnectedParams, PoolType, PspModel, PspOp, ReduceOp, UnaryOp};
 
 /// Convert a TFLite model buffer into PSP IR.
 ///
@@ -95,7 +95,8 @@ fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
         let psp_op = match builtin_code {
             BuiltinOperator::CONV_2D => Some(lower_conv2d(&op, &tensor_map, &graph_tensors)?),
             BuiltinOperator::FULLY_CONNECTED => Some(lower_fc(&op, &tensor_map)?),
-            BuiltinOperator::MAX_POOL_2D => Some(lower_maxpool(&op, &tensor_map)?),
+            BuiltinOperator::MAX_POOL_2D
+            | BuiltinOperator::AVERAGE_POOL_2D => Some(lower_pool2d(&op, &tensor_map, builtin_code)?),
             BuiltinOperator::RESHAPE
             | BuiltinOperator::SQUEEZE
             | BuiltinOperator::EXPAND_DIMS => {
@@ -321,31 +322,30 @@ fn lower_fc(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
     })
 }
 
-/// Lower TFLite MAX_POOL_2D to PspOp::MaxPool2x2
-fn lower_maxpool(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
-    let inputs = op.inputs().ok_or("MAX_POOL_2D: no inputs")?;
-    let outputs = op.outputs().ok_or("MAX_POOL_2D: no outputs")?;
+/// Lower TFLite MAX_POOL_2D / AVERAGE_POOL_2D to PspOp::Pool2d
+fn lower_pool2d(op: &Operator, tensor_map: &[TensorId], builtin_code: BuiltinOperator) -> Result<PspOp, String> {
+    let inputs = op.inputs().ok_or("POOL_2D: no inputs")?;
+    let outputs = op.outputs().ok_or("POOL_2D: no outputs")?;
     let options = op
         .builtin_options_as_pool_2_doptions()
-        .ok_or("MAX_POOL_2D: no options")?;
+        .ok_or("POOL_2D: no options")?;
 
-    // We only support 2x2 maxpool with stride 2 for now
-    let filter_h = options.filter_height();
-    let filter_w = options.filter_width();
-    let stride_h = options.stride_h();
-    let stride_w = options.stride_w();
-
-    if filter_h != 2 || filter_w != 2 || stride_h != 2 || stride_w != 2 {
-        return Err(format!(
-            "MAX_POOL_2D: only 2x2 stride 2 supported, got {}x{} stride {}x{}",
-            filter_h, filter_w, stride_h, stride_w
-        ));
-    }
+    let pool_type = match builtin_code {
+        BuiltinOperator::MAX_POOL_2D => PoolType::Max,
+        BuiltinOperator::AVERAGE_POOL_2D => PoolType::Average,
+        _ => unreachable!(),
+    };
 
     let input = tensor_map[inputs.get(0) as usize];
     let output = tensor_map[outputs.get(0) as usize];
 
-    Ok(PspOp::MaxPool2x2 { input, output })
+    Ok(PspOp::Pool2d {
+        pool_type,
+        input,
+        output,
+        filter: [options.filter_height() as usize, options.filter_width() as usize],
+        stride: [options.stride_h() as usize, options.stride_w() as usize],
+    })
 }
 
 /// Lower TFLite RESHAPE to PspOp::Reshape

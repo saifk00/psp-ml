@@ -3,7 +3,7 @@
 //! This is the only codegen file that depends on proc_macro2/quote.
 
 use crate::ir::graph::Graph;
-use crate::ir::psp::PspOp;
+use crate::ir::psp::{PoolType, PspOp};
 
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
@@ -360,15 +360,28 @@ fn render_kernel_call(
             quote! { relu(#output_expr); }
         }
 
-        KernelCall::MaxPool2d { input, output } => {
+        KernelCall::Pool2d {
+            input,
+            output,
+            filter,
+            stride,
+            pool_type,
+        } => {
+            let fn_name = match pool_type {
+                PoolType::Max => "max_pool2d",
+                PoolType::Average => "average_pool2d",
+            };
+            let fn_ident = Ident::new(fn_name, Span::call_site());
             let input_expr = writer.read(input.id);
             let input_shape_tok = shape_tokens(&input.shape);
             let output_expr = writer.write(output.id);
             let output_shape_tok = shape_tokens(&output.shape);
+            let [fh, fw] = filter;
+            let [sh, sw] = stride;
             quote! {
-                max_pool2d(
+                #fn_ident(
                     #input_expr, #input_shape_tok,
-                    [2, 2], [2, 2],
+                    [#fh, #fw], [#sh, #sw],
                     #output_expr, #output_shape_tok
                 );
             }

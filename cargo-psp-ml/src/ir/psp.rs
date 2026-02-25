@@ -32,8 +32,14 @@ pub enum PspOp {
         fused_activation: FullyConnectedParams,
     },
 
-    /// 2×2 max pooling, stride 2
-    MaxPool2x2 { input: TensorId, output: TensorId },
+    /// 2D pooling (max or average)
+    Pool2d {
+        pool_type: PoolType,
+        input: TensorId,
+        output: TensorId,
+        filter: [usize; 2],
+        stride: [usize; 2],
+    },
 
     /// Reshape (zero-cost pointer reinterpret)
     Reshape { input: TensorId, output: TensorId },
@@ -156,6 +162,12 @@ impl UnaryOp {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PoolType {
+    Max,
+    Average,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReduceOp {
     Prod,
     Max,
@@ -201,7 +213,7 @@ impl PspOp {
                 }
                 v
             }
-            PspOp::MaxPool2x2 { input, .. }
+            PspOp::Pool2d { input, .. }
             | PspOp::Reshape { input, .. }
             | PspOp::Softmax { input, .. }
             | PspOp::Shape { input, .. }
@@ -242,7 +254,7 @@ impl PspOp {
         match self {
             PspOp::Conv2d { output, .. }
             | PspOp::FullyConnected { output, .. }
-            | PspOp::MaxPool2x2 { output, .. }
+            | PspOp::Pool2d { output, .. }
             | PspOp::Reshape { output, .. }
             | PspOp::Softmax { output, .. }
             | PspOp::ElementWise { output, .. }

@@ -1,5 +1,5 @@
 use crate::ir::graph::{TensorId, TensorKind};
-use crate::ir::psp::{Activation, PspModel, PspOp, ReduceOp};
+use crate::ir::psp::{Activation, PoolType, PspModel, PspOp, ReduceOp};
 
 use super::plan::*;
 
@@ -222,23 +222,28 @@ fn lower_ops(model: &PspModel, use_vfpu_conv2d: bool) -> Result<Vec<OpPlan>, Str
                 }
             }
 
-            PspOp::MaxPool2x2 { input, output } => {
+            PspOp::Pool2d { pool_type, input, output, filter, stride } => {
                 let in_shape = &graph.tensor(*input).shape;
                 let out_shape = &graph.tensor(*output).shape;
 
                 if in_shape.len() != 4 || out_shape.len() != 4 {
                     return Err(format!(
-                        "Op {i}: MaxPool2x2 expects 4D tensors (input={}, output={})",
+                        "Op {i}: Pool2d expects 4D tensors (input={}, output={})",
                         in_shape.len(),
                         out_shape.len()
                     ));
                 }
 
+                let name = match pool_type {
+                    PoolType::Max => "max_pool2d",
+                    PoolType::Average => "average_pool2d",
+                };
+
                 OpPlan {
                     scratch: vec![],
                     sub_ops: vec![SubOpPlan {
-                        name: "max_pool2d".into(),
-                        kernels: vec![KernelCall::MaxPool2d {
+                        name: name.into(),
+                        kernels: vec![KernelCall::Pool2d {
                             input: Tensor4d {
                                 id: *input,
                                 shape: [in_shape[0], in_shape[1], in_shape[2], in_shape[3]],
@@ -247,6 +252,9 @@ fn lower_ops(model: &PspModel, use_vfpu_conv2d: bool) -> Result<Vec<OpPlan>, Str
                                 id: *output,
                                 shape: [out_shape[0], out_shape[1], out_shape[2], out_shape[3]],
                             },
+                            filter: *filter,
+                            stride: *stride,
+                            pool_type: *pool_type,
                         }],
                     }],
                 }

@@ -2,7 +2,7 @@
 #[allow(unused_imports)]
 use psp_ml::kernels::naive::*;
 #[allow(unused_imports)]
-use psp_ml::kernels::{im2col, im2col_padded, matmul_bt, matmul_bt_tiled, bias_add, relu};
+use psp_ml::kernels::*;
 pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
     static mut T_10_BUF: Aligned16<6272usize> = Aligned16([0.0f32; 6272usize]);
     let t_10 = unsafe {
@@ -81,8 +81,8 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
     max_pool2d(
         t_10,
         [1usize, 28usize, 28usize, 8usize],
-        [2, 2],
-        [2, 2],
+        [2usize, 2usize],
+        [2usize, 2usize],
         t_11,
         [1usize, 14usize, 14usize, 8usize],
     );
@@ -115,8 +115,8 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
     max_pool2d(
         t_12,
         [1usize, 14usize, 14usize, 16usize],
-        [2, 2],
-        [2, 2],
+        [2usize, 2usize],
+        [2usize, 2usize],
         t_13,
         [1usize, 7usize, 7usize, 16usize],
     );
@@ -214,8 +214,8 @@ pub fn forward_timed(
     max_pool2d(
         t_10,
         [1usize, 28usize, 28usize, 8usize],
-        [2, 2],
-        [2, 2],
+        [2usize, 2usize],
+        [2usize, 2usize],
         t_11,
         [1usize, 14usize, 14usize, 8usize],
     );
@@ -256,8 +256,8 @@ pub fn forward_timed(
     max_pool2d(
         t_12,
         [1usize, 14usize, 14usize, 16usize],
-        [2, 2],
-        [2, 2],
+        [2usize, 2usize],
+        [2usize, 2usize],
         t_13,
         [1usize, 7usize, 7usize, 16usize],
     );

@@ -131,6 +131,45 @@ pub fn max_pool2d(
     }
 }
 
+/// 2D Average Pooling (NHWC, naive)
+///
+/// - `input`:  [N, H, W, C]
+/// - `output`: [N, Ho, Wo, C]
+pub fn average_pool2d(
+    input: &[f32],
+    input_shape: [usize; 4],
+    kernel: [usize; 2],
+    stride: [usize; 2],
+    output: &mut [f32],
+    output_shape: [usize; 4],
+) {
+    let [n, h, w, c] = input_shape;
+    let [kh, kw] = kernel;
+    let [sh, sw] = stride;
+    let [_, ho, wo, _] = output_shape;
+    let pool_size = (kh * kw) as f32;
+
+    for batch in 0..n {
+        for oy in 0..ho {
+            for ox in 0..wo {
+                for ch in 0..c {
+                    let mut sum = 0.0f32;
+                    for ky in 0..kh {
+                        for kx in 0..kw {
+                            let iy = oy * sh + ky;
+                            let ix = ox * sw + kx;
+                            let in_idx = batch * (h * w * c) + iy * (w * c) + ix * c + ch;
+                            sum += input[in_idx];
+                        }
+                    }
+                    let out_idx = batch * (ho * wo * c) + oy * (wo * c) + ox * c + ch;
+                    output[out_idx] = sum / pool_size;
+                }
+            }
+        }
+    }
+}
+
 /// Reshape (copy)
 pub fn reshape(input: &[f32], output: &mut [f32]) {
     for i in 0..input.len() {
