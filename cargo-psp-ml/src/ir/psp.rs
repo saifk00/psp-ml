@@ -93,6 +93,9 @@ pub enum PspOp {
 
     /// Type cast
     Cast { input: TensorId, output: TensorId },
+
+    /// Zero-pad an NHWC tensor
+    Pad { input: TensorId, paddings: TensorId, output: TensorId },
 }
 
 #[derive(Debug, Clone)]
@@ -204,6 +207,7 @@ impl PspOp {
             | PspOp::Shape { input, .. }
             | PspOp::Cast { input, .. }
             | PspOp::UnaryElementWise { input, .. } => vec![*input],
+            PspOp::Pad { input, paddings, .. } => vec![*input, *paddings],
             PspOp::ElementWise {
                 input_a, input_b, ..
             } => vec![*input_a, *input_b],
@@ -250,7 +254,8 @@ impl PspOp {
             | PspOp::Gather { output, .. }
             | PspOp::Reduce { output, .. }
             | PspOp::Range { output, .. }
-            | PspOp::Cast { output, .. } => *output,
+            | PspOp::Cast { output, .. }
+            | PspOp::Pad { output, .. } => *output,
             PspOp::SplitV { .. } => panic!("SplitV has multiple outputs; use outputs()"),
         }
     }

@@ -335,6 +335,65 @@ fn lower_ops(model: &PspModel, use_vfpu_conv2d: bool) -> Result<Vec<OpPlan>, Str
                 }
             }
 
+            PspOp::Pad { input, paddings, output } => {
+                let in_shape = &graph.tensor(*input).shape;
+                let out_shape = &graph.tensor(*output).shape;
+
+                if in_shape.len() != 4 || out_shape.len() != 4 {
+                    return Err(format!(
+                        "Op {i}: Pad expects 4D tensors (input={}, output={})",
+                        in_shape.len(),
+                        out_shape.len()
+                    ));
+                }
+
+                // Read the padding constant at compile time: [4, 2] INT32
+                let pad_tensor = graph.tensor(*paddings);
+                let padding = if let TensorKind::Constant { offset, len } = pad_tensor.kind {
+                    let vals: Vec<i32> = model.model_data[offset..offset + len]
+                        .chunks_exact(4)
+                        .map(|c| i32::from_le_bytes(c.try_into().unwrap()))
+                        .collect();
+                    if vals.len() != 8 {
+                        return Err(format!(
+                            "Op {i}: Pad expects [4,2] padding tensor, got {} values",
+                            vals.len()
+                        ));
+                    }
+                    [
+                        [vals[0] as usize, vals[1] as usize],
+                        [vals[2] as usize, vals[3] as usize],
+                        [vals[4] as usize, vals[5] as usize],
+                        [vals[6] as usize, vals[7] as usize],
+                    ]
+                } else {
+                    return Err(format!(
+                        "Op {i}: Pad requires constant padding tensor"
+                    ));
+                };
+
+                let in4 = Tensor4d {
+                    id: *input,
+                    shape: [in_shape[0], in_shape[1], in_shape[2], in_shape[3]],
+                };
+                let out4 = Tensor4d {
+                    id: *output,
+                    shape: [out_shape[0], out_shape[1], out_shape[2], out_shape[3]],
+                };
+
+                OpPlan {
+                    scratch: vec![],
+                    sub_ops: vec![SubOpPlan {
+                        name: "pad".into(),
+                        kernels: vec![KernelCall::Pad {
+                            input: in4,
+                            output: out4,
+                            padding,
+                        }],
+                    }],
+                }
+            }
+
             PspOp::Shape { .. }
             | PspOp::Pack { .. }
             | PspOp::StridedSlice { .. }

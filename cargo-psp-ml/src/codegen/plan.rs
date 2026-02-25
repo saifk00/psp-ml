@@ -159,4 +159,9 @@ pub enum KernelCall {
         input: TensorId,
         output: TensorId,
     },
+    Pad {
+        input: Tensor4d,
+        output: Tensor4d,
+        padding: [[usize; 2]; 4],
+    },
 }

@@ -37,9 +37,9 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
         //! Generated inference module
 
         #[allow(unused_imports)]
-        use psp_ml::kernels::naive::{conv2d, conv2d_relu, max_pool2d, reshape, fully_connected, fully_connected_relu, binary_add, binary_mul, binary_sub, binary_div, binary_max, binary_pow, unary_logistic, reduce_max, reduce_min, reduce_mean_hw};
+        use psp_ml::kernels::naive::*;
         #[allow(unused_imports)]
-        use psp_ml::kernels::{im2col, im2col_padded, matmul_bt, matmul_bt_tiled, bias_add, relu};
+        use psp_ml::kernels::*;
 
         pub fn forward(input: &[f32; #input_size]) -> [f32; #output_size] {
             #tensor_allocs
@@ -316,8 +316,7 @@ fn render_kernel_call(
             let [kh, kw] = kernel_size;
             let [ph, pw] = padding;
             let [ho, wo] = output_hw;
-            let scratch_ident =
-                Ident::new(&format!("conv_scratch_{op_idx}"), Span::call_site());
+            let scratch_ident = Ident::new(&format!("conv_scratch_{op_idx}"), Span::call_site());
 
             quote! {
                 im2col_padded(
@@ -361,10 +360,7 @@ fn render_kernel_call(
             quote! { relu(#output_expr); }
         }
 
-        KernelCall::MaxPool2d {
-            input,
-            output,
-        } => {
+        KernelCall::MaxPool2d { input, output } => {
             let input_expr = writer.read(input.id);
             let input_shape_tok = shape_tokens(&input.shape);
             let output_expr = writer.write(output.id);
@@ -442,6 +438,32 @@ fn render_kernel_call(
             let in_expr = writer.read(*input);
             let out_expr = writer.write(*output);
             quote! { #fn_ident(#in_expr, #out_expr); }
+        }
+
+        KernelCall::Pad {
+            input,
+            output,
+            padding,
+        } => {
+            let input_expr = writer.read(input.id);
+            let input_shape_tok = shape_tokens(&input.shape);
+            let output_expr = writer.write(output.id);
+            let output_shape_tok = shape_tokens(&output.shape);
+            let p00 = padding[0][0];
+            let p01 = padding[0][1];
+            let p10 = padding[1][0];
+            let p11 = padding[1][1];
+            let p20 = padding[2][0];
+            let p21 = padding[2][1];
+            let p30 = padding[3][0];
+            let p31 = padding[3][1];
+            quote! {
+                pad(
+                    #input_expr, #input_shape_tok,
+                    #output_expr, #output_shape_tok,
+                    [[#p00, #p01], [#p10, #p11], [#p20, #p21], [#p30, #p31]]
+                );
+            }
         }
     }
 }

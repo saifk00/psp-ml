@@ -269,6 +269,40 @@ pub fn reduce_mean_hw(input: &[f32], output: &mut [f32]) {
     }
 }
 
+/// Zero-pad an NHWC tensor.
+///
+/// - `input`:  [N, H, W, C]
+/// - `output`: [N+pN, H+pH, W+pW, C+pC]
+/// - `padding`: [[before, after]; 4] per NHWC dim
+pub fn pad(
+    input: &[f32],
+    input_shape: [usize; 4],
+    output: &mut [f32],
+    output_shape: [usize; 4],
+    padding: [[usize; 2]; 4],
+) {
+    for v in output.iter_mut() {
+        *v = 0.0;
+    }
+    let [n, h, w, c] = input_shape;
+    let [_, o_h, o_w, o_c] = output_shape;
+    for batch in 0..n {
+        for iy in 0..h {
+            for ix in 0..w {
+                for ic in 0..c {
+                    let ob = batch + padding[0][0];
+                    let oy = iy + padding[1][0];
+                    let ox = ix + padding[2][0];
+                    let oc = ic + padding[3][0];
+                    let in_idx = batch * (h * w * c) + iy * (w * c) + ix * c + ic;
+                    let out_idx = ob * (o_h * o_w * o_c) + oy * (o_w * o_c) + ox * o_c + oc;
+                    output[out_idx] = input[in_idx];
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
