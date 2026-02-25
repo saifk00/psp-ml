@@ -12,6 +12,7 @@ use super::{
 type Buffers<'a> = flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<Buffer<'a>>>;
 use crate::ir::graph::{DType, Graph, Tensor, TensorId, TensorKind};
 use crate::ir::const_fold;
+use crate::ir::fuse;
 use crate::ir::psp::{Activation, BinaryOp, Conv2dParams, FullyConnectedParams, PoolType, PspModel, PspOp, ReduceOp, UnaryOp};
 
 /// Convert a TFLite model buffer into PSP IR.
@@ -21,6 +22,7 @@ use crate::ir::psp::{Activation, BinaryOp, Conv2dParams, FullyConnectedParams, P
 pub fn to_psp_ir(model_data: Vec<u8>) -> Result<PspModel, String> {
     let graph = lower(&model_data)?;
     let mut model = PspModel { graph, model_data };
+    fuse::fuse(&mut model);
     const_fold::fold(&mut model);
     Ok(model)
 }
@@ -135,6 +137,7 @@ fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
             BuiltinOperator::PAD => Some(lower_pad(&op, &tensor_map)?),
             BuiltinOperator::TRANSPOSE => Some(lower_transpose(&op, &tensor_map)?),
             BuiltinOperator::REVERSE_V2 => Some(lower_reverse_v2(&op, &tensor_map)?),
+            BuiltinOperator::RFFT2D => Some(lower_rfft2d(&op, &tensor_map)?),
             other => {
                 return Err(format!(
                     "unsupported operator: {:?}",
@@ -233,9 +236,10 @@ fn lower_conv2d(
         .ok_or("CONV_2D: no options")?;
 
     // Input tensors: input, weights, optional bias
+    // TFLite uses -1 as a sentinel for "no tensor", so check both length and value
     let input = tensor_map[inputs.get(0) as usize];
     let weights = tensor_map[inputs.get(1) as usize];
-    let bias = if inputs.len() > 2 {
+    let bias = if inputs.len() > 2 && inputs.get(2) >= 0 {
         Some(tensor_map[inputs.get(2) as usize])
     } else {
         None
@@ -389,7 +393,8 @@ fn lower_fc(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
 
     let input = tensor_map[inputs.get(0) as usize];
     let weights = tensor_map[inputs.get(1) as usize];
-    let bias = if inputs.len() > 2 {
+    // TFLite uses -1 as a sentinel for "no tensor", so check both length and value
+    let bias = if inputs.len() > 2 && inputs.get(2) >= 0 {
         Some(tensor_map[inputs.get(2) as usize])
     } else {
         None
@@ -661,6 +666,16 @@ fn lower_cast(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
     let input = tensor_map[inputs.get(0) as usize];
     let output = tensor_map[outputs.get(0) as usize];
     Ok(PspOp::Cast { input, output })
+}
+
+/// Lower TFLite RFFT2D to PspOp::Rfft2d
+fn lower_rfft2d(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
+    let inputs = op.inputs().ok_or("RFFT2D: no inputs")?;
+    let outputs = op.outputs().ok_or("RFFT2D: no outputs")?;
+    let input = tensor_map[inputs.get(0) as usize];
+    let fft_length = tensor_map[inputs.get(1) as usize];
+    let output = tensor_map[outputs.get(0) as usize];
+    Ok(PspOp::Rfft2d { input, fft_length, output })
 }
 
 /// Lower TFLite REVERSE_V2 to PspOp::ReverseV2

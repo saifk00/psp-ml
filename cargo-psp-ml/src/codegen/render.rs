@@ -189,16 +189,10 @@ fn render_scratch(op: &OpPlan, op_idx: usize, writer: &TensorExprWriter) -> Toke
     for (s_idx, scratch) in op.scratch.iter().enumerate() {
         let size = scratch.size;
 
-        // Choose ident names based on scratch purpose
-        // Scratch 0 = im2col scratch, Scratch 1 = padded weights
-        let (static_name, local_name) = if s_idx == 0 {
-            (
-                format!("CONV_SCRATCH_{op_idx}"),
-                format!("conv_scratch_{op_idx}"),
-            )
-        } else {
-            (format!("PADDED_W_{op_idx}"), format!("padded_w_{op_idx}"))
-        };
+        let (static_name, local_name) = (
+            format!("SCRATCH_{op_idx}_{s_idx}"),
+            format!("scratch_{op_idx}_{s_idx}"),
+        );
 
         let static_ident = Ident::new(&static_name, Span::call_site());
         let local_ident = Ident::new(&local_name, Span::call_site());
@@ -316,7 +310,7 @@ fn render_kernel_call(
             let [kh, kw] = kernel_size;
             let [ph, pw] = padding;
             let [ho, wo] = output_hw;
-            let scratch_ident = Ident::new(&format!("conv_scratch_{op_idx}"), Span::call_site());
+            let scratch_ident = Ident::new(&format!("scratch_{op_idx}_{}", _scratch_idx), Span::call_site());
 
             quote! {
                 im2col_padded(
@@ -335,8 +329,8 @@ fn render_kernel_call(
             k_tiles,
             n_tiles,
         } => {
-            let a_ident = Ident::new(&format!("conv_scratch_{op_idx}"), Span::call_site());
-            let b_ident = Ident::new(&format!("padded_w_{op_idx}"), Span::call_site());
+            let a_ident = Ident::new(&format!("scratch_{op_idx}_{}", _a_scratch), Span::call_site());
+            let b_ident = Ident::new(&format!("scratch_{op_idx}_{}", _b_scratch), Span::call_site());
             let output_expr = writer.write(*output);
 
             quote! {
@@ -549,6 +543,29 @@ fn render_kernel_call(
                     #output_expr, #output_shape_tok
                 );
             }
+        }
+
+        KernelCall::RfftPack { input, output: scratch_idx, n } => {
+            let input_expr = writer.read(*input);
+            let scratch_ident = Ident::new(&format!("scratch_{op_idx}_{scratch_idx}"), Span::call_site());
+            let n = *n;
+            quote! { rfft_pack(#input_expr, #scratch_ident, #n); }
+        }
+
+        KernelCall::FftButterflyStage { data: scratch_idx, twiddles, n_complex, half_size } => {
+            let scratch_ident = Ident::new(&format!("scratch_{op_idx}_{scratch_idx}"), Span::call_site());
+            let tw_expr = writer.read(*twiddles);
+            let nc = *n_complex;
+            let hs = *half_size;
+            quote! { fft_butterfly_stage(#scratch_ident, #tw_expr, #nc, #hs); }
+        }
+
+        KernelCall::RfftUnpack { data: scratch_idx, twiddles, output, n } => {
+            let scratch_ident = Ident::new(&format!("scratch_{op_idx}_{scratch_idx}"), Span::call_site());
+            let tw_expr = writer.read(*twiddles);
+            let out_expr = writer.write(*output);
+            let n = *n;
+            quote! { rfft_unpack(#scratch_ident, #tw_expr, #out_expr, #n); }
         }
     }
 }

@@ -14,7 +14,7 @@ pub struct Generated {
     pub data_path: String,
 }
 
-pub fn generate_code(model: &PspModel) -> GenResult<Generated> {
+pub fn generate_code(model: &mut PspModel) -> GenResult<Generated> {
     let plan = lower::lower(model)?;
     let tokens = render::render(&plan, &model.graph);
 

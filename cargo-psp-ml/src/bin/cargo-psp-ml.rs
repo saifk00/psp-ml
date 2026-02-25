@@ -97,12 +97,12 @@ fn cmd_compile(args: &[String]) {
     let out_dir = out_dir.unwrap_or_else(|| PathBuf::from("."));
 
     let data = fs::read(&model_path).expect("Failed to read model");
-    let psp_model = tflite::to_psp_ir(data).unwrap_or_else(|err| {
+    let mut psp_model = tflite::to_psp_ir(data).unwrap_or_else(|err| {
         eprintln!("Error lowering to IR: {err}");
         process::exit(1);
     });
 
-    let generated = generate_code(&psp_model).unwrap_or_else(|err| {
+    let generated = generate_code(&mut psp_model).unwrap_or_else(|err| {
         eprintln!("Error: {err}");
         process::exit(1);
     });

@@ -1,4 +1,5 @@
 pub mod const_fold;
+pub mod fuse;
 pub mod graph;
 pub mod psp;
 

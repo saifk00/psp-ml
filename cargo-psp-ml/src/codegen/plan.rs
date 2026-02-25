@@ -188,4 +188,27 @@ pub enum KernelCall {
         input_shape: Vec<usize>,
         axis: usize,
     },
+
+    /// Pack N real values into N/2 interleaved complex pairs in bit-reversed order.
+    RfftPack {
+        input: TensorId,
+        output: ScratchId,
+        n: usize,
+    },
+
+    /// One radix-2 DIT butterfly stage of an FFT.
+    FftButterflyStage {
+        data: ScratchId,
+        twiddles: TensorId,
+        n_complex: usize,
+        half_size: usize,
+    },
+
+    /// Unpack N/2 complex FFT result to N/2+1 real-part frequency bins.
+    RfftUnpack {
+        data: ScratchId,
+        twiddles: TensorId,
+        output: TensorId,
+        n: usize,
+    },
 }

@@ -1,4 +1,4 @@
-use crate::ir::graph::{TensorId, TensorKind};
+use crate::ir::graph::{DType, TensorId, TensorKind};
 use crate::ir::psp::{Activation, PoolType, PspModel, PspOp, ReduceOp};
 
 use super::plan::*;
@@ -12,35 +12,34 @@ const fn ceil_vfpu_q(x: usize) -> usize {
 /**
  * Lower a PspModel into a CodegenPlan.
  */
-pub fn lower(model: &PspModel) -> Result<CodegenPlan, String> {
-    let graph = &model.graph;
-
-    if graph.inputs.len() != 1 {
+pub fn lower(model: &mut PspModel) -> Result<CodegenPlan, String> {
+    if model.graph.inputs.len() != 1 {
         return Err(format!(
             "Expected 1 input tensor, found {}",
-            graph.inputs.len()
+            model.graph.inputs.len()
         ));
     }
-    if graph.outputs.len() != 1 {
+    if model.graph.outputs.len() != 1 {
         return Err(format!(
             "Expected 1 output tensor, found {}",
-            graph.outputs.len()
+            model.graph.outputs.len()
         ));
     }
 
-    let input_id = graph.inputs[0];
-    let output_id = graph.outputs[0];
-    let input_size = graph.tensor(input_id).shape.iter().product::<usize>();
-    let output_size = graph.tensor(output_id).shape.iter().product::<usize>();
+    let input_id = model.graph.inputs[0];
+    let output_id = model.graph.outputs[0];
+    let input_size = model.graph.tensor(input_id).shape.iter().product::<usize>();
+    let output_size = model.graph.tensor(output_id).shape.iter().product::<usize>();
 
-    let blob_bytes = model.model_data.len();
-    let blob_floats = blob_bytes / std::mem::size_of::<f32>();
-
-    let allocs = lower_allocs(model)?;
+    let mut allocs = lower_allocs(model)?;
 
     // TODO: expose as compiler flag
     let use_vfpu_conv2d = true;
-    let ops = lower_ops(model, use_vfpu_conv2d)?;
+    let ops = lower_ops(model, use_vfpu_conv2d, &mut allocs)?;
+
+    // Compute blob size AFTER lower_ops, which may append twiddle constants
+    let blob_bytes = model.model_data.len();
+    let blob_floats = blob_bytes / std::mem::size_of::<f32>();
 
     Ok(CodegenPlan {
         input_id,
@@ -124,12 +123,21 @@ fn lower_allocs(model: &PspModel) -> Result<Vec<TensorAlloc>, String> {
     Ok(allocs)
 }
 
-fn lower_ops(model: &PspModel, use_vfpu_conv2d: bool) -> Result<Vec<OpPlan>, String> {
-    let graph = &model.graph;
+fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<TensorAlloc>) -> Result<Vec<OpPlan>, String> {
     let mut ops = Vec::new();
+    let num_ops = model.graph.ops.len();
 
-    for (i, op) in graph.ops.iter().enumerate() {
-        let plan = match op {
+    for i in 0..num_ops {
+        let op = model.graph.ops[i].clone();
+
+        // Handle RFFT separately: it needs &mut model to append twiddle constants
+        if let PspOp::Rfft { input, output, fft_length } = &op {
+            ops.push(lower_rfft(model, allocs, i, *input, *output, *fft_length)?);
+            continue;
+        }
+
+        let graph = &model.graph;
+        let plan = match &op {
             PspOp::Conv2d {
                 input,
                 weights,
@@ -543,6 +551,8 @@ fn lower_ops(model: &PspModel, use_vfpu_conv2d: bool) -> Result<Vec<OpPlan>, Str
                 }
             }
 
+            PspOp::Rfft { .. } => unreachable!("handled above"),
+
             PspOp::Shape { .. }
             | PspOp::Pack { .. }
             | PspOp::StridedSlice { .. }
@@ -550,9 +560,10 @@ fn lower_ops(model: &PspModel, use_vfpu_conv2d: bool) -> Result<Vec<OpPlan>, Str
             | PspOp::Gather { .. }
             | PspOp::Range { .. }
             | PspOp::SplitV { .. }
-            | PspOp::Cast { .. } => {
+            | PspOp::Cast { .. }
+            | PspOp::Rfft2d { .. } => {
                 return Err(format!(
-                    "Op {i}: {:?} should have been constant-folded",
+                    "Op {i}: {:?} should have been constant-folded or fused",
                     op
                 ));
             }
@@ -717,6 +728,121 @@ fn lower_conv2d_vfpu(
     Ok(OpPlan { scratch, sub_ops })
 }
 
+/// Append a float slice to model_data as a constant tensor, returning its TensorId.
+fn append_constant_f32(
+    model: &mut PspModel,
+    allocs: &mut Vec<TensorAlloc>,
+    shape: Vec<usize>,
+    data: &[f32],
+) -> TensorId {
+    let sz = std::mem::size_of::<f32>();
+    // Align to 4 bytes (should already be aligned since model_data is byte vec)
+    let offset = model.model_data.len();
+    let len = data.len() * sz;
+    for &val in data {
+        model.model_data.extend_from_slice(&val.to_le_bytes());
+    }
+    let id = model.graph.add_tensor(shape, DType::F32, TensorKind::Constant { offset, len });
+    allocs.push(TensorAlloc::Constant {
+        id,
+        float_offset: offset / sz,
+        float_len: data.len(),
+    });
+    id
+}
+
+/// Lower a fused RFFT op into pack → butterfly stages → unpack.
+fn lower_rfft(
+    model: &mut PspModel,
+    allocs: &mut Vec<TensorAlloc>,
+    _op_idx: usize,
+    input: TensorId,
+    output: TensorId,
+    fft_length: usize,
+) -> Result<OpPlan, String> {
+    let n = fft_length;
+    let n_complex = n / 2;
+
+    // Number of butterfly stages = log2(n_complex)
+    let num_stages = {
+        let mut s = 0;
+        let mut v = n_complex;
+        while v > 1 {
+            v >>= 1;
+            s += 1;
+        }
+        s
+    };
+
+    // Scratch buffer: n floats (n_complex interleaved complex pairs)
+    let scratch = vec![ScratchBuffer {
+        size: n,
+        load_from: None,
+    }];
+
+    let mut sub_ops = Vec::new();
+
+    // Sub-op 0: rfft_pack
+    sub_ops.push(SubOpPlan {
+        name: "rfft_pack".into(),
+        kernels: vec![KernelCall::RfftPack {
+            input,
+            output: 0, // scratch index 0
+            n,
+        }],
+    });
+
+    // Sub-ops 1..num_stages: butterfly stages
+    for stage in 0..num_stages {
+        let half_size = 1 << stage;
+
+        // Generate twiddle factors: exp(-2πi·j / (2·half_size)) for j = 0..half_size
+        // Stored as interleaved [cos, sin] pairs (sin because our twiddle is e^{-i·angle})
+        let mut twiddles = Vec::with_capacity(half_size * 2);
+        for j in 0..half_size {
+            let angle = -2.0 * std::f64::consts::PI * (j as f64) / (2.0 * half_size as f64);
+            twiddles.push(angle.cos() as f32);
+            twiddles.push(angle.sin() as f32);
+        }
+
+        let tw_id = append_constant_f32(model, allocs, vec![half_size * 2], &twiddles);
+
+        sub_ops.push(SubOpPlan {
+            name: format!("fft_butterfly_s{stage}"),
+            kernels: vec![KernelCall::FftButterflyStage {
+                data: 0, // scratch index 0
+                twiddles: tw_id,
+                n_complex,
+                half_size,
+            }],
+        });
+    }
+
+    // Sub-op final: rfft_unpack
+    // Unpack twiddles: W_N^k = exp(2πi·k/N) stored as [cos, -sin] for k = 1..n_complex-1
+    let mut unpack_twiddles = Vec::with_capacity((n_complex - 1) * 2);
+    for k in 1..n_complex {
+        let angle = 2.0 * std::f64::consts::PI * (k as f64) / (n as f64);
+        unpack_twiddles.push(angle.cos() as f32);
+        unpack_twiddles.push(-(angle.sin() as f32));
+    }
+
+    let unpack_tw_id =
+        append_constant_f32(model, allocs, vec![(n_complex - 1) * 2], &unpack_twiddles);
+
+    sub_ops.push(SubOpPlan {
+        name: "rfft_unpack".into(),
+        kernels: vec![KernelCall::RfftUnpack {
+            data: 0, // scratch index 0
+            twiddles: unpack_tw_id,
+            output,
+            n,
+        }],
+    });
+
+    Ok(OpPlan { scratch, sub_ops })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -810,8 +936,8 @@ mod tests {
     fn vfpu_conv2d_gemm_dimensions() {
         // MNIST Conv1: [1,28,28,1] * [8,5,5,1] pad=2 → [1,28,28,8]
         // M=784, K=25, K_pad=28, N=8
-        let model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
-        let plan = lower(&model).unwrap();
+        let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
+        let plan = lower(&mut model).unwrap();
         let op = &plan.ops[0];
         // matmul is sub_op[1]
         match &op.sub_ops[1].kernels[0] {
@@ -832,8 +958,8 @@ mod tests {
     #[test]
     fn vfpu_conv2d_row_padded_when_k_unaligned() {
         // K=25, K_pad=28 → RowPadded
-        let model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
-        let plan = lower(&model).unwrap();
+        let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
+        let plan = lower(&mut model).unwrap();
         let scratch = &plan.ops[0].scratch[1]; // weight scratch
         match &scratch.load_from {
             Some(ScratchLoad {
@@ -857,8 +983,8 @@ mod tests {
     fn vfpu_conv2d_bulk_copy_when_k_aligned() {
         // MNIST Conv2: [1,14,14,8] * [16,5,5,8] pad=2 → [1,14,14,16]
         // K=200, K_pad=200 (already aligned) → BulkCopy
-        let model = make_conv2d_model(14, 14, 8, 16, 5, 5, 2, 1, true, true);
-        let plan = lower(&model).unwrap();
+        let mut model = make_conv2d_model(14, 14, 8, 16, 5, 5, 2, 1, true, true);
+        let plan = lower(&mut model).unwrap();
         let scratch = &plan.ops[0].scratch[1];
         match &scratch.load_from {
             Some(ScratchLoad {
@@ -872,30 +998,30 @@ mod tests {
     #[test]
     fn vfpu_conv2d_scratch_sizes() {
         // Conv1: M=784, K_pad=28 → im2col=784*28=21952, weights=8*28=224
-        let model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
-        let plan = lower(&model).unwrap();
+        let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
+        let plan = lower(&mut model).unwrap();
         assert_eq!(plan.ops[0].scratch[0].size, 21952);
         assert_eq!(plan.ops[0].scratch[1].size, 224);
 
         // Conv2: M=196, K_pad=200 → im2col=196*200=39200, weights=16*200=3200
-        let model = make_conv2d_model(14, 14, 8, 16, 5, 5, 2, 1, true, true);
-        let plan = lower(&model).unwrap();
+        let mut model = make_conv2d_model(14, 14, 8, 16, 5, 5, 2, 1, true, true);
+        let plan = lower(&mut model).unwrap();
         assert_eq!(plan.ops[0].scratch[0].size, 39200);
         assert_eq!(plan.ops[0].scratch[1].size, 3200);
     }
 
     #[test]
     fn vfpu_conv2d_rejects_non_unit_stride() {
-        let model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 2, true, true);
-        let err = lower(&model).unwrap_err();
+        let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 2, true, true);
+        let err = lower(&mut model).unwrap_err();
         assert!(err.contains("stride [1,1]"), "got: {err}");
     }
 
     #[test]
     fn vfpu_conv2d_rejects_unaligned_m() {
         // M = 1*3*3 = 9 (not multiple of 4)
-        let model = make_conv2d_model(5, 5, 1, 4, 3, 3, 0, 1, true, true);
-        let plan = lower(&model);
+        let mut model = make_conv2d_model(5, 5, 1, 4, 3, 3, 0, 1, true, true);
+        let plan = lower(&mut model);
         // M=9, not multiple of 4
         assert!(plan.is_err());
         assert!(plan.unwrap_err().contains("multiple of 4"));
@@ -907,7 +1033,7 @@ mod tests {
         if let PspOp::Conv2d { params, .. } = &mut model.graph.ops[0] {
             params.pad_bottom = 3; // asymmetric
         }
-        let err = lower(&model).unwrap_err();
+        let err = lower(&mut model).unwrap_err();
         assert!(err.contains("asymmetric"), "got: {err}");
     }
 
@@ -917,7 +1043,7 @@ mod tests {
         if let PspOp::Conv2d { params, .. } = &mut model.graph.ops[0] {
             params.fused_activation = Some(Activation::Relu6);
         }
-        let err = lower(&model).unwrap_err();
+        let err = lower(&mut model).unwrap_err();
         assert!(err.contains("Relu6"), "got: {err}");
     }
 
@@ -945,11 +1071,11 @@ mod tests {
                 fused_activation: None,
             },
         });
-        let model = PspModel {
+        let mut model = PspModel {
             graph,
             model_data: vec![0u8; 10 * 784 * 4],
         };
-        let err = lower(&model).unwrap_err();
+        let err = lower(&mut model).unwrap_err();
         assert!(err.contains("requires bias"), "got: {err}");
     }
 
@@ -975,18 +1101,18 @@ mod tests {
             input_b: bad,
             output,
         });
-        let model = PspModel {
+        let mut model = PspModel {
             graph,
             model_data: vec![0u8; 16],
         };
-        let err = lower(&model).unwrap_err();
+        let err = lower(&mut model).unwrap_err();
         assert!(err.contains("not 4-byte aligned"), "got: {err}");
     }
 
     #[test]
     fn tensor_allocs_correct() {
-        let model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
-        let plan = lower(&model).unwrap();
+        let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
+        let plan = lower(&mut model).unwrap();
         // Should have: 1 weight constant + 1 bias constant + 1 output
         let constants: Vec<_> = plan
             .allocs
@@ -1011,18 +1137,18 @@ mod tests {
         graph.inputs.push(i2);
         let output = graph.add_tensor(vec![4], DType::F32, TensorKind::Output);
         graph.outputs.push(output);
-        let model = PspModel {
+        let mut model = PspModel {
             graph,
             model_data: vec![],
         };
-        let err = lower(&model).unwrap_err();
+        let err = lower(&mut model).unwrap_err();
         assert!(err.contains("Expected 1 input"), "got: {err}");
     }
 
     #[test]
     fn conv2d_no_bias_no_relu_has_2_sub_ops() {
-        let model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, false, false);
-        let plan = lower(&model).unwrap();
+        let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, false, false);
+        let plan = lower(&mut model).unwrap();
         // im2col + matmul, no bias/relu sub-op
         assert_eq!(plan.ops[0].sub_ops.len(), 2);
         assert_eq!(plan.ops[0].sub_ops[0].name, "im2col");
@@ -1031,8 +1157,8 @@ mod tests {
 
     #[test]
     fn conv2d_bias_relu_has_3_sub_ops() {
-        let model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
-        let plan = lower(&model).unwrap();
+        let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
+        let plan = lower(&mut model).unwrap();
         assert_eq!(plan.ops[0].sub_ops.len(), 3);
         assert_eq!(plan.ops[0].sub_ops[0].name, "im2col");
         assert_eq!(plan.ops[0].sub_ops[1].name, "matmul");

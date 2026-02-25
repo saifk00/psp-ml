@@ -474,8 +474,140 @@ pub fn pad(
     }
 }
 
+// ─── RFFT kernels ─────────────────────────────────────────────
+
+/// Bit-reverse an index within `bits` bits.
+fn bit_reverse(mut x: usize, bits: usize) -> usize {
+    let mut result = 0;
+    for _ in 0..bits {
+        result = (result << 1) | (x & 1);
+        x >>= 1;
+    }
+    result
+}
+
+/// Pack N real values into N/2 interleaved complex pairs in bit-reversed order.
+///
+/// `output` has N floats: N/2 complex pairs as [re0, im0, re1, im1, ...].
+/// Complex pair k (in bit-reversed order) = (input[2*br(k)], input[2*br(k)+1]).
+pub fn rfft_pack(input: &[f32], output: &mut [f32], n: usize) {
+    let n_complex = n / 2;
+    let bits = {
+        let mut b = 0;
+        let mut v = n_complex;
+        while v > 1 {
+            v >>= 1;
+            b += 1;
+        }
+        b
+    };
+    for k in 0..n_complex {
+        let br = bit_reverse(k, bits);
+        output[2 * k] = input[2 * br];
+        output[2 * k + 1] = input[2 * br + 1];
+    }
+}
+
+/// One radix-2 DIT butterfly stage.
+///
+/// - `data`: N interleaved complex values [re, im, re, im, ...]
+/// - `twiddles`: `half_size` interleaved [cos, -sin] pairs
+/// - `n_complex`: total number of complex elements
+/// - `half_size`: butterfly half-size for this stage (1, 2, 4, ..., n_complex/2)
+pub fn fft_butterfly_stage(
+    data: &mut [f32],
+    twiddles: &[f32],
+    n_complex: usize,
+    half_size: usize,
+) {
+    let full_size = half_size * 2;
+    let num_groups = n_complex / full_size;
+    for group in 0..num_groups {
+        let base = group * full_size;
+        for j in 0..half_size {
+            let tw_re = twiddles[2 * j];
+            let tw_im = twiddles[2 * j + 1];
+
+            let top = base + j;
+            let bot = top + half_size;
+
+            let top_re = data[2 * top];
+            let top_im = data[2 * top + 1];
+            let bot_re = data[2 * bot];
+            let bot_im = data[2 * bot + 1];
+
+            // twiddle * bottom: (tw_re + tw_im*i) * (bot_re + bot_im*i)
+            let t_re = tw_re * bot_re - tw_im * bot_im;
+            let t_im = tw_re * bot_im + tw_im * bot_re;
+
+            data[2 * top] = top_re + t_re;
+            data[2 * top + 1] = top_im + t_im;
+            data[2 * bot] = top_re - t_re;
+            data[2 * bot + 1] = top_im - t_im;
+        }
+    }
+}
+
+/// Unpack N/2-point complex FFT result to N/2+1 real-part frequency bins.
+///
+/// Given X[k] = FFT of the N/2-point complex sequence formed by packing N real values,
+/// recovers the real parts of the N-point RFFT: Re(F[k]) for k = 0..N/2.
+///
+/// - `data`: N/2 interleaved complex values (FFT output)
+/// - `twiddles`: N/4 interleaved [cos, -sin] pairs for the unpack stage
+/// - `output`: N/2+1 real-part values
+/// - `n`: original real sequence length
+pub fn rfft_unpack(data: &[f32], twiddles: &[f32], output: &mut [f32], n: usize) {
+    let nc = n / 2; // number of complex FFT points
+
+    // F[0] = (X[0].re + X[0].im, 0) — both are purely real
+    output[0] = data[0] + data[1];
+
+    // F[N/2] = (X[0].re - X[0].im, 0) — Nyquist, also purely real
+    output[nc] = data[0] - data[1];
+
+    // F[k] for k = 1..N/2-1:
+    // Using the identity:
+    //   A[k] = 0.5 * (X[k] + X*[N/2-k])
+    //   B[k] = -0.5j * (X[k] - X*[N/2-k])
+    //   F[k] = A[k] + W_N^k * B[k]
+    // We only need Re(F[k]).
+    for k in 1..nc {
+        let conj = nc - k;
+
+        let xk_re = data[2 * k];
+        let xk_im = data[2 * k + 1];
+        let xc_re = data[2 * conj];
+        let xc_im = data[2 * conj + 1];
+
+        // A[k] = 0.5 * (X[k] + X*[conj])
+        let a_re = 0.5 * (xk_re + xc_re);
+        let _a_im = 0.5 * (xk_im - xc_im);
+
+        // B[k] = -0.5j * (X[k] - X*[conj])
+        //       = 0.5 * (xk_im + xc_im) + 0.5j * (xk_re - xc_re)  [NOT the version below]
+        // Actually: -j * (a+bi) = b - ai
+        // So B = -0.5j * ((xk_re - xc_re) + (xk_im + xc_im)i)
+        //      = 0.5 * (xk_im + xc_im) + 0.5 * (-(xk_re - xc_re))i
+        //      = 0.5 * (xk_im + xc_im) - 0.5 * (xk_re - xc_re)i
+        let b_re = 0.5 * (xk_im + xc_im);
+        let b_im = -0.5 * (xk_re - xc_re);
+
+        // W_N^k = cos(2πk/N) - j*sin(2πk/N)
+        // Twiddle for k: stored as [cos, -sin] pairs, but indexed by k-1 since k starts at 1
+        let tw_re = twiddles[2 * (k - 1)];
+        let tw_im = twiddles[2 * (k - 1) + 1]; // this is -sin
+
+        // F[k] = A[k] + W * B[k]
+        // Re(F[k]) = a_re + (tw_re * b_re - tw_im * b_im)
+        output[k] = a_re + (tw_re * b_re - tw_im * b_im);
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    extern crate alloc;
+    use alloc::{vec, vec::Vec};
     use super::*;
 
     #[test]
@@ -541,5 +673,114 @@ mod tests {
         assert!((out[1] - 0.7310586).abs() < 1e-5);
         assert!((out[2] - 0.2689414).abs() < 1e-5);
         assert!((out[3] - 1.0).abs() < 1e-4);
+    }
+
+    /// Compute a naive DFT for reference, return real parts of first N/2+1 bins.
+    fn naive_rfft_real_parts(input: &[f32]) -> Vec<f32> {
+        let n = input.len();
+        let mut result = Vec::with_capacity(n / 2 + 1);
+        for k in 0..=n / 2 {
+            let mut re = 0.0f64;
+            for t in 0..n {
+                let angle = -2.0 * core::f64::consts::PI * (k as f64) * (t as f64) / (n as f64);
+                re += (input[t] as f64) * angle.cos();
+            }
+            result.push(re as f32);
+        }
+        result
+    }
+
+    #[test]
+    fn test_rfft_n8() {
+        // 8-point real FFT
+        let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let n = 8;
+        let nc = n / 2; // 4 complex points
+
+        // Step 1: pack
+        let mut packed = [0.0f32; 8]; // 4 complex pairs
+        rfft_pack(&input, &mut packed, n);
+
+        // Step 2: butterfly stages (log2(4) = 2 stages)
+        // Stage 0: half_size=1
+        let twiddles_s0 = [1.0f32, 0.0]; // W_1^0 = (1, 0)
+        fft_butterfly_stage(&mut packed, &twiddles_s0, nc, 1);
+
+        // Stage 1: half_size=2
+        // W_4^0 = (1, 0), W_4^1 = (0, -1)
+        let twiddles_s1 = [1.0f32, 0.0, 0.0, -1.0];
+        fft_butterfly_stage(&mut packed, &twiddles_s1, nc, 2);
+
+        // Step 3: unpack
+        // Unpack twiddles: W_N^k for k=1..nc-1, stored as [cos, -sin]
+        // W_8^1 = cos(π/4) - j*sin(π/4) = (0.7071, -0.7071)
+        // W_8^2 = cos(π/2) - j*sin(π/2) = (0, -1)
+        // W_8^3 = cos(3π/4) - j*sin(3π/4) = (-0.7071, -0.7071)
+        use core::f32::consts::PI;
+        let mut unpack_tw = [0.0f32; 6]; // 3 pairs for k=1,2,3
+        for k in 1..nc {
+            let angle = 2.0 * PI * (k as f32) / (n as f32);
+            unpack_tw[2 * (k - 1)] = libm::cosf(angle);
+            unpack_tw[2 * (k - 1) + 1] = -libm::sinf(angle);
+        }
+
+        let mut output = [0.0f32; 5]; // N/2+1 = 5 bins
+        rfft_unpack(&packed, &unpack_tw, &mut output, n);
+
+        // Compare against naive DFT
+        let expected = naive_rfft_real_parts(&input);
+        for k in 0..=nc {
+            assert!(
+                (output[k] - expected[k]).abs() < 1e-3,
+                "bin {k}: got {}, expected {}",
+                output[k],
+                expected[k]
+            );
+        }
+    }
+
+    #[test]
+    fn test_rfft_n16() {
+        let input: Vec<f32> = (0..16).map(|i| (i as f32) * 0.1).collect();
+        let n = 16;
+        let nc = n / 2;
+
+        let mut packed = vec![0.0f32; n];
+        rfft_pack(&input, &mut packed, n);
+
+        use core::f32::consts::PI;
+
+        // 3 butterfly stages for nc=8
+        for stage in 0..3 {
+            let half_size = 1 << stage;
+            let mut twiddles = vec![0.0f32; half_size * 2];
+            for j in 0..half_size {
+                let angle = -2.0 * PI * (j as f32) / (2.0 * half_size as f32);
+                twiddles[2 * j] = libm::cosf(angle);
+                twiddles[2 * j + 1] = libm::sinf(angle);
+            }
+            fft_butterfly_stage(&mut packed, &twiddles, nc, half_size);
+        }
+
+        // Unpack twiddles
+        let mut unpack_tw = vec![0.0f32; (nc - 1) * 2];
+        for k in 1..nc {
+            let angle = 2.0 * PI * (k as f32) / (n as f32);
+            unpack_tw[2 * (k - 1)] = libm::cosf(angle);
+            unpack_tw[2 * (k - 1) + 1] = -libm::sinf(angle);
+        }
+
+        let mut output = vec![0.0f32; nc + 1];
+        rfft_unpack(&packed, &unpack_tw, &mut output, n);
+
+        let expected = naive_rfft_real_parts(&input);
+        for k in 0..=nc {
+            assert!(
+                (output[k] - expected[k]).abs() < 1e-3,
+                "bin {k}: got {}, expected {}",
+                output[k],
+                expected[k]
+            );
+        }
     }
 }

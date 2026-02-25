@@ -117,6 +117,16 @@ pub enum PspOp {
 
     /// Reverse elements along an axis
     ReverseV2 { input: TensorId, axis: TensorId, output: TensorId },
+
+    // ─── Pre-fusion ops (replaced by fusion pass) ───────────────
+
+    /// Raw RFFT2D from TFLite (pre-fusion, output is COMPLEX64)
+    Rfft2d { input: TensorId, fft_length: TensorId, output: TensorId },
+
+    // ─── Fused ops (produced by fusion pass) ────────────────────
+
+    /// Fused real FFT: input F32 → output F32 (real parts of frequency bins)
+    Rfft { input: TensorId, output: TensorId, fft_length: usize },
 }
 
 #[derive(Debug, Clone)]
@@ -239,10 +249,12 @@ impl PspOp {
             | PspOp::Softmax { input, .. }
             | PspOp::Shape { input, .. }
             | PspOp::Cast { input, .. }
-            | PspOp::UnaryElementWise { input, .. } => vec![*input],
+            | PspOp::UnaryElementWise { input, .. }
+            | PspOp::Rfft { input, .. } => vec![*input],
             PspOp::Pad { input, paddings, .. } => vec![*input, *paddings],
             PspOp::Transpose { input, perm, .. } => vec![*input, *perm],
             PspOp::ReverseV2 { input, axis, .. } => vec![*input, *axis],
+            PspOp::Rfft2d { input, fft_length, .. } => vec![*input, *fft_length],
             PspOp::ElementWise {
                 input_a, input_b, ..
             } => vec![*input_a, *input_b],
@@ -293,7 +305,9 @@ impl PspOp {
             | PspOp::Cast { output, .. }
             | PspOp::Pad { output, .. }
             | PspOp::Transpose { output, .. }
-            | PspOp::ReverseV2 { output, .. } => *output,
+            | PspOp::ReverseV2 { output, .. }
+            | PspOp::Rfft2d { output, .. }
+            | PspOp::Rfft { output, .. } => *output,
             PspOp::SplitV { .. } => panic!("SplitV has multiple outputs; use outputs()"),
         }
     }
