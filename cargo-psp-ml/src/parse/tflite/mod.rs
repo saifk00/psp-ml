@@ -1,7 +1,8 @@
-mod schema_generated;
-mod lowering;
+mod compiler;
 mod info;
+mod lowering;
+mod schema_generated;
 
-pub use schema_generated::tflite::*;
-pub use lowering::to_psp_ir;
+pub use compiler::to_psp_ir;
 pub use info::dump_model_info;
+pub use schema_generated::tflite::*;

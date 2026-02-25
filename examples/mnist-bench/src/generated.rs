@@ -49,22 +49,22 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
     let t_6 = &tensor_data[T_6_OFFSET..T_6_OFFSET + T_6_LEN];
     let t_8 = &tensor_data[T_8_OFFSET..T_8_OFFSET + T_8_LEN];
     let t_9 = &tensor_data[T_9_OFFSET..T_9_OFFSET + T_9_LEN];
-    static mut CONV_SCRATCH_0: Aligned16<21952usize> = Aligned16([0.0f32; 21952usize]);
-    let conv_scratch_0 = unsafe {
+    static mut SCRATCH_0_0: Aligned16<21952usize> = Aligned16([0.0f32; 21952usize]);
+    let scratch_0_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(CONV_SCRATCH_0) as *mut f32,
+            core::ptr::addr_of_mut!(SCRATCH_0_0) as *mut f32,
             21952usize,
         )
     };
-    static mut PADDED_W_0: Aligned16<224usize> = Aligned16([0.0f32; 224usize]);
-    let padded_w_0 = unsafe {
+    static mut SCRATCH_0_1: Aligned16<224usize> = Aligned16([0.0f32; 224usize]);
+    let scratch_0_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(PADDED_W_0) as *mut f32,
+            core::ptr::addr_of_mut!(SCRATCH_0_1) as *mut f32,
             224usize,
         )
     };
     for row in 0..8usize {
-        padded_w_0[row * 28usize..row * 28usize + 25usize]
+        scratch_0_1[row * 28usize..row * 28usize + 25usize]
             .copy_from_slice(&t_8[row * 25usize..(row + 1) * 25usize]);
     }
     im2col_padded(
@@ -73,9 +73,9 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
         [5usize, 5usize],
         [2usize, 2usize],
         [28usize, 28usize],
-        conv_scratch_0,
+        scratch_0_0,
     );
-    matmul_bt_tiled(conv_scratch_0, padded_w_0, t_10, 196usize, 7usize, 2usize);
+    matmul_bt_tiled(scratch_0_0, scratch_0_1, t_10, 196usize, 7usize, 2usize);
     bias_add(t_10, t_9, 784usize, 8usize);
     relu(t_10);
     max_pool2d(
@@ -86,30 +86,30 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
         t_11,
         [1usize, 14usize, 14usize, 8usize],
     );
-    static mut CONV_SCRATCH_2: Aligned16<39200usize> = Aligned16([0.0f32; 39200usize]);
-    let conv_scratch_2 = unsafe {
+    static mut SCRATCH_2_0: Aligned16<39200usize> = Aligned16([0.0f32; 39200usize]);
+    let scratch_2_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(CONV_SCRATCH_2) as *mut f32,
+            core::ptr::addr_of_mut!(SCRATCH_2_0) as *mut f32,
             39200usize,
         )
     };
-    static mut PADDED_W_2: Aligned16<3200usize> = Aligned16([0.0f32; 3200usize]);
-    let padded_w_2 = unsafe {
+    static mut SCRATCH_2_1: Aligned16<3200usize> = Aligned16([0.0f32; 3200usize]);
+    let scratch_2_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(PADDED_W_2) as *mut f32,
+            core::ptr::addr_of_mut!(SCRATCH_2_1) as *mut f32,
             3200usize,
         )
     };
-    padded_w_2.copy_from_slice(t_4);
+    scratch_2_1.copy_from_slice(t_4);
     im2col_padded(
         t_11,
         [1usize, 14usize, 14usize, 8usize],
         [5usize, 5usize],
         [2usize, 2usize],
         [14usize, 14usize],
-        conv_scratch_2,
+        scratch_2_0,
     );
-    matmul_bt_tiled(conv_scratch_2, padded_w_2, t_12, 49usize, 50usize, 4usize);
+    matmul_bt_tiled(scratch_2_0, scratch_2_1, t_12, 49usize, 50usize, 4usize);
     bias_add(t_12, t_2, 196usize, 16usize);
     relu(t_12);
     max_pool2d(
@@ -175,22 +175,22 @@ pub fn forward_timed(
     let t_6 = &tensor_data[T_6_OFFSET..T_6_OFFSET + T_6_LEN];
     let t_8 = &tensor_data[T_8_OFFSET..T_8_OFFSET + T_8_LEN];
     let t_9 = &tensor_data[T_9_OFFSET..T_9_OFFSET + T_9_LEN];
-    static mut CONV_SCRATCH_0: Aligned16<21952usize> = Aligned16([0.0f32; 21952usize]);
-    let conv_scratch_0 = unsafe {
+    static mut SCRATCH_0_0: Aligned16<21952usize> = Aligned16([0.0f32; 21952usize]);
+    let scratch_0_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(CONV_SCRATCH_0) as *mut f32,
+            core::ptr::addr_of_mut!(SCRATCH_0_0) as *mut f32,
             21952usize,
         )
     };
-    static mut PADDED_W_0: Aligned16<224usize> = Aligned16([0.0f32; 224usize]);
-    let padded_w_0 = unsafe {
+    static mut SCRATCH_0_1: Aligned16<224usize> = Aligned16([0.0f32; 224usize]);
+    let scratch_0_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(PADDED_W_0) as *mut f32,
+            core::ptr::addr_of_mut!(SCRATCH_0_1) as *mut f32,
             224usize,
         )
     };
     for row in 0..8usize {
-        padded_w_0[row * 28usize..row * 28usize + 25usize]
+        scratch_0_1[row * 28usize..row * 28usize + 25usize]
             .copy_from_slice(&t_8[row * 25usize..(row + 1) * 25usize]);
     }
     let __t0 = get_tick();
@@ -200,11 +200,11 @@ pub fn forward_timed(
         [5usize, 5usize],
         [2usize, 2usize],
         [28usize, 28usize],
-        conv_scratch_0,
+        scratch_0_0,
     );
     op_ticks[0usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(conv_scratch_0, padded_w_0, t_10, 196usize, 7usize, 2usize);
+    matmul_bt_tiled(scratch_0_0, scratch_0_1, t_10, 196usize, 7usize, 2usize);
     op_ticks[1usize] += get_tick() - __t0;
     let __t0 = get_tick();
     bias_add(t_10, t_9, 784usize, 8usize);
@@ -220,21 +220,21 @@ pub fn forward_timed(
         [1usize, 14usize, 14usize, 8usize],
     );
     op_ticks[3usize] += get_tick() - __t0;
-    static mut CONV_SCRATCH_2: Aligned16<39200usize> = Aligned16([0.0f32; 39200usize]);
-    let conv_scratch_2 = unsafe {
+    static mut SCRATCH_2_0: Aligned16<39200usize> = Aligned16([0.0f32; 39200usize]);
+    let scratch_2_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(CONV_SCRATCH_2) as *mut f32,
+            core::ptr::addr_of_mut!(SCRATCH_2_0) as *mut f32,
             39200usize,
         )
     };
-    static mut PADDED_W_2: Aligned16<3200usize> = Aligned16([0.0f32; 3200usize]);
-    let padded_w_2 = unsafe {
+    static mut SCRATCH_2_1: Aligned16<3200usize> = Aligned16([0.0f32; 3200usize]);
+    let scratch_2_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(PADDED_W_2) as *mut f32,
+            core::ptr::addr_of_mut!(SCRATCH_2_1) as *mut f32,
             3200usize,
         )
     };
-    padded_w_2.copy_from_slice(t_4);
+    scratch_2_1.copy_from_slice(t_4);
     let __t0 = get_tick();
     im2col_padded(
         t_11,
@@ -242,11 +242,11 @@ pub fn forward_timed(
         [5usize, 5usize],
         [2usize, 2usize],
         [14usize, 14usize],
-        conv_scratch_2,
+        scratch_2_0,
     );
     op_ticks[4usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(conv_scratch_2, padded_w_2, t_12, 49usize, 50usize, 4usize);
+    matmul_bt_tiled(scratch_2_0, scratch_2_1, t_12, 49usize, 50usize, 4usize);
     op_ticks[5usize] += get_tick() - __t0;
     let __t0 = get_tick();
     bias_add(t_12, t_2, 196usize, 16usize);

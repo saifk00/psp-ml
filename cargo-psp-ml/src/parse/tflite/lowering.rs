@@ -11,24 +11,12 @@ use super::{
 
 type Buffers<'a> = flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<Buffer<'a>>>;
 use crate::ir::graph::{DType, Graph, Tensor, TensorId, TensorKind};
-use crate::ir::const_fold;
-use crate::ir::fuse;
-use crate::ir::psp::{Activation, BinaryOp, Conv2dParams, FullyConnectedParams, PoolType, PspModel, PspOp, ReduceOp, UnaryOp};
-
-/// Convert a TFLite model buffer into PSP IR.
-///
-/// Takes ownership of the raw bytes so `PspModel` can pair the graph with
-/// its backing weight data.
-pub fn to_psp_ir(model_data: Vec<u8>) -> Result<PspModel, String> {
-    let graph = lower(&model_data)?;
-    let mut model = PspModel { graph, model_data };
-    fuse::fuse(&mut model);
-    const_fold::fold(&mut model);
-    Ok(model)
-}
+use crate::ir::psp::{
+    Activation, BinaryOp, Conv2dParams, FullyConnectedParams, PoolType, PspOp, ReduceOp, UnaryOp,
+};
 
 /// Pure lowering pass: borrows model bytes, returns an IR graph with no data ownership.
-fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
+pub fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
     let model =
         root_as_model(model_data).map_err(|e| format!("failed to parse TFLite model: {e}"))?;
 
@@ -96,13 +84,14 @@ fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
 
         let psp_op = match builtin_code {
             BuiltinOperator::CONV_2D => Some(lower_conv2d(&op, &tensor_map, &graph_tensors)?),
-            BuiltinOperator::DEPTHWISE_CONV_2D => Some(lower_depthwise_conv2d(&op, &tensor_map, &graph_tensors)?),
+            BuiltinOperator::DEPTHWISE_CONV_2D => {
+                Some(lower_depthwise_conv2d(&op, &tensor_map, &graph_tensors)?)
+            }
             BuiltinOperator::FULLY_CONNECTED => Some(lower_fc(&op, &tensor_map)?),
-            BuiltinOperator::MAX_POOL_2D
-            | BuiltinOperator::AVERAGE_POOL_2D => Some(lower_pool2d(&op, &tensor_map, builtin_code)?),
-            BuiltinOperator::RESHAPE
-            | BuiltinOperator::SQUEEZE
-            | BuiltinOperator::EXPAND_DIMS => {
+            BuiltinOperator::MAX_POOL_2D | BuiltinOperator::AVERAGE_POOL_2D => {
+                Some(lower_pool2d(&op, &tensor_map, builtin_code)?)
+            }
+            BuiltinOperator::RESHAPE | BuiltinOperator::SQUEEZE | BuiltinOperator::EXPAND_DIMS => {
                 if try_alias_shape_op(&op, &mut tensor_map, &tflite_outputs)? {
                     None // aliased — zero-cost, no op emitted
                 } else {
@@ -115,9 +104,7 @@ fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
             | BuiltinOperator::DIV
             | BuiltinOperator::FLOOR_DIV
             | BuiltinOperator::MAXIMUM
-            | BuiltinOperator::POW => {
-                Some(lower_elementwise(&op, &tensor_map, builtin_code)?)
-            }
+            | BuiltinOperator::POW => Some(lower_elementwise(&op, &tensor_map, builtin_code)?),
             BuiltinOperator::LOGISTIC => {
                 Some(lower_unary_elementwise(&op, &tensor_map, builtin_code)?)
             }
@@ -413,7 +400,11 @@ fn lower_fc(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
 }
 
 /// Lower TFLite MAX_POOL_2D / AVERAGE_POOL_2D to PspOp::Pool2d
-fn lower_pool2d(op: &Operator, tensor_map: &[TensorId], builtin_code: BuiltinOperator) -> Result<PspOp, String> {
+fn lower_pool2d(
+    op: &Operator,
+    tensor_map: &[TensorId],
+    builtin_code: BuiltinOperator,
+) -> Result<PspOp, String> {
     let inputs = op.inputs().ok_or("POOL_2D: no inputs")?;
     let outputs = op.outputs().ok_or("POOL_2D: no outputs")?;
     let options = op
@@ -433,7 +424,10 @@ fn lower_pool2d(op: &Operator, tensor_map: &[TensorId], builtin_code: BuiltinOpe
         pool_type,
         input,
         output,
-        filter: [options.filter_height() as usize, options.filter_width() as usize],
+        filter: [
+            options.filter_height() as usize,
+            options.filter_width() as usize,
+        ],
         stride: [options.stride_h() as usize, options.stride_w() as usize],
     })
 }
@@ -604,7 +598,11 @@ fn lower_gather(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String>
 }
 
 /// Lower TFLite REDUCE_PROD/REDUCE_MAX/REDUCE_MIN to PspOp::Reduce
-fn lower_reduce(op: &Operator, tensor_map: &[TensorId], builtin_code: BuiltinOperator) -> Result<PspOp, String> {
+fn lower_reduce(
+    op: &Operator,
+    tensor_map: &[TensorId],
+    builtin_code: BuiltinOperator,
+) -> Result<PspOp, String> {
     let inputs = op.inputs().ok_or("reduce: no inputs")?;
     let outputs = op.outputs().ok_or("reduce: no outputs")?;
     let reduce_op = match builtin_code {
@@ -675,7 +673,11 @@ fn lower_rfft2d(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String>
     let input = tensor_map[inputs.get(0) as usize];
     let fft_length = tensor_map[inputs.get(1) as usize];
     let output = tensor_map[outputs.get(0) as usize];
-    Ok(PspOp::Rfft2d { input, fft_length, output })
+    Ok(PspOp::Rfft2d {
+        input,
+        fft_length,
+        output,
+    })
 }
 
 /// Lower TFLite REVERSE_V2 to PspOp::ReverseV2
@@ -685,7 +687,11 @@ fn lower_reverse_v2(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, Str
     let input = tensor_map[inputs.get(0) as usize];
     let axis = tensor_map[inputs.get(1) as usize];
     let output = tensor_map[outputs.get(0) as usize];
-    Ok(PspOp::ReverseV2 { input, axis, output })
+    Ok(PspOp::ReverseV2 {
+        input,
+        axis,
+        output,
+    })
 }
 
 /// Lower TFLite TRANSPOSE to PspOp::Transpose
@@ -695,7 +701,11 @@ fn lower_transpose(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, Stri
     let input = tensor_map[inputs.get(0) as usize];
     let perm = tensor_map[inputs.get(1) as usize];
     let output = tensor_map[outputs.get(0) as usize];
-    Ok(PspOp::Transpose { input, perm, output })
+    Ok(PspOp::Transpose {
+        input,
+        perm,
+        output,
+    })
 }
 
 /// Lower TFLite PAD to PspOp::Pad
@@ -705,7 +715,11 @@ fn lower_pad(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
     let input = tensor_map[inputs.get(0) as usize];
     let paddings = tensor_map[inputs.get(1) as usize];
     let output = tensor_map[outputs.get(0) as usize];
-    Ok(PspOp::Pad { input, paddings, output })
+    Ok(PspOp::Pad {
+        input,
+        paddings,
+        output,
+    })
 }
 
 /// Convert TFLite tensor type to our DType
