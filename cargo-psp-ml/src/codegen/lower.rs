@@ -343,6 +343,52 @@ fn lower_ops(model: &PspModel, use_vfpu_conv2d: bool) -> Result<Vec<OpPlan>, Str
                 }
             }
 
+            PspOp::Transpose { input, perm, output } => {
+                let in_shape = graph.tensor(*input).shape.clone();
+                let out_shape = graph.tensor(*output).shape.clone();
+                let ndim = in_shape.len();
+
+                if ndim > 4 {
+                    return Err(format!(
+                        "Op {i}: Transpose only supports up to 4D tensors (got {}D)",
+                        ndim
+                    ));
+                }
+
+                let perm_tensor = graph.tensor(*perm);
+                let perm_vals = if let TensorKind::Constant { offset, len } = perm_tensor.kind {
+                    let vals: Vec<i32> = model.model_data[offset..offset + len]
+                        .chunks_exact(4)
+                        .map(|c| i32::from_le_bytes(c.try_into().unwrap()))
+                        .collect();
+                    if vals.len() != ndim {
+                        return Err(format!(
+                            "Op {i}: Transpose perm length {} doesn't match input rank {}",
+                            vals.len(), ndim
+                        ));
+                    }
+                    vals.iter().map(|&v| v as usize).collect::<Vec<_>>()
+                } else {
+                    return Err(format!(
+                        "Op {i}: Transpose requires constant perm tensor"
+                    ));
+                };
+
+                OpPlan {
+                    scratch: vec![],
+                    sub_ops: vec![SubOpPlan {
+                        name: "transpose".into(),
+                        kernels: vec![KernelCall::Transpose {
+                            input: *input,
+                            output: *output,
+                            input_shape: in_shape,
+                            output_shape: out_shape,
+                            perm: perm_vals,
+                        }],
+                    }],
+                }
+            }
+
             PspOp::Pad { input, paddings, output } => {
                 let in_shape = &graph.tensor(*input).shape;
                 let out_shape = &graph.tensor(*output).shape;

@@ -308,6 +308,56 @@ pub fn reduce_mean_hw(input: &[f32], output: &mut [f32]) {
     }
 }
 
+/// Permute tensor dimensions (up to 4D).
+///
+/// Pads shapes/perm to 4D internally, then iterates all elements
+/// mapping source indices through the permutation.
+pub fn transpose(
+    input: &[f32],
+    input_shape: &[usize],
+    output: &mut [f32],
+    output_shape: &[usize],
+    perm: &[usize],
+) {
+    let ndim = input_shape.len();
+    let pad = 4 - ndim;
+    let mut is = [1usize; 4];
+    let mut os = [1usize; 4];
+    let mut p = [0usize; 4];
+    for i in 0..ndim {
+        is[pad + i] = input_shape[i];
+        os[pad + i] = output_shape[i];
+    }
+    for i in 0..pad {
+        p[i] = i;
+    }
+    for i in 0..ndim {
+        p[pad + i] = pad + perm[i];
+    }
+
+    for i0 in 0..is[0] {
+        for i1 in 0..is[1] {
+            for i2 in 0..is[2] {
+                for i3 in 0..is[3] {
+                    let src = [i0, i1, i2, i3];
+                    let mut dst = [0usize; 4];
+                    dst[p[0]] = src[0];
+                    dst[p[1]] = src[1];
+                    dst[p[2]] = src[2];
+                    dst[p[3]] = src[3];
+                    let in_idx =
+                        i0 * is[1] * is[2] * is[3] + i1 * is[2] * is[3] + i2 * is[3] + i3;
+                    let out_idx = dst[0] * os[1] * os[2] * os[3]
+                        + dst[1] * os[2] * os[3]
+                        + dst[2] * os[3]
+                        + dst[3];
+                    output[out_idx] = input[in_idx];
+                }
+            }
+        }
+    }
+}
+
 /// Zero-pad an NHWC tensor.
 ///
 /// - `input`:  [N, H, W, C]

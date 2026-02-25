@@ -478,6 +478,27 @@ fn render_kernel_call(
                 );
             }
         }
+
+        KernelCall::Transpose {
+            input,
+            output,
+            input_shape,
+            output_shape,
+            perm,
+        } => {
+            let input_expr = writer.read(*input);
+            let output_expr = writer.write(*output);
+            let is_tok = shape_tokens(input_shape);
+            let os_tok = shape_tokens(output_shape);
+            let p_tok = shape_tokens(perm);
+            quote! {
+                transpose(
+                    #input_expr, &#is_tok,
+                    #output_expr, &#os_tok,
+                    &#p_tok
+                );
+            }
+        }
     }
 }
 

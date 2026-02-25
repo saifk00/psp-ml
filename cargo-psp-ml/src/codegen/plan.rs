@@ -167,4 +167,11 @@ pub enum KernelCall {
         output: Tensor4d,
         padding: [[usize; 2]; 4],
     },
+    Transpose {
+        input: TensorId,
+        output: TensorId,
+        input_shape: Vec<usize>,
+        output_shape: Vec<usize>,
+        perm: Vec<usize>,
+    },
 }
