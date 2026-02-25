@@ -174,4 +174,10 @@ pub enum KernelCall {
         output_shape: Vec<usize>,
         perm: Vec<usize>,
     },
+    ReverseV2 {
+        input: TensorId,
+        output: TensorId,
+        input_shape: Vec<usize>,
+        axis: usize,
+    },
 }

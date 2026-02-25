@@ -343,6 +343,50 @@ fn lower_ops(model: &PspModel, use_vfpu_conv2d: bool) -> Result<Vec<OpPlan>, Str
                 }
             }
 
+            PspOp::ReverseV2 { input, axis, output } => {
+                let in_shape = graph.tensor(*input).shape.clone();
+                let ndim = in_shape.len();
+
+                if ndim > 4 {
+                    return Err(format!(
+                        "Op {i}: ReverseV2 only supports up to 4D tensors (got {}D)",
+                        ndim
+                    ));
+                }
+
+                let axis_tensor = graph.tensor(*axis);
+                let axis_val = if let TensorKind::Constant { offset, .. } = axis_tensor.kind {
+                    let val = i32::from_le_bytes(
+                        model.model_data[offset..offset + 4].try_into().unwrap(),
+                    );
+                    let a = if val < 0 { (ndim as i32 + val) as usize } else { val as usize };
+                    if a >= ndim {
+                        return Err(format!(
+                            "Op {i}: ReverseV2 axis {} out of bounds for {}D tensor",
+                            val, ndim
+                        ));
+                    }
+                    a
+                } else {
+                    return Err(format!(
+                        "Op {i}: ReverseV2 requires constant axis tensor"
+                    ));
+                };
+
+                OpPlan {
+                    scratch: vec![],
+                    sub_ops: vec![SubOpPlan {
+                        name: "reverse_v2".into(),
+                        kernels: vec![KernelCall::ReverseV2 {
+                            input: *input,
+                            output: *output,
+                            input_shape: in_shape,
+                            axis: axis_val,
+                        }],
+                    }],
+                }
+            }
+
             PspOp::Transpose { input, perm, output } => {
                 let in_shape = graph.tensor(*input).shape.clone();
                 let out_shape = graph.tensor(*output).shape.clone();

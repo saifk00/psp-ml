@@ -133,6 +133,7 @@ fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
             BuiltinOperator::CAST => Some(lower_cast(&op, &tensor_map)?),
             BuiltinOperator::PAD => Some(lower_pad(&op, &tensor_map)?),
             BuiltinOperator::TRANSPOSE => Some(lower_transpose(&op, &tensor_map)?),
+            BuiltinOperator::REVERSE_V2 => Some(lower_reverse_v2(&op, &tensor_map)?),
             other => {
                 return Err(format!(
                     "unsupported operator: {:?}",
@@ -577,6 +578,16 @@ fn lower_cast(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
     let input = tensor_map[inputs.get(0) as usize];
     let output = tensor_map[outputs.get(0) as usize];
     Ok(PspOp::Cast { input, output })
+}
+
+/// Lower TFLite REVERSE_V2 to PspOp::ReverseV2
+fn lower_reverse_v2(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
+    let inputs = op.inputs().ok_or("REVERSE_V2: no inputs")?;
+    let outputs = op.outputs().ok_or("REVERSE_V2: no outputs")?;
+    let input = tensor_map[inputs.get(0) as usize];
+    let axis = tensor_map[inputs.get(1) as usize];
+    let output = tensor_map[outputs.get(0) as usize];
+    Ok(PspOp::ReverseV2 { input, axis, output })
 }
 
 /// Lower TFLite TRANSPOSE to PspOp::Transpose

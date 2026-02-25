@@ -308,6 +308,33 @@ pub fn reduce_mean_hw(input: &[f32], output: &mut [f32]) {
     }
 }
 
+/// Reverse elements along a specified axis (up to 4D).
+pub fn reverse_v2(input: &[f32], input_shape: &[usize], output: &mut [f32], axis: usize) {
+    let ndim = input_shape.len();
+    let pad = 4 - ndim;
+    let mut s = [1usize; 4];
+    for i in 0..ndim {
+        s[pad + i] = input_shape[i];
+    }
+    let axis_4d = pad + axis;
+
+    for i0 in 0..s[0] {
+        for i1 in 0..s[1] {
+            for i2 in 0..s[2] {
+                for i3 in 0..s[3] {
+                    let mut d = [i0, i1, i2, i3];
+                    d[axis_4d] = s[axis_4d] - 1 - d[axis_4d];
+                    let in_idx =
+                        i0 * s[1] * s[2] * s[3] + i1 * s[2] * s[3] + i2 * s[3] + i3;
+                    let out_idx =
+                        d[0] * s[1] * s[2] * s[3] + d[1] * s[2] * s[3] + d[2] * s[3] + d[3];
+                    output[out_idx] = input[in_idx];
+                }
+            }
+        }
+    }
+}
+
 /// Permute tensor dimensions (up to 4D).
 ///
 /// Pads shapes/perm to 4D internally, then iterates all elements

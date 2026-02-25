@@ -105,6 +105,9 @@ pub enum PspOp {
 
     /// Permute tensor dimensions (up to 4D)
     Transpose { input: TensorId, perm: TensorId, output: TensorId },
+
+    /// Reverse elements along an axis
+    ReverseV2 { input: TensorId, axis: TensorId, output: TensorId },
 }
 
 #[derive(Debug, Clone)]
@@ -224,6 +227,7 @@ impl PspOp {
             | PspOp::UnaryElementWise { input, .. } => vec![*input],
             PspOp::Pad { input, paddings, .. } => vec![*input, *paddings],
             PspOp::Transpose { input, perm, .. } => vec![*input, *perm],
+            PspOp::ReverseV2 { input, axis, .. } => vec![*input, *axis],
             PspOp::ElementWise {
                 input_a, input_b, ..
             } => vec![*input_a, *input_b],
@@ -272,7 +276,8 @@ impl PspOp {
             | PspOp::Range { output, .. }
             | PspOp::Cast { output, .. }
             | PspOp::Pad { output, .. }
-            | PspOp::Transpose { output, .. } => *output,
+            | PspOp::Transpose { output, .. }
+            | PspOp::ReverseV2 { output, .. } => *output,
             PspOp::SplitV { .. } => panic!("SplitV has multiple outputs; use outputs()"),
         }
     }

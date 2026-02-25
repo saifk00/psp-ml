@@ -499,6 +499,20 @@ fn render_kernel_call(
                 );
             }
         }
+
+        KernelCall::ReverseV2 {
+            input,
+            output,
+            input_shape,
+            axis,
+        } => {
+            let input_expr = writer.read(*input);
+            let output_expr = writer.write(*output);
+            let is_tok = shape_tokens(input_shape);
+            quote! {
+                reverse_v2(#input_expr, &#is_tok, #output_expr, #axis);
+            }
+        }
     }
 }
 

@@ -32,6 +32,7 @@ const SUPPORTED_OPS: &[BuiltinOperator] = &[
     BuiltinOperator::PAD,
     BuiltinOperator::AVERAGE_POOL_2D,
     BuiltinOperator::TRANSPOSE,
+    BuiltinOperator::REVERSE_V2,
 ];
 
 fn type_name(t: TensorType) -> &'static str {
