@@ -216,6 +216,163 @@ pub struct FullyConnectedParams {
     pub fused_activation: Option<Activation>,
 }
 
+impl std::fmt::Display for PspOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PspOp::Conv2d { input, weights, bias, output, params } => {
+                write!(f, "Conv2d(t{}, t{}", input, weights)?;
+                if let Some(b) = bias { write!(f, ", t{}", b)?; }
+                write!(f, " → t{}; kernel={}x{} stride={}x{} pad={},{},{},{}",
+                    output, params.kernel_h, params.kernel_w,
+                    params.stride_h, params.stride_w,
+                    params.pad_top, params.pad_bottom, params.pad_left, params.pad_right)?;
+                if let Some(act) = &params.fused_activation {
+                    write!(f, " {}", act)?;
+                }
+                write!(f, ")")
+            }
+            PspOp::FullyConnected { input, weights, bias, output, fused_activation } => {
+                write!(f, "FullyConnected(t{}, t{}", input, weights)?;
+                if let Some(b) = bias { write!(f, ", t{}", b)?; }
+                write!(f, " → t{}", output)?;
+                if let Some(act) = &fused_activation.fused_activation {
+                    write!(f, "; {}", act)?;
+                }
+                write!(f, ")")
+            }
+            PspOp::DepthwiseConv2d { input, weights, bias, output, params } => {
+                write!(f, "DepthwiseConv2d(t{}, t{}", input, weights)?;
+                if let Some(b) = bias { write!(f, ", t{}", b)?; }
+                write!(f, " → t{}; kernel={}x{} stride={}x{} pad={},{},{},{}",
+                    output, params.kernel_h, params.kernel_w,
+                    params.stride_h, params.stride_w,
+                    params.pad_top, params.pad_bottom, params.pad_left, params.pad_right)?;
+                if let Some(act) = &params.fused_activation {
+                    write!(f, " {}", act)?;
+                }
+                write!(f, ")")
+            }
+            PspOp::Pool2d { pool_type, input, output, filter, stride } => {
+                write!(f, "Pool2d(t{} → t{}; {} filter={}x{} stride={}x{})",
+                    input, output, pool_type, filter[0], filter[1], stride[0], stride[1])
+            }
+            PspOp::Reshape { input, output } => write!(f, "Reshape(t{} → t{})", input, output),
+            PspOp::Softmax { input, output } => write!(f, "Softmax(t{} → t{})", input, output),
+            PspOp::ElementWise { op, input_a, input_b, output } => {
+                write!(f, "ElementWise(t{}, t{} → t{}; {})", input_a, input_b, output, op)
+            }
+            PspOp::UnaryElementWise { op, input, output } => {
+                write!(f, "UnaryElementWise(t{} → t{}; {})", input, output, op)
+            }
+            PspOp::Shape { input, output } => write!(f, "Shape(t{} → t{})", input, output),
+            PspOp::Pack { inputs, output, axis } => {
+                write!(f, "Pack(")?;
+                for (i, id) in inputs.iter().enumerate() {
+                    if i > 0 { write!(f, ", ")?; }
+                    write!(f, "t{}", id)?;
+                }
+                write!(f, " → t{}; axis={})", output, axis)
+            }
+            PspOp::StridedSlice { input, begin, end, strides, output, begin_mask, end_mask, shrink_axis_mask } => {
+                write!(f, "StridedSlice(t{}, t{}, t{}, t{} → t{}; begin_mask={} end_mask={} shrink={})",
+                    input, begin, end, strides, output, begin_mask, end_mask, shrink_axis_mask)
+            }
+            PspOp::Concatenation { inputs, output, axis } => {
+                write!(f, "Concatenation(")?;
+                for (i, id) in inputs.iter().enumerate() {
+                    if i > 0 { write!(f, ", ")?; }
+                    write!(f, "t{}", id)?;
+                }
+                write!(f, " → t{}; axis={})", output, axis)
+            }
+            PspOp::Gather { input, indices, output, axis } => {
+                write!(f, "Gather(t{}, t{} → t{}; axis={})", input, indices, output, axis)
+            }
+            PspOp::Reduce { op, input, axes, output } => {
+                write!(f, "Reduce(t{}, t{} → t{}; {})", input, axes, output, op)
+            }
+            PspOp::Range { start, limit, delta, output } => {
+                write!(f, "Range(t{}, t{}, t{} → t{})", start, limit, delta, output)
+            }
+            PspOp::SplitV { input, size_splits, axis, outputs } => {
+                write!(f, "SplitV(t{}, t{}, t{} → ", input, size_splits, axis)?;
+                for (i, id) in outputs.iter().enumerate() {
+                    if i > 0 { write!(f, ", ")?; }
+                    write!(f, "t{}", id)?;
+                }
+                write!(f, ")")
+            }
+            PspOp::Cast { input, output } => write!(f, "Cast(t{} → t{})", input, output),
+            PspOp::Pad { input, paddings, output } => {
+                write!(f, "Pad(t{}, t{} → t{})", input, paddings, output)
+            }
+            PspOp::Transpose { input, perm, output } => {
+                write!(f, "Transpose(t{}, t{} → t{})", input, perm, output)
+            }
+            PspOp::ReverseV2 { input, axis, output } => {
+                write!(f, "ReverseV2(t{}, t{} → t{})", input, axis, output)
+            }
+            PspOp::Rfft2d { input, fft_length, output } => {
+                write!(f, "Rfft2d(t{}, t{} → t{})", input, fft_length, output)
+            }
+            PspOp::Rfft { input, output, fft_length } => {
+                write!(f, "Rfft(t{} → t{}; n={})", input, output, fft_length)
+            }
+        }
+    }
+}
+
+impl std::fmt::Display for Activation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Activation::Relu => write!(f, "Relu"),
+            Activation::Relu6 => write!(f, "Relu6"),
+        }
+    }
+}
+
+impl std::fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BinaryOp::Add => write!(f, "Add"),
+            BinaryOp::Mul => write!(f, "Mul"),
+            BinaryOp::Sub => write!(f, "Sub"),
+            BinaryOp::Div => write!(f, "Div"),
+            BinaryOp::FloorDiv => write!(f, "FloorDiv"),
+            BinaryOp::Max => write!(f, "Max"),
+            BinaryOp::Pow => write!(f, "Pow"),
+        }
+    }
+}
+
+impl std::fmt::Display for UnaryOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UnaryOp::Logistic => write!(f, "Logistic"),
+        }
+    }
+}
+
+impl std::fmt::Display for PoolType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PoolType::Max => write!(f, "Max"),
+            PoolType::Average => write!(f, "Avg"),
+        }
+    }
+}
+
+impl std::fmt::Display for ReduceOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReduceOp::Prod => write!(f, "Prod"),
+            ReduceOp::Max => write!(f, "Max"),
+            ReduceOp::Min => write!(f, "Min"),
+            ReduceOp::Mean => write!(f, "Mean"),
+        }
+    }
+}
+
 impl PspOp {
     pub fn inputs(&self) -> Vec<TensorId> {
         match self {

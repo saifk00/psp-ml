@@ -56,6 +56,7 @@ fn cmd_compile(args: &[String]) {
 
     let mut model_path: Option<String> = None;
     let mut out_dir: Option<PathBuf> = None;
+    let mut dump_ir = false;
 
     let mut i = 0;
     while i < args.len() {
@@ -67,13 +68,15 @@ fn cmd_compile(args: &[String]) {
                     process::exit(1);
                 })));
             }
+            "--dump-ir" => dump_ir = true,
             "--help" | "-h" => {
-                eprintln!("Usage: cargo psp-ml compile <model.tflite> [-o <dir>]");
+                eprintln!("Usage: cargo psp-ml compile <model.tflite> [-o <dir>] [--dump-ir]");
                 eprintln!();
                 eprintln!("Compile a TFLite model into Rust code targeting the psp-ml runtime.");
                 eprintln!();
                 eprintln!("Options:");
                 eprintln!("  -o, --out <DIR>  Output directory (default: current directory)");
+                eprintln!("  --dump-ir        Print IR graph after each pipeline stage");
                 process::exit(0);
             }
             _ => {
@@ -97,7 +100,7 @@ fn cmd_compile(args: &[String]) {
     let out_dir = out_dir.unwrap_or_else(|| PathBuf::from("."));
 
     let data = fs::read(&model_path).expect("Failed to read model");
-    let mut psp_model = tflite::to_psp_ir(data).unwrap_or_else(|err| {
+    let mut psp_model = tflite::to_psp_ir(data, dump_ir).unwrap_or_else(|err| {
         eprintln!("Error lowering to IR: {err}");
         process::exit(1);
     });
