@@ -263,7 +263,7 @@ fn render_kernel_call(
             let output_expr = writer.write(output.id);
             let output_shape_tok = shape_tokens(&output.shape);
             let [sh, sw] = stride;
-            let [ph, pw] = padding;
+            let [pt, pb, pl, pr] = padding;
 
             let bias_tok = match bias {
                 Some(b) => {
@@ -280,7 +280,7 @@ fn render_kernel_call(
                         #filter_expr, #filter_shape_tok,
                         #bias_tok,
                         [#sh, #sw],
-                        [#ph, #pw],
+                        [#pt, #pb, #pl, #pr],
                         #output_expr, #output_shape_tok
                     );
                 }
@@ -291,7 +291,7 @@ fn render_kernel_call(
                         #filter_expr, #filter_shape_tok,
                         #bias_tok,
                         [#sh, #sw],
-                        [#ph, #pw],
+                        [#pt, #pb, #pl, #pr],
                         #output_expr, #output_shape_tok
                     );
                 }
@@ -301,6 +301,7 @@ fn render_kernel_call(
         KernelCall::Im2colPadded {
             input,
             kernel_size,
+            stride,
             padding,
             output_hw,
             output: _scratch_idx,
@@ -308,14 +309,15 @@ fn render_kernel_call(
             let input_expr = writer.read(input.id);
             let input_shape_tok = shape_tokens(&input.shape);
             let [kh, kw] = kernel_size;
-            let [ph, pw] = padding;
+            let [sh, sw] = stride;
+            let [pt, pb, pl, pr] = padding;
             let [ho, wo] = output_hw;
             let scratch_ident = Ident::new(&format!("scratch_{op_idx}_{}", _scratch_idx), Span::call_site());
 
             quote! {
                 im2col_padded(
                     #input_expr, #input_shape_tok,
-                    [#kh, #kw], [#ph, #pw], [#ho, #wo],
+                    [#kh, #kw], [#sh, #sw], [#pt, #pb, #pl, #pr], [#ho, #wo],
                     #scratch_ident
                 );
             }
@@ -398,13 +400,19 @@ fn render_kernel_call(
         } => {
             let input_expr = writer.read(*input);
             let weight_expr = writer.read(*weights);
-            let bias_expr = writer.read(*bias);
             let output_expr = writer.write(*output);
+            let bias_tok = match bias {
+                Some(b) => {
+                    let b_expr = writer.read(*b);
+                    quote!(Some(#b_expr))
+                }
+                None => quote!(None),
+            };
             if *has_relu {
                 quote! {
                     fully_connected_relu(
                         #input_expr, #in_features,
-                        #weight_expr, #bias_expr,
+                        #weight_expr, #bias_tok,
                         #output_expr, #out_features
                     );
                 }
@@ -412,7 +420,7 @@ fn render_kernel_call(
                 quote! {
                     fully_connected(
                         #input_expr, #in_features,
-                        #weight_expr, #bias_expr,
+                        #weight_expr, #bias_tok,
                         #output_expr, #out_features
                     );
                 }
@@ -523,7 +531,7 @@ fn render_kernel_call(
             let output_expr = writer.write(output.id);
             let output_shape_tok = shape_tokens(&output.shape);
             let [sh, sw] = stride;
-            let [ph, pw] = padding;
+            let [pt, pb, pl, pr] = padding;
 
             let bias_tok = match bias {
                 Some(b) => {
@@ -539,7 +547,7 @@ fn render_kernel_call(
                     #filter_expr, #filter_shape_tok,
                     #bias_tok,
                     [#sh, #sw],
-                    [#ph, #pw],
+                    [#pt, #pb, #pl, #pr],
                     #output_expr, #output_shape_tok
                 );
             }
@@ -566,6 +574,92 @@ fn render_kernel_call(
             let out_expr = writer.write(*output);
             let n = *n;
             quote! { rfft_unpack(#scratch_ident, #tw_expr, #out_expr, #n); }
+        }
+
+        KernelCall::StridedSlice {
+            input, output,
+            input_shape, output_shape: _,
+            begin, end, strides,
+            begin_mask, end_mask, shrink_axis_mask,
+        } => {
+            let input_expr = writer.read(*input);
+            let output_expr = writer.write(*output);
+            let is_tok = shape_tokens(input_shape);
+            let begin_vals: Vec<_> = begin.iter().map(|v| quote!(#v)).collect();
+            let end_vals: Vec<_> = end.iter().map(|v| quote!(#v)).collect();
+            let stride_vals: Vec<_> = strides.iter().map(|v| quote!(#v)).collect();
+            quote! {
+                strided_slice(
+                    #input_expr, &#is_tok,
+                    #output_expr,
+                    &[#(#begin_vals),*], &[#(#end_vals),*], &[#(#stride_vals),*],
+                    #begin_mask, #end_mask, #shrink_axis_mask
+                );
+            }
+        }
+
+        KernelCall::Gather {
+            input, output, indices, indices_len,
+            input_shape, output_shape,
+            axis,
+        } => {
+            let input_expr = writer.read(*input);
+            let output_expr = writer.write(*output);
+            let is_tok = shape_tokens(input_shape);
+            let os_tok = shape_tokens(output_shape);
+            // indices is an I32 constant tensor in the weights blob.
+            // Read as f32 slice and reinterpret as i32 at runtime.
+            let indices_expr = writer.read(*indices);
+            let indices_len = *indices_len;
+            quote! {
+                gather(
+                    #input_expr, &#is_tok,
+                    unsafe { core::slice::from_raw_parts(#indices_expr.as_ptr() as *const i32, #indices_len) },
+                    #output_expr, &#os_tok,
+                    #axis
+                );
+            }
+        }
+
+        KernelCall::Concatenation {
+            inputs, output,
+            input_shapes, output_shape,
+            axis,
+        } => {
+            let output_expr = writer.write(*output);
+            let os_tok = shape_tokens(output_shape);
+            let axis = *axis;
+
+            // Generate sequential copy: for each input, compute offset along axis and copy
+            let mut copies = Vec::new();
+            let mut axis_offset: usize = 0;
+            for (idx, (tensor_id, in_shape)) in inputs.iter().zip(input_shapes.iter()).enumerate() {
+                let input_expr = writer.read(*tensor_id);
+                let _ = idx;
+
+                // Compute suffix size (product of dims after axis)
+                let suffix: usize = in_shape[axis + 1..].iter().product();
+                let prefix: usize = in_shape[..axis].iter().product();
+                let axis_len = in_shape[axis];
+                let out_axis_len = output_shape[axis];
+
+                copies.push(quote! {
+                    {
+                        let src = #input_expr;
+                        for p in 0..#prefix {
+                            for a in 0..#axis_len {
+                                let src_off = p * (#axis_len * #suffix) + a * #suffix;
+                                let dst_off = p * (#out_axis_len * #suffix) + (#axis_offset + a) * #suffix;
+                                #output_expr[dst_off..dst_off + #suffix].copy_from_slice(&src[src_off..src_off + #suffix]);
+                            }
+                        }
+                    }
+                });
+                axis_offset += axis_len;
+            }
+
+            let _ = os_tok;
+            quote! { #(#copies)* }
         }
     }
 }

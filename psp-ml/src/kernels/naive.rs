@@ -8,7 +8,7 @@ use core::option::Option;
 /// - `input`:  [N, H, W, Ci]
 /// - `filter`: [Co, Kh, Kw, Ci]
 /// - `bias`:   [Co]
-/// - `padding`: [pad_h, pad_w] - zero padding on each side
+/// - `padding`: [pad_top, pad_bottom, pad_left, pad_right]
 /// - `output`: [N, Ho, Wo, Co]
 pub fn conv2d(
     input: &[f32],
@@ -17,7 +17,7 @@ pub fn conv2d(
     filter_shape: [usize; 4],
     bias: Option<&[f32]>,
     stride: [usize; 2],
-    padding: [usize; 2],
+    padding: [usize; 4],
     output: &mut [f32],
     output_shape: [usize; 4],
 ) {
@@ -25,7 +25,7 @@ pub fn conv2d(
     let [co, kh, kw, _] = filter_shape;
     let [_, ho, wo, _] = output_shape;
     let [sh, sw] = stride;
-    let [pad_h, pad_w] = padding;
+    let [pad_top, _pad_bottom, pad_left, _pad_right] = padding;
 
     for batch in 0..n {
         for oy in 0..ho {
@@ -34,18 +34,15 @@ pub fn conv2d(
                     let mut sum = bias.map_or(0.0, |b| b[oc]);
                     for ky in 0..kh {
                         for kx in 0..kw {
-                            // Calculate input position with padding offset
                             let iy_padded = oy * sh + ky;
                             let ix_padded = ox * sw + kx;
 
-                            // Check if within padding region (treat as 0)
-                            if iy_padded < pad_h || ix_padded < pad_w {
+                            if iy_padded < pad_top || ix_padded < pad_left {
                                 continue;
                             }
-                            let iy = iy_padded - pad_h;
-                            let ix = ix_padded - pad_w;
+                            let iy = iy_padded - pad_top;
+                            let ix = ix_padded - pad_left;
 
-                            // Check bounds
                             if iy >= h || ix >= w {
                                 continue;
                             }
@@ -70,7 +67,7 @@ pub fn conv2d(
 /// - `input`:  [N, H, W, Ci]
 /// - `filter`: [Co, Kh, Kw, Ci]
 /// - `bias`:   [Co]
-/// - `padding`: [pad_h, pad_w] - zero padding on each side
+/// - `padding`: [pad_top, pad_bottom, pad_left, pad_right]
 /// - `output`: [N, Ho, Wo, Co]
 pub fn conv2d_relu(
     input: &[f32],
@@ -79,7 +76,7 @@ pub fn conv2d_relu(
     filter_shape: [usize; 4],
     bias: Option<&[f32]>,
     stride: [usize; 2],
-    padding: [usize; 2],
+    padding: [usize; 4],
     output: &mut [f32],
     output_shape: [usize; 4],
 ) {
@@ -187,12 +184,12 @@ pub fn fully_connected(
     input: &[f32],
     in_features: usize,
     weights: &[f32],
-    bias: &[f32],
+    bias: Option<&[f32]>,
     output: &mut [f32],
     out_features: usize,
 ) {
     for o in 0..out_features {
-        let mut sum = bias[o];
+        let mut sum = bias.map_or(0.0, |b| b[o]);
         for i in 0..in_features {
             sum += input[i] * weights[o * in_features + i];
         }
@@ -256,7 +253,7 @@ pub fn fully_connected_relu(
     input: &[f32],
     in_features: usize,
     weights: &[f32],
-    bias: &[f32],
+    bias: Option<&[f32]>,
     output: &mut [f32],
     out_features: usize,
 ) {
@@ -400,7 +397,7 @@ pub fn depthwise_conv2d(
     filter_shape: [usize; 4],
     bias: Option<&[f32]>,
     stride: [usize; 2],
-    padding: [usize; 2],
+    padding: [usize; 4],
     output: &mut [f32],
     output_shape: [usize; 4],
 ) {
@@ -408,7 +405,7 @@ pub fn depthwise_conv2d(
     let [_, kh, kw, _] = filter_shape;
     let [_, ho, wo, _] = output_shape;
     let [sh, sw] = stride;
-    let [pad_h, pad_w] = padding;
+    let [pad_top, _pad_bottom, pad_left, _pad_right] = padding;
 
     for batch in 0..n {
         for oy in 0..ho {
@@ -419,11 +416,11 @@ pub fn depthwise_conv2d(
                         for kx in 0..kw {
                             let iy_padded = oy * sh + ky;
                             let ix_padded = ox * sw + kx;
-                            if iy_padded < pad_h || ix_padded < pad_w {
+                            if iy_padded < pad_top || ix_padded < pad_left {
                                 continue;
                             }
-                            let iy = iy_padded - pad_h;
-                            let ix = ix_padded - pad_w;
+                            let iy = iy_padded - pad_top;
+                            let ix = ix_padded - pad_left;
                             if iy >= h || ix >= w {
                                 continue;
                             }
@@ -472,6 +469,143 @@ pub fn pad(
             }
         }
     }
+}
+
+// ─── StridedSlice / Gather ────────────────────────────────────
+
+/// N-dimensional strided slice.
+///
+/// `begin`, `end`, `strides` are per-dimension (same length as `input_shape`).
+/// Masks follow TFLite semantics: bit `i` set means dimension `i` is auto-filled.
+/// `shrink_axis_mask` bit `i` set means dimension `i` is removed from output.
+pub fn strided_slice(
+    input: &[f32],
+    input_shape: &[usize],
+    output: &mut [f32],
+    begin: &[i32],
+    end: &[i32],
+    strides: &[i32],
+    begin_mask: i32,
+    end_mask: i32,
+    shrink_axis_mask: i32,
+) {
+    let ndim = input_shape.len();
+
+    // Resolve begin/end for each dimension
+    let mut resolved_begin = [0i32; 8];
+    let mut resolved_end = [0i32; 8];
+    let mut resolved_stride = [1i32; 8];
+    for d in 0..ndim {
+        let len = input_shape[d] as i32;
+        let stride = strides[d];
+        resolved_stride[d] = stride;
+
+        resolved_begin[d] = if begin_mask & (1 << d) != 0 {
+            if stride > 0 { 0 } else { len - 1 }
+        } else {
+            let mut v = begin[d];
+            if v < 0 { v += len; }
+            v
+        };
+
+        resolved_end[d] = if end_mask & (1 << d) != 0 {
+            if stride > 0 { len } else { -1 }
+        } else {
+            let mut v = end[d];
+            if v < 0 { v += len; }
+            v
+        };
+    }
+
+    // Compute input strides (row-major)
+    let mut in_strides = [0usize; 8];
+    in_strides[ndim - 1] = 1;
+    for d in (0..ndim - 1).rev() {
+        in_strides[d] = in_strides[d + 1] * input_shape[d + 1];
+    }
+
+    // Iterate output positions using a coordinate vector
+    let mut coord = [0i32; 8];
+    for d in 0..ndim {
+        coord[d] = resolved_begin[d];
+    }
+
+    let mut out_idx = 0;
+    loop {
+        // Compute flat input index
+        let mut in_idx = 0;
+        for d in 0..ndim {
+            in_idx += coord[d] as usize * in_strides[d];
+        }
+        output[out_idx] = input[in_idx];
+        out_idx += 1;
+
+        // Advance coordinate (innermost first)
+        let mut d = ndim - 1;
+        loop {
+            // Skip shrunk dimensions
+            if shrink_axis_mask & (1 << d) != 0 {
+                if d == 0 { return; }
+                d -= 1;
+                continue;
+            }
+            coord[d] += resolved_stride[d];
+            let done = if resolved_stride[d] > 0 {
+                coord[d] < resolved_end[d]
+            } else {
+                coord[d] > resolved_end[d]
+            };
+            if done {
+                break;
+            }
+            // Reset this dimension and carry to next
+            coord[d] = resolved_begin[d];
+            if d == 0 { return; }
+            d -= 1;
+        }
+    }
+}
+
+/// Gather elements along an axis using integer indices.
+///
+/// Standard TFLite Gather semantics:
+/// `output_shape = input_shape[:axis] + indices_shape + input_shape[axis+1:]`
+pub fn gather(
+    input: &[f32],
+    input_shape: &[usize],
+    indices: &[i32],
+    output: &mut [f32],
+    output_shape: &[usize],
+    axis: usize,
+) {
+    let ndim_in = input_shape.len();
+
+    // Compute flat size of prefix (dims before axis), inner (axis dim), suffix (dims after axis)
+    let mut prefix_size = 1usize;
+    for d in 0..axis {
+        prefix_size *= input_shape[d];
+    }
+    let axis_size = input_shape[axis];
+    let mut suffix_size = 1usize;
+    for d in (axis + 1)..ndim_in {
+        suffix_size *= input_shape[d];
+    }
+    let _ = axis_size; // used implicitly through indices
+
+    let _num_indices = indices.len();
+
+    // output layout: [prefix_size, num_indices, suffix_size] flattened
+    let mut out_idx = 0;
+    for p in 0..prefix_size {
+        for &idx in indices {
+            let src_base = p * (input_shape[axis] * suffix_size) + (idx as usize) * suffix_size;
+            for s in 0..suffix_size {
+                output[out_idx] = input[src_base + s];
+                out_idx += 1;
+            }
+        }
+    }
+    let _ = output_shape; // shape is used by caller for allocation
 }
 
 // ─── RFFT kernels ─────────────────────────────────────────────

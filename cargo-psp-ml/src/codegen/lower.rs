@@ -9,6 +9,26 @@ const fn ceil_vfpu_q(x: usize) -> usize {
     (x + VFPU_Q - 1) & !(VFPU_Q - 1)
 }
 
+struct Conv2dKernelParams {
+    input: Tensor4d,
+    filter: Tensor4d,
+    bias: Option<TensorId>,
+    output: Tensor4d,
+    stride: [usize; 2],
+    padding: [usize; 4],
+    has_relu: bool,
+}
+
+impl Conv2dKernelParams {
+    fn is_vfpu_eligible(&self) -> bool {
+        let [n, _, _, _] = self.input.shape;
+        let [co, _, _, _] = self.filter.shape;
+        let [_, ho, wo, _] = self.output.shape;
+        let gemm_m = n * ho * wo;
+        gemm_m % VFPU_Q == 0 && co % VFPU_Q == 0
+    }
+}
+
 /**
  * Lower a PspModel into a CodegenPlan.
  */
@@ -29,7 +49,12 @@ pub fn lower(model: &mut PspModel) -> Result<CodegenPlan, String> {
     let input_id = model.graph.inputs[0];
     let output_id = model.graph.outputs[0];
     let input_size = model.graph.tensor(input_id).shape.iter().product::<usize>();
-    let output_size = model.graph.tensor(output_id).shape.iter().product::<usize>();
+    let output_size = model
+        .graph
+        .tensor(output_id)
+        .shape
+        .iter()
+        .product::<usize>();
 
     let mut allocs = lower_allocs(model)?;
 
@@ -123,7 +148,11 @@ fn lower_allocs(model: &PspModel) -> Result<Vec<TensorAlloc>, String> {
     Ok(allocs)
 }
 
-fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<TensorAlloc>) -> Result<Vec<OpPlan>, String> {
+fn lower_ops(
+    model: &mut PspModel,
+    use_vfpu_conv2d: bool,
+    allocs: &mut Vec<TensorAlloc>,
+) -> Result<Vec<OpPlan>, String> {
     let mut ops = Vec::new();
     let num_ops = model.graph.ops.len();
 
@@ -131,7 +160,12 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
         let op = model.graph.ops[i].clone();
 
         // Handle RFFT separately: it needs &mut model to append twiddle constants
-        if let PspOp::Rfft { input, output, fft_length } = &op {
+        if let PspOp::Rfft {
+            input,
+            output,
+            fft_length,
+        } = &op
+        {
             ops.push(lower_rfft(model, allocs, i, *input, *output, *fft_length)?);
             continue;
         }
@@ -145,10 +179,6 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
                 output,
                 params,
             } => {
-                if params.pad_top != params.pad_bottom || params.pad_left != params.pad_right {
-                    return Err(format!("Op {i}: asymmetric padding not supported"));
-                }
-
                 let in_shape = &graph.tensor(*input).shape;
                 let w_shape = &graph.tensor(*weights).shape;
                 let out_shape = &graph.tensor(*output).shape;
@@ -179,13 +209,26 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
                     shape: [out_shape[0], out_shape[1], out_shape[2], out_shape[3]],
                 };
                 let stride = [params.stride_h, params.stride_w];
-                let padding = [params.pad_top, params.pad_left];
+                let padding = [
+                    params.pad_top,
+                    params.pad_bottom,
+                    params.pad_left,
+                    params.pad_right,
+                ];
                 let has_relu = matches!(params.fused_activation, Some(Activation::Relu));
-
-                if use_vfpu_conv2d {
-                    lower_conv2d_vfpu(i, in4, w4, *bias, out4, stride, padding, has_relu)?
+                let conv2d_params = Conv2dKernelParams {
+                    input: in4,
+                    filter: w4,
+                    bias: *bias,
+                    output: out4,
+                    stride,
+                    padding,
+                    has_relu,
+                };
+                if use_vfpu_conv2d && conv2d_params.is_vfpu_eligible() {
+                    lower_conv2d_vfpu(conv2d_params)
                 } else {
-                    lower_conv2d_naive(in4, w4, *bias, out4, stride, padding, has_relu)
+                    lower_conv2d_naive(conv2d_params)
                 }
             }
 
@@ -196,10 +239,6 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
                 output,
                 params,
             } => {
-                if params.pad_top != params.pad_bottom || params.pad_left != params.pad_right {
-                    return Err(format!("Op {i}: asymmetric padding not supported for depthwise conv2d"));
-                }
-
                 let in_shape = &graph.tensor(*input).shape;
                 let w_shape = &graph.tensor(*weights).shape;
                 let out_shape = &graph.tensor(*output).shape;
@@ -233,7 +272,12 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
                             filter: w4,
                             bias: *bias,
                             stride: [params.stride_h, params.stride_w],
-                            padding: [params.pad_top, params.pad_left],
+                            padding: [
+                                params.pad_top,
+                                params.pad_bottom,
+                                params.pad_left,
+                                params.pad_right,
+                            ],
                             output: out4,
                         }],
                     }],
@@ -247,9 +291,6 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
                 output,
                 fused_activation,
             } => {
-                let bias_id =
-                    bias.ok_or_else(|| format!("Op {i}: FullyConnected requires bias tensor"))?;
-
                 let in_features = graph.tensor(*input).shape.iter().product::<usize>();
                 let out_features = graph.tensor(*output).shape.iter().product::<usize>();
                 let has_relu = matches!(fused_activation.fused_activation, Some(Activation::Relu));
@@ -272,7 +313,7 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
                             input: *input,
                             in_features,
                             weights: *weights,
-                            bias: bias_id,
+                            bias: *bias,
                             output: *output,
                             out_features,
                             has_relu,
@@ -281,7 +322,13 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
                 }
             }
 
-            PspOp::Pool2d { pool_type, input, output, filter, stride } => {
+            PspOp::Pool2d {
+                pool_type,
+                input,
+                output,
+                filter,
+                stride,
+            } => {
                 let in_shape = &graph.tensor(*input).shape;
                 let out_shape = &graph.tensor(*output).shape;
 
@@ -368,25 +415,24 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
                 return Err(format!("Op {i}: Softmax kernel not yet implemented"));
             }
 
-            PspOp::Reduce { op, input, axes, output } => {
-                // Validate Mean axes at compile time
+            PspOp::Reduce {
+                op,
+                input,
+                axes: _,
+                output,
+            } => {
+                // Validate Mean: output must keep only the last dim (all others size 1)
                 if *op == ReduceOp::Mean {
-                    let axes_tensor = graph.tensor(*axes);
-                    if let TensorKind::Constant { offset, len } = axes_tensor.kind {
-                        let axes_vals: Vec<i32> = model.model_data[offset..offset + len]
-                            .chunks_exact(4)
-                            .map(|c| i32::from_le_bytes(c.try_into().unwrap()))
-                            .collect();
-                        let input_ndim = graph.tensor(*input).shape.len();
-                        let expected: Vec<i32> = (0..input_ndim as i32 - 1).collect();
-                        if axes_vals != expected {
-                            return Err(format!(
-                                "Op {i}: reduce_mean_hw only supports reduction over all axes \
-                                 except the last (got axes={:?}, input shape={:?})",
-                                axes_vals,
-                                graph.tensor(*input).shape,
-                            ));
-                        }
+                    let in_shape = &graph.tensor(*input).shape;
+                    let out_shape = &graph.tensor(*output).shape;
+                    let last_matches = out_shape.last() == in_shape.last();
+                    let others_are_one = out_shape.iter().rev().skip(1).all(|&d| d == 1);
+                    if !last_matches || !others_are_one {
+                        return Err(format!(
+                            "Op {i}: reduce_mean_hw requires output to keep only the last dim \
+                             (input shape={:?}, output shape={:?})",
+                            in_shape, out_shape,
+                        ));
                     }
                 }
                 OpPlan {
@@ -402,7 +448,11 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
                 }
             }
 
-            PspOp::ReverseV2 { input, axis, output } => {
+            PspOp::ReverseV2 {
+                input,
+                axis,
+                output,
+            } => {
                 let in_shape = graph.tensor(*input).shape.clone();
                 let ndim = in_shape.len();
 
@@ -418,7 +468,11 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
                     let val = i32::from_le_bytes(
                         model.model_data[offset..offset + 4].try_into().unwrap(),
                     );
-                    let a = if val < 0 { (ndim as i32 + val) as usize } else { val as usize };
+                    let a = if val < 0 {
+                        (ndim as i32 + val) as usize
+                    } else {
+                        val as usize
+                    };
                     if a >= ndim {
                         return Err(format!(
                             "Op {i}: ReverseV2 axis {} out of bounds for {}D tensor",
@@ -427,9 +481,7 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
                     }
                     a
                 } else {
-                    return Err(format!(
-                        "Op {i}: ReverseV2 requires constant axis tensor"
-                    ));
+                    return Err(format!("Op {i}: ReverseV2 requires constant axis tensor"));
                 };
 
                 OpPlan {
@@ -446,7 +498,11 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
                 }
             }
 
-            PspOp::Transpose { input, perm, output } => {
+            PspOp::Transpose {
+                input,
+                perm,
+                output,
+            } => {
                 let in_shape = graph.tensor(*input).shape.clone();
                 let out_shape = graph.tensor(*output).shape.clone();
                 let ndim = in_shape.len();
@@ -467,14 +523,13 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
                     if vals.len() != ndim {
                         return Err(format!(
                             "Op {i}: Transpose perm length {} doesn't match input rank {}",
-                            vals.len(), ndim
+                            vals.len(),
+                            ndim
                         ));
                     }
                     vals.iter().map(|&v| v as usize).collect::<Vec<_>>()
                 } else {
-                    return Err(format!(
-                        "Op {i}: Transpose requires constant perm tensor"
-                    ));
+                    return Err(format!("Op {i}: Transpose requires constant perm tensor"));
                 };
 
                 OpPlan {
@@ -492,7 +547,11 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
                 }
             }
 
-            PspOp::Pad { input, paddings, output } => {
+            PspOp::Pad {
+                input,
+                paddings,
+                output,
+            } => {
                 let in_shape = &graph.tensor(*input).shape;
                 let out_shape = &graph.tensor(*output).shape;
 
@@ -524,9 +583,7 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
                         [vals[6] as usize, vals[7] as usize],
                     ]
                 } else {
-                    return Err(format!(
-                        "Op {i}: Pad requires constant padding tensor"
-                    ));
+                    return Err(format!("Op {i}: Pad requires constant padding tensor"));
                 };
 
                 let in4 = Tensor4d {
@@ -553,11 +610,131 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
 
             PspOp::Rfft { .. } => unreachable!("handled above"),
 
+            PspOp::StridedSlice {
+                input,
+                begin,
+                end,
+                strides,
+                output,
+                begin_mask,
+                end_mask,
+                shrink_axis_mask,
+            } => {
+                let in_shape = graph.tensor(*input).shape.clone();
+                let out_shape = graph.tensor(*output).shape.clone();
+
+                // Read begin/end/strides from constant tensors
+                let read_i32_const = |tid: TensorId| -> Result<Vec<i32>, String> {
+                    let t = graph.tensor(tid);
+                    if let TensorKind::Constant { offset, len } = t.kind {
+                        Ok(model.model_data[offset..offset + len]
+                            .chunks_exact(4)
+                            .map(|c| i32::from_le_bytes(c.try_into().unwrap()))
+                            .collect())
+                    } else {
+                        Err(format!(
+                            "Op {i}: StridedSlice requires constant begin/end/strides"
+                        ))
+                    }
+                };
+
+                let begin_vals = read_i32_const(*begin)?;
+                let end_vals = read_i32_const(*end)?;
+                let stride_vals = read_i32_const(*strides)?;
+
+                OpPlan {
+                    scratch: vec![],
+                    sub_ops: vec![SubOpPlan {
+                        name: "strided_slice".into(),
+                        kernels: vec![KernelCall::StridedSlice {
+                            input: *input,
+                            output: *output,
+                            input_shape: in_shape,
+                            output_shape: out_shape,
+                            begin: begin_vals,
+                            end: end_vals,
+                            strides: stride_vals,
+                            begin_mask: *begin_mask,
+                            end_mask: *end_mask,
+                            shrink_axis_mask: *shrink_axis_mask,
+                        }],
+                    }],
+                }
+            }
+
+            PspOp::Gather {
+                input,
+                indices,
+                output,
+                axis,
+            } => {
+                let in_shape = graph.tensor(*input).shape.clone();
+                let out_shape = graph.tensor(*output).shape.clone();
+
+                // Validate indices is constant
+                if !matches!(graph.tensor(*indices).kind, TensorKind::Constant { .. }) {
+                    return Err(format!("Op {i}: Gather requires constant indices tensor"));
+                }
+
+                let axis_val = if *axis < 0 {
+                    (in_shape.len() as i32 + *axis) as usize
+                } else {
+                    *axis as usize
+                };
+
+                let indices_len = graph.tensor(*indices).shape.iter().product::<usize>();
+
+                OpPlan {
+                    scratch: vec![],
+                    sub_ops: vec![SubOpPlan {
+                        name: "gather".into(),
+                        kernels: vec![KernelCall::Gather {
+                            input: *input,
+                            output: *output,
+                            indices: *indices,
+                            indices_len,
+                            input_shape: in_shape,
+                            output_shape: out_shape,
+                            axis: axis_val,
+                        }],
+                    }],
+                }
+            }
+
+            PspOp::Concatenation {
+                inputs,
+                output,
+                axis,
+            } => {
+                let out_shape = graph.tensor(*output).shape.clone();
+                let in_shapes: Vec<Vec<usize>> = inputs
+                    .iter()
+                    .map(|id| graph.tensor(*id).shape.clone())
+                    .collect();
+
+                let axis_val = if *axis < 0 {
+                    (out_shape.len() as i32 + *axis) as usize
+                } else {
+                    *axis as usize
+                };
+
+                OpPlan {
+                    scratch: vec![],
+                    sub_ops: vec![SubOpPlan {
+                        name: "concatenation".into(),
+                        kernels: vec![KernelCall::Concatenation {
+                            inputs: inputs.clone(),
+                            output: *output,
+                            input_shapes: in_shapes,
+                            output_shape: out_shape,
+                            axis: axis_val,
+                        }],
+                    }],
+                }
+            }
+
             PspOp::Shape { .. }
             | PspOp::Pack { .. }
-            | PspOp::StridedSlice { .. }
-            | PspOp::Concatenation { .. }
-            | PspOp::Gather { .. }
             | PspOp::Range { .. }
             | PspOp::SplitV { .. }
             | PspOp::Cast { .. }
@@ -575,53 +752,33 @@ fn lower_ops(model: &mut PspModel, use_vfpu_conv2d: bool, allocs: &mut Vec<Tenso
     Ok(ops)
 }
 
-fn lower_conv2d_naive(
-    input: Tensor4d,
-    filter: Tensor4d,
-    bias: Option<TensorId>,
-    output: Tensor4d,
-    stride: [usize; 2],
-    padding: [usize; 2],
-    has_relu: bool,
-) -> OpPlan {
-    let name = if has_relu { "conv2d_relu" } else { "conv2d" };
+fn lower_conv2d_naive(conv2d: Conv2dKernelParams) -> OpPlan {
+    let name = if conv2d.has_relu {
+        "conv2d_relu"
+    } else {
+        "conv2d"
+    };
     OpPlan {
         scratch: vec![],
         sub_ops: vec![SubOpPlan {
             name: name.into(),
             kernels: vec![KernelCall::Conv2d {
-                input,
-                filter,
-                bias,
-                stride,
-                padding,
-                output,
-                has_relu,
+                input: conv2d.input,
+                filter: conv2d.filter,
+                bias: conv2d.bias,
+                stride: conv2d.stride,
+                padding: conv2d.padding,
+                output: conv2d.output,
+                has_relu: conv2d.has_relu,
             }],
         }],
     }
 }
 
-fn lower_conv2d_vfpu(
-    op_idx: usize,
-    input: Tensor4d,
-    weights: Tensor4d,
-    bias: Option<TensorId>,
-    output: Tensor4d,
-    stride: [usize; 2],
-    padding: [usize; 2],
-    has_relu: bool,
-) -> Result<OpPlan, String> {
-    if stride != [1, 1] {
-        return Err(format!(
-            "Op {op_idx}: VFPU conv2d requires stride [1,1], got {:?}",
-            stride
-        ));
-    }
-
-    let [n, _, _, ci] = input.shape;
-    let [co, kh, kw, _] = weights.shape;
-    let [_, ho, wo, _] = output.shape;
+fn lower_conv2d_vfpu(conv2d: Conv2dKernelParams) -> OpPlan {
+    let [n, _, _, ci] = conv2d.input.shape;
+    let [co, kh, kw, _] = conv2d.filter.shape;
+    let [_, ho, wo, _] = conv2d.output.shape;
 
     let gemm_m = n * ho * wo;
     let gemm_k = kh * kw * ci;
@@ -629,16 +786,8 @@ fn lower_conv2d_vfpu(
     let m_padded = ceil_vfpu_q(gemm_m);
     let n_padded = ceil_vfpu_q(co);
 
-    if m_padded != gemm_m {
-        return Err(format!(
-            "Op {op_idx}: VFPU conv2d requires M ({gemm_m}) to be a multiple of {VFPU_Q}"
-        ));
-    }
-    if n_padded != co {
-        return Err(format!(
-            "Op {op_idx}: VFPU conv2d requires N ({co}) to be a multiple of {VFPU_Q}"
-        ));
-    }
+    debug_assert_eq!(gemm_m % VFPU_Q, 0, "caller must check is_vfpu_eligible");
+    debug_assert_eq!(co % VFPU_Q, 0, "caller must check is_vfpu_eligible");
 
     let m_tiles = m_padded / VFPU_Q;
     let k_tiles = k_padded / VFPU_Q;
@@ -660,7 +809,7 @@ fn lower_conv2d_vfpu(
     };
 
     let weight_load = ScratchLoad {
-        source: weights.id,
+        source: conv2d.filter.id,
         copy: weight_copy_strategy,
     };
 
@@ -679,9 +828,10 @@ fn lower_conv2d_vfpu(
         SubOpPlan {
             name: "im2col".into(),
             kernels: vec![KernelCall::Im2colPadded {
-                input,
+                input: conv2d.input,
                 kernel_size: [kh, kw],
-                padding,
+                stride: conv2d.stride,
+                padding: conv2d.padding,
                 output_hw: [ho, wo],
                 // TODO: proper index handling; maybe two way pointers?
                 output: 0, // scratch index 0
@@ -692,7 +842,7 @@ fn lower_conv2d_vfpu(
             kernels: vec![KernelCall::MatmulBtTiled {
                 a: 0, // scratch index 0
                 b: 1, // scratch index 1
-                output: output.id,
+                output: conv2d.output.id,
                 m_tiles,
                 k_tiles,
                 n_tiles,
@@ -701,23 +851,25 @@ fn lower_conv2d_vfpu(
     ];
 
     // Bias + relu sub-op
-    if bias.is_some() || has_relu {
-        let name = if has_relu {
+    if conv2d.bias.is_some() || conv2d.has_relu {
+        let name = if conv2d.has_relu {
             "bias_add_relu"
         } else {
             "bias_add"
         };
         let mut kernels = Vec::new();
-        if let Some(bias_id) = bias {
+        if let Some(bias_id) = conv2d.bias {
             kernels.push(KernelCall::BiasAdd {
-                output: output.id,
+                output: conv2d.output.id,
                 bias: bias_id,
                 rows: gemm_m,
                 cols: co,
             });
         }
-        if has_relu {
-            kernels.push(KernelCall::Relu { output: output.id });
+        if conv2d.has_relu {
+            kernels.push(KernelCall::Relu {
+                output: conv2d.output.id,
+            });
         }
         sub_ops.push(SubOpPlan {
             name: name.into(),
@@ -725,7 +877,7 @@ fn lower_conv2d_vfpu(
         });
     }
 
-    Ok(OpPlan { scratch, sub_ops })
+    OpPlan { scratch, sub_ops }
 }
 
 /// Append a float slice to model_data as a constant tensor, returning its TensorId.
@@ -742,7 +894,9 @@ fn append_constant_f32(
     for &val in data {
         model.model_data.extend_from_slice(&val.to_le_bytes());
     }
-    let id = model.graph.add_tensor(shape, DType::F32, TensorKind::Constant { offset, len });
+    let id = model
+        .graph
+        .add_tensor(shape, DType::F32, TensorKind::Constant { offset, len });
     allocs.push(TensorAlloc::Constant {
         id,
         float_offset: offset / sz,
@@ -1011,30 +1165,41 @@ mod tests {
     }
 
     #[test]
-    fn vfpu_conv2d_rejects_non_unit_stride() {
+    fn vfpu_conv2d_strided() {
         let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 2, true, true);
-        let err = lower(&mut model).unwrap_err();
-        assert!(err.contains("stride [1,1]"), "got: {err}");
+        let plan = lower(&mut model).unwrap();
+        // Verify im2col uses stride [2,2]
+        match &plan.ops[0].sub_ops[0].kernels[0] {
+            KernelCall::Im2colPadded { stride, .. } => assert_eq!(*stride, [2, 2]),
+            other => panic!("expected Im2colPadded, got: {other:?}"),
+        }
     }
 
     #[test]
-    fn vfpu_conv2d_rejects_unaligned_m() {
-        // M = 1*3*3 = 9 (not multiple of 4)
+    fn vfpu_conv2d_unaligned_m_falls_back_to_naive() {
+        // M = 1*3*3 = 9 (not multiple of 4) — falls back to naive Conv2d
         let mut model = make_conv2d_model(5, 5, 1, 4, 3, 3, 0, 1, true, true);
-        let plan = lower(&mut model);
-        // M=9, not multiple of 4
-        assert!(plan.is_err());
-        assert!(plan.unwrap_err().contains("multiple of 4"));
+        let plan = lower(&mut model).unwrap();
+        match &plan.ops[0].sub_ops[0].kernels[0] {
+            KernelCall::Conv2d { .. } => {} // naive path
+            other => panic!("expected naive Conv2d fallback, got: {other:?}"),
+        }
     }
 
     #[test]
-    fn asymmetric_padding_rejected() {
+    fn asymmetric_padding_accepted() {
         let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
         if let PspOp::Conv2d { params, .. } = &mut model.graph.ops[0] {
             params.pad_bottom = 3; // asymmetric
         }
-        let err = lower(&mut model).unwrap_err();
-        assert!(err.contains("asymmetric"), "got: {err}");
+        let plan = lower(&mut model).unwrap();
+        // Verify the padding is [2, 3, 2, 2] (top, bottom, left, right)
+        match &plan.ops[0].sub_ops[0].kernels[0] {
+            KernelCall::Im2colPadded { padding, .. } => {
+                assert_eq!(*padding, [2, 3, 2, 2]);
+            }
+            other => panic!("expected Im2colPadded, got: {other:?}"),
+        }
     }
 
     #[test]
@@ -1048,7 +1213,7 @@ mod tests {
     }
 
     #[test]
-    fn fc_requires_bias() {
+    fn fc_no_bias() {
         let mut graph = Graph::new();
         let input = graph.add_tensor(vec![784], DType::F32, TensorKind::Input);
         graph.inputs.push(input);
@@ -1065,7 +1230,7 @@ mod tests {
         graph.ops.push(PspOp::FullyConnected {
             input,
             weights,
-            bias: None, // no bias
+            bias: None,
             output,
             fused_activation: FullyConnectedParams {
                 fused_activation: None,
@@ -1075,8 +1240,11 @@ mod tests {
             graph,
             model_data: vec![0u8; 10 * 784 * 4],
         };
-        let err = lower(&mut model).unwrap_err();
-        assert!(err.contains("requires bias"), "got: {err}");
+        let plan = lower(&mut model).unwrap();
+        match &plan.ops[0].sub_ops[0].kernels[0] {
+            KernelCall::FullyConnected { bias, .. } => assert!(bias.is_none()),
+            other => panic!("expected FullyConnected, got: {other:?}"),
+        }
     }
 
     #[test]

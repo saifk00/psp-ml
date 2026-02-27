@@ -97,7 +97,7 @@ pub enum KernelCall {
         filter: Tensor4d,
         bias: Option<TensorId>,
         stride: [usize; 2],
-        padding: [usize; 2],
+        padding: [usize; 4],
         output: Tensor4d,
     },
     Conv2d {
@@ -105,14 +105,15 @@ pub enum KernelCall {
         filter: Tensor4d,
         bias: Option<TensorId>,
         stride: [usize; 2],
-        padding: [usize; 2],
+        padding: [usize; 4],
         output: Tensor4d,
         has_relu: bool,
     },
     Im2colPadded {
         input: Tensor4d,
         kernel_size: [usize; 2],
-        padding: [usize; 2],
+        stride: [usize; 2],
+        padding: [usize; 4],
         output_hw: [usize; 2],
         output: ScratchId,
     },
@@ -148,7 +149,7 @@ pub enum KernelCall {
         input: TensorId,
         in_features: usize,
         weights: TensorId,
-        bias: TensorId,
+        bias: Option<TensorId>,
         output: TensorId,
         out_features: usize,
         has_relu: bool,
@@ -210,5 +211,39 @@ pub enum KernelCall {
         twiddles: TensorId,
         output: TensorId,
         n: usize,
+    },
+
+    /// N-dimensional strided slice (begin/end/strides resolved at compile time).
+    StridedSlice {
+        input: TensorId,
+        output: TensorId,
+        input_shape: Vec<usize>,
+        output_shape: Vec<usize>,
+        begin: Vec<i32>,
+        end: Vec<i32>,
+        strides: Vec<i32>,
+        begin_mask: i32,
+        end_mask: i32,
+        shrink_axis_mask: i32,
+    },
+
+    /// Gather elements along an axis using constant indices.
+    Gather {
+        input: TensorId,
+        output: TensorId,
+        indices: TensorId,
+        indices_len: usize,
+        input_shape: Vec<usize>,
+        output_shape: Vec<usize>,
+        axis: usize,
+    },
+
+    /// Concatenate tensors along an axis.
+    Concatenation {
+        inputs: Vec<TensorId>,
+        output: TensorId,
+        input_shapes: Vec<Vec<usize>>,
+        output_shape: Vec<usize>,
+        axis: usize,
     },
 }

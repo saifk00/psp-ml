@@ -279,6 +279,7 @@ fn test_im2col_padded_vs_im2col() -> bool {
         [1, 4, 4, 2],
         [3, 3],
         [1, 1],
+        [1, 1, 1, 1],
         [4, 4],
         &mut col_padded,
     );
@@ -336,7 +337,7 @@ fn test_conv2d_via_im2col_vs_naive() -> bool {
         [co, kh, kw, ci],
         Some(&bias),
         [1, 1],
-        [pad_h, pad_w],
+        [pad_h, pad_w, pad_h, pad_w],
         &mut output_naive,
         [1, ho, wo, co],
     );
@@ -354,7 +355,8 @@ fn test_conv2d_via_im2col_vs_naive() -> bool {
         &input,
         [1, h, w, ci],
         [kh, kw],
-        [pad_h, pad_w],
+        [1, 1],
+        [pad_h, pad_w, pad_h, pad_w],
         [ho, wo],
         &mut im2col_buf,
     );

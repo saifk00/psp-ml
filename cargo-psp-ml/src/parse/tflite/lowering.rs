@@ -92,11 +92,7 @@ pub fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
                 Some(lower_pool2d(&op, &tensor_map, builtin_code)?)
             }
             BuiltinOperator::RESHAPE | BuiltinOperator::SQUEEZE | BuiltinOperator::EXPAND_DIMS => {
-                if try_alias_shape_op(&op, &mut tensor_map, &tflite_outputs)? {
-                    None // aliased — zero-cost, no op emitted
-                } else {
-                    Some(lower_reshape(&op, &tensor_map)?) // graph-output fallback
-                }
+                Some(lower_reshape(&op, &tensor_map)?)
             }
             BuiltinOperator::ADD
             | BuiltinOperator::MUL
@@ -184,30 +180,6 @@ fn get_buffer_location(
 
     let offset = data_ptr - base_ptr;
     Some((offset, data_bytes.len()))
-}
-
-/// Try to alias a shape-only op (RESHAPE, SQUEEZE, EXPAND_DIMS).
-///
-/// If the output tensor is not a graph output, redirect it to reuse the input
-/// tensor's buffer — zero cost, no op emitted, no extra allocation.
-/// Returns `Ok(true)` if aliased, `Ok(false)` if fallback copy is needed.
-fn try_alias_shape_op(
-    op: &Operator,
-    tensor_map: &mut [TensorId],
-    tflite_outputs: &HashSet<i32>,
-) -> Result<bool, String> {
-    let inputs = op.inputs().ok_or("shape op: no inputs")?;
-    let outputs = op.outputs().ok_or("shape op: no outputs")?;
-    let out_idx = outputs.get(0);
-
-    // Fall back to copy if output is a graph output (needs separate stack buffer)
-    if tflite_outputs.contains(&out_idx) {
-        return Ok(false);
-    }
-
-    // Alias: output tensor now resolves to the same TensorId as input
-    tensor_map[out_idx as usize] = tensor_map[inputs.get(0) as usize];
-    Ok(true)
 }
 
 /// Lower TFLite CONV_2D to PspOp::Conv2d

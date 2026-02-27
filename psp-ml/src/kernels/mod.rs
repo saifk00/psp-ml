@@ -427,13 +427,15 @@ pub fn im2col_padded(
     input: &[f32],
     input_shape: [usize; 4],
     kernel: [usize; 2],
-    padding: [usize; 2],
+    stride: [usize; 2],
+    padding: [usize; 4],
     output_hw: [usize; 2],
     col: &mut [f32],
 ) {
     let [n, h, w, ci] = input_shape;
     let [kh, kw] = kernel;
-    let [pad_h, pad_w] = padding;
+    let [sh, sw] = stride;
+    let [pad_top, _pad_bottom, pad_left, _pad_right] = padding;
     let [ho, wo] = output_hw;
     let k = kh * kw * ci;
     let k_padded = div_ceil(k, VFPU_Q) * VFPU_Q;
@@ -444,8 +446,8 @@ pub fn im2col_padded(
                 let row = batch * (ho * wo) + oy * wo + ox;
                 for ky in 0..kh {
                     for kx in 0..kw {
-                        let iy = (oy + ky) as isize - pad_h as isize;
-                        let ix = (ox + kx) as isize - pad_w as isize;
+                        let iy = (oy * sh + ky) as isize - pad_top as isize;
+                        let ix = (ox * sw + kx) as isize - pad_left as isize;
                         for ic in 0..ci {
                             let col_idx = ky * (kw * ci) + kx * ci + ic;
                             if iy >= 0 && iy < h as isize && ix >= 0 && ix < w as isize {
