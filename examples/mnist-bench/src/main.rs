@@ -227,6 +227,8 @@ fn app_main() {
 
     let tick_res = unsafe { sceRtcGetTickResolution() } as u64;
 
+    generated::init();
+
     psp_ml::dprintln!("Running inference on {} images...", NUM_IMAGES);
     let result = run_benchmark(get_tick, tick_res);
 
@@ -296,6 +298,8 @@ fn main() {
     println!("MNIST Inference Benchmark");
     println!("=========================");
     println!();
+
+    generated::init();
 
     println!("Running inference on {} images...", NUM_IMAGES);
     let result = run_benchmark(local_get_tick, tick_res);

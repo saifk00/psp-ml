@@ -7,3 +7,8 @@ scrap
 *.bin
 .vscode
 models/BirdNET_v2.4_tflite/
+benchmarks.json
+meminfo.txt
+birdnet.txt
+results.txt
+out.log

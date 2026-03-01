@@ -344,3 +344,6 @@ fn tensor_data_f32() -> &'static [f32] {
         )
     }
 }
+/// No-op for embedded weights. Provided so callers can
+/// unconditionally call `init()` regardless of model size.
+pub fn init() {}

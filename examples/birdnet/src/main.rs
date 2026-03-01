@@ -14,30 +14,17 @@ psp_ml::module!("birdnet", 1, 0);
 
 mod generated;
 
-// Embed test audio (16-bit mono PCM WAV)
-static AUDIO_WAV: &[u8] = include_bytes!("../recording.wav");
-
 const INPUT_SAMPLES: usize = 144000;
 const OUTPUT_CLASSES: usize = 6522;
 
-/// Parse embedded WAV and return audio as f32 samples, zero-padded to INPUT_SAMPLES.
-fn load_audio() -> [f32; INPUT_SAMPLES] {
-    let mut out = [0.0f32; INPUT_SAMPLES];
-    // Skip 44-byte WAV header, read i16 PCM samples
-    let pcm = &AUDIO_WAV[44..];
-    let num_samples = pcm.len() / 2;
-    let count = if num_samples < INPUT_SAMPLES {
-        num_samples
-    } else {
-        INPUT_SAMPLES
-    };
-    for i in 0..count {
-        let lo = pcm[i * 2] as i16;
-        let hi = (pcm[i * 2 + 1] as i16) << 8;
-        let sample = lo | hi;
-        out[i] = sample as f32 / 32768.0;
-    }
-    out
+// Audio pre-converted to f32 by build.rs (avoids 562KB stack allocation)
+#[repr(C, align(16))]
+struct AlignedAudio([u8; INPUT_SAMPLES * 4]);
+static AUDIO_F32_BYTES: AlignedAudio =
+    AlignedAudio(*include_bytes!(concat!(env!("OUT_DIR"), "/audio_f32.bin")));
+
+fn audio_input() -> &'static [f32; INPUT_SAMPLES] {
+    unsafe { &*(AUDIO_F32_BYTES.0.as_ptr() as *const [f32; INPUT_SAMPLES]) }
 }
 
 // ============================================================================
@@ -55,11 +42,11 @@ struct BenchResult {
 ///
 /// `get_tick` returns a monotonic tick value; `tick_res` is ticks per second.
 fn run_benchmark(get_tick: fn() -> u64, tick_res: u64) -> BenchResult {
-    let input = load_audio();
+    let input = audio_input();
     let mut op_ticks = [0u64; generated::NUM_OPS];
 
     let start = get_tick();
-    let output = generated::forward_timed(&input, &mut op_ticks, get_tick);
+    let output = generated::forward_timed(input, &mut op_ticks, get_tick);
     let elapsed_ticks = get_tick() - start;
 
     let total_us = (elapsed_ticks * 1_000_000) / tick_res;
@@ -285,6 +272,8 @@ fn write_file(path: &[u8], data: &[u8]) {
 fn app_main() {
     psp::enable_home_button();
 
+    generated::init();
+
     psp_ml::dprintln!("Running BirdNET...");
 
     let tick_res = unsafe { sceRtcGetTickResolution() } as u64;
@@ -338,6 +327,8 @@ fn main() {
     println!("BirdNET Inference Benchmark");
     println!("===========================");
     println!();
+
+    generated::init();
 
     println!("Running inference...");
     let result = run_benchmark(local_get_tick, tick_res);

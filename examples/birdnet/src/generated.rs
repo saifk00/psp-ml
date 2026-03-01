@@ -53,18 +53,18 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
             144000usize,
         )
     };
-    static mut T_187_BUF: Aligned16<144000usize> = Aligned16([0.0f32; 144000usize]);
+    static mut T_187_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_187 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_187_BUF) as *mut f32,
-            144000usize,
+            1usize,
         )
     };
-    static mut T_188_BUF: Aligned16<144000usize> = Aligned16([0.0f32; 144000usize]);
+    static mut T_188_BUF: Aligned16<2usize> = Aligned16([0.0f32; 2usize]);
     let t_188 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_188_BUF) as *mut f32,
-            144000usize,
+            2usize,
         )
     };
     static mut T_200_BUF: Aligned16<2048usize> = Aligned16([0.0f32; 2048usize]);
@@ -102,11 +102,11 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
             1025usize,
         )
     };
-    static mut T_214_BUF: Aligned16<1025usize> = Aligned16([0.0f32; 1025usize]);
+    static mut T_214_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_214 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_214_BUF) as *mut f32,
-            1025usize,
+            1usize,
         )
     };
     static mut T_215_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
@@ -158,46 +158,46 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
             96usize,
         )
     };
-    static mut T_228_BUF: Aligned16<144000usize> = Aligned16([0.0f32; 144000usize]);
+    static mut T_228_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_228 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_228_BUF) as *mut f32,
-            144000usize,
+            1usize,
         )
     };
-    static mut T_229_BUF: Aligned16<144000usize> = Aligned16([0.0f32; 144000usize]);
+    static mut T_229_BUF: Aligned16<8usize> = Aligned16([0.0f32; 8usize]);
     let t_229 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_229_BUF) as *mut f32,
-            144000usize,
+            8usize,
         )
     };
-    static mut T_241_BUF: Aligned16<4088usize> = Aligned16([0.0f32; 4088usize]);
+    static mut T_241_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_241 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_241_BUF) as *mut f32,
-            4088usize,
+            1024usize,
         )
     };
-    static mut T_242_BUF: Aligned16<4088usize> = Aligned16([0.0f32; 4088usize]);
+    static mut T_242_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_242 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_242_BUF) as *mut f32,
-            4088usize,
+            1024usize,
         )
     };
-    static mut T_243_BUF: Aligned16<4088usize> = Aligned16([0.0f32; 4088usize]);
+    static mut T_243_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_243 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_243_BUF) as *mut f32,
-            4088usize,
+            1024usize,
         )
     };
-    static mut T_244_BUF: Aligned16<4088usize> = Aligned16([0.0f32; 4088usize]);
+    static mut T_244_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_244 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_244_BUF) as *mut f32,
-            4088usize,
+            1024usize,
         )
     };
     static mut T_247_BUF: Aligned16<513usize> = Aligned16([0.0f32; 513usize]);
@@ -207,11 +207,11 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
             513usize,
         )
     };
-    static mut T_255_BUF: Aligned16<513usize> = Aligned16([0.0f32; 513usize]);
+    static mut T_255_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_255 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_255_BUF) as *mut f32,
-            513usize,
+            1usize,
         )
     };
     static mut T_256_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
@@ -2163,7 +2163,7 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     reshape(t_187, t_188);
     gather(
         t_188,
-        &[1usize, 72000usize, 2usize],
+        &[1usize, 1usize, 2usize],
         unsafe { core::slice::from_raw_parts(t_199.as_ptr() as *const i32, 1024usize) },
         t_200,
         &[1usize, 1usize, 1024usize, 2usize],
@@ -2192,7 +2192,7 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     fft_butterfly_stage(scratch_13_0, t_556, 1024usize, 512usize);
     rfft_unpack(scratch_13_0, t_557, t_206, 2048usize);
     reshape(t_206, t_214);
-    fully_connected(t_214, 1025usize, t_166, None, t_215, 96usize);
+    fully_connected(t_214, 1usize, t_166, None, t_215, 96usize);
     reshape(t_215, t_216);
     binary_mul(t_216, t_216, t_217, 96usize);
     binary_pow(t_217, t_165, t_218, 1usize);
@@ -2219,10 +2219,10 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     reshape(t_228, t_229);
     gather(
         t_229,
-        &[1usize, 18000usize, 8usize],
+        &[1usize, 1usize, 8usize],
         unsafe { core::slice::from_raw_parts(t_240.as_ptr() as *const i32, 511usize) },
         t_241,
-        &[1usize, 511usize, 8usize],
+        &[1usize, 1usize, 128usize, 8usize],
         1usize,
     );
     reshape(t_241, t_242);
@@ -2247,7 +2247,7 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     fft_butterfly_stage(scratch_28_0, t_566, 512usize, 256usize);
     rfft_unpack(scratch_28_0, t_567, t_247, 1024usize);
     reshape(t_247, t_255);
-    fully_connected(t_255, 513usize, t_168, None, t_256, 96usize);
+    fully_connected(t_255, 1usize, t_168, None, t_256, 96usize);
     reshape(t_256, t_257);
     binary_mul(t_257, t_257, t_258, 96usize);
     binary_pow(t_258, t_167, t_259, 1usize);
@@ -3670,18 +3670,18 @@ pub fn forward_timed(
             144000usize,
         )
     };
-    static mut T_187_BUF: Aligned16<144000usize> = Aligned16([0.0f32; 144000usize]);
+    static mut T_187_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_187 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_187_BUF) as *mut f32,
-            144000usize,
+            1usize,
         )
     };
-    static mut T_188_BUF: Aligned16<144000usize> = Aligned16([0.0f32; 144000usize]);
+    static mut T_188_BUF: Aligned16<2usize> = Aligned16([0.0f32; 2usize]);
     let t_188 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_188_BUF) as *mut f32,
-            144000usize,
+            2usize,
         )
     };
     static mut T_200_BUF: Aligned16<2048usize> = Aligned16([0.0f32; 2048usize]);
@@ -3719,11 +3719,11 @@ pub fn forward_timed(
             1025usize,
         )
     };
-    static mut T_214_BUF: Aligned16<1025usize> = Aligned16([0.0f32; 1025usize]);
+    static mut T_214_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_214 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_214_BUF) as *mut f32,
-            1025usize,
+            1usize,
         )
     };
     static mut T_215_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
@@ -3775,46 +3775,46 @@ pub fn forward_timed(
             96usize,
         )
     };
-    static mut T_228_BUF: Aligned16<144000usize> = Aligned16([0.0f32; 144000usize]);
+    static mut T_228_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_228 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_228_BUF) as *mut f32,
-            144000usize,
+            1usize,
         )
     };
-    static mut T_229_BUF: Aligned16<144000usize> = Aligned16([0.0f32; 144000usize]);
+    static mut T_229_BUF: Aligned16<8usize> = Aligned16([0.0f32; 8usize]);
     let t_229 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_229_BUF) as *mut f32,
-            144000usize,
+            8usize,
         )
     };
-    static mut T_241_BUF: Aligned16<4088usize> = Aligned16([0.0f32; 4088usize]);
+    static mut T_241_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_241 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_241_BUF) as *mut f32,
-            4088usize,
+            1024usize,
         )
     };
-    static mut T_242_BUF: Aligned16<4088usize> = Aligned16([0.0f32; 4088usize]);
+    static mut T_242_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_242 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_242_BUF) as *mut f32,
-            4088usize,
+            1024usize,
         )
     };
-    static mut T_243_BUF: Aligned16<4088usize> = Aligned16([0.0f32; 4088usize]);
+    static mut T_243_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_243 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_243_BUF) as *mut f32,
-            4088usize,
+            1024usize,
         )
     };
-    static mut T_244_BUF: Aligned16<4088usize> = Aligned16([0.0f32; 4088usize]);
+    static mut T_244_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_244 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_244_BUF) as *mut f32,
-            4088usize,
+            1024usize,
         )
     };
     static mut T_247_BUF: Aligned16<513usize> = Aligned16([0.0f32; 513usize]);
@@ -3824,11 +3824,11 @@ pub fn forward_timed(
             513usize,
         )
     };
-    static mut T_255_BUF: Aligned16<513usize> = Aligned16([0.0f32; 513usize]);
+    static mut T_255_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_255 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_255_BUF) as *mut f32,
-            513usize,
+            1usize,
         )
     };
     static mut T_256_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
@@ -5799,7 +5799,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     gather(
         t_188,
-        &[1usize, 72000usize, 2usize],
+        &[1usize, 1usize, 2usize],
         unsafe { core::slice::from_raw_parts(t_199.as_ptr() as *const i32, 1024usize) },
         t_200,
         &[1usize, 1usize, 1024usize, 2usize],
@@ -5862,7 +5862,7 @@ pub fn forward_timed(
     reshape(t_206, t_214);
     op_ticks[25usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    fully_connected(t_214, 1025usize, t_166, None, t_215, 96usize);
+    fully_connected(t_214, 1usize, t_166, None, t_215, 96usize);
     op_ticks[26usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reshape(t_215, t_216);
@@ -5907,10 +5907,10 @@ pub fn forward_timed(
     let __t0 = get_tick();
     gather(
         t_229,
-        &[1usize, 18000usize, 8usize],
+        &[1usize, 1usize, 8usize],
         unsafe { core::slice::from_raw_parts(t_240.as_ptr() as *const i32, 511usize) },
         t_241,
-        &[1usize, 511usize, 8usize],
+        &[1usize, 1usize, 128usize, 8usize],
         1usize,
     );
     op_ticks[35usize] += get_tick() - __t0;
@@ -5967,7 +5967,7 @@ pub fn forward_timed(
     reshape(t_247, t_255);
     op_ticks[50usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    fully_connected(t_255, 513usize, t_168, None, t_256, 96usize);
+    fully_connected(t_255, 1usize, t_168, None, t_256, 96usize);
     op_ticks[51usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reshape(t_256, t_257);
@@ -8252,10 +8252,9 @@ struct AlignedBytes<const N: usize>([u8; N]);
 /// 16-byte aligned f32 array for VFPU `lv.q`/`sv.q`.
 #[repr(C, align(16))]
 struct Aligned16<const N: usize>([f32; N]);
-static TENSOR_DATA_BYTES: AlignedBytes<51770016usize> = AlignedBytes(
-    *include_bytes!("weights.bin"),
-);
+const WEIGHT_BYTES: usize = 51770016usize;
 const TENSOR_DATA_FLOATS: usize = 12942504usize;
+static mut WEIGHT_PTR: *const u8 = core::ptr::null();
 const T_1_OFFSET: usize = 12930528usize;
 const T_1_LEN: usize = 1024usize;
 const T_2_OFFSET: usize = 12928951usize;
@@ -8595,10 +8594,69 @@ const T_566_LEN: usize = 512usize;
 const T_567_OFFSET: usize = 12941482usize;
 const T_567_LEN: usize = 1022usize;
 fn tensor_data_f32() -> &'static [f32] {
-    unsafe {
-        core::slice::from_raw_parts(
-            TENSOR_DATA_BYTES.0.as_ptr() as *const f32,
-            TENSOR_DATA_FLOATS,
+    unsafe { core::slice::from_raw_parts(WEIGHT_PTR as *const f32, TENSOR_DATA_FLOATS) }
+}
+/// Initialize the model by loading weights from file.
+/// Must be called once before `forward()` or `forward_timed()`.
+#[cfg(target_os = "psp")]
+pub fn init() {
+    use psp::sys::{
+        sceIoClose, sceIoOpen, sceIoRead, sceKernelAllocPartitionMemory,
+        sceKernelGetBlockHeadAddr, IoOpenFlags, SceSysMemBlockTypes,
+    };
+    let uid = unsafe {
+        sceKernelAllocPartitionMemory(
+            core::mem::transmute(2i32),
+            b"weights\0".as_ptr(),
+            SceSysMemBlockTypes::Low,
+            WEIGHT_BYTES as u32,
+            core::ptr::null_mut(),
         )
+    };
+    if uid.0 < 0 {
+        psp_ml::dprintln!("FATAL: weight alloc failed (0x{:08X})", uid.0 as u32);
+        loop {}
     }
+    let ptr = unsafe { sceKernelGetBlockHeadAddr(uid) } as *mut u8;
+    let fd = unsafe {
+        sceIoOpen(b"host0:/weights.bin\0".as_ptr(), IoOpenFlags::RD_ONLY, 0)
+    };
+    if fd.0 < 0 {
+        psp_ml::dprintln!("FATAL: could not open host0:/weights.bin");
+        loop {}
+    }
+    let mut loaded = 0usize;
+    while loaded < WEIGHT_BYTES {
+        let chunk = if WEIGHT_BYTES - loaded < 65536 {
+            WEIGHT_BYTES - loaded
+        } else {
+            65536
+        };
+        let n = unsafe {
+            sceIoRead(fd, ptr.add(loaded) as *mut core::ffi::c_void, chunk as u32)
+        };
+        if n <= 0 {
+            break;
+        }
+        loaded += n as usize;
+    }
+    unsafe { sceIoClose(fd) };
+    if loaded != WEIGHT_BYTES {
+        psp_ml::dprintln!(
+            "FATAL: incomplete weight load: {} / {} bytes", loaded, WEIGHT_BYTES
+        );
+        loop {}
+    }
+    unsafe { WEIGHT_PTR = ptr };
+    psp_ml::dprintln!("Loaded weights: {} bytes", WEIGHT_BYTES);
+}
+/// Initialize the model by loading weights from file.
+#[cfg(not(target_os = "psp"))]
+pub fn init() {
+    let data = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/src/weights.bin"))
+        .expect("failed to read weights.bin");
+    assert_eq!(data.len(), WEIGHT_BYTES, "weights.bin size mismatch");
+    let ptr = data.as_ptr();
+    std::mem::forget(data);
+    unsafe { WEIGHT_PTR = ptr };
 }

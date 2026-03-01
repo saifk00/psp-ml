@@ -76,6 +76,12 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
 // Weight statics
 // ---------------------------------------------------------------------------
 
+/// Models above this threshold use runtime weight loading (pointer path)
+/// instead of `include_bytes!` (embedded path). The PSP module loader can
+/// handle PRXs up to ~28 MB; 16 MB leaves comfortable headroom for code +
+/// intermediate buffers.
+const EXTERNAL_WEIGHT_THRESHOLD: usize = 16 * 1024 * 1024;
+
 fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
     let total_bytes = plan.blob_bytes;
     let total_floats = plan.blob_floats;
@@ -97,27 +103,138 @@ fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
         }
     }
 
-    quote! {
-        #[allow(dead_code)]
-        #[repr(align(16))]
-        struct AlignedBytes<const N: usize>([u8; N]);
+    if plan.blob_bytes <= EXTERNAL_WEIGHT_THRESHOLD {
+        // Embedded path: weights compiled into the binary via include_bytes!
+        quote! {
+            #[allow(dead_code)]
+            #[repr(align(16))]
+            struct AlignedBytes<const N: usize>([u8; N]);
 
-        /// 16-byte aligned f32 array for VFPU `lv.q`/`sv.q`.
-        #[repr(C, align(16))]
-        struct Aligned16<const N: usize>([f32; N]);
+            /// 16-byte aligned f32 array for VFPU `lv.q`/`sv.q`.
+            #[repr(C, align(16))]
+            struct Aligned16<const N: usize>([f32; N]);
 
-        static TENSOR_DATA_BYTES: AlignedBytes<#total_bytes> =
-            AlignedBytes(*include_bytes!("weights.bin"));
-        const TENSOR_DATA_FLOATS: usize = #total_floats;
+            static TENSOR_DATA_BYTES: AlignedBytes<#total_bytes> =
+                AlignedBytes(*include_bytes!("weights.bin"));
+            const TENSOR_DATA_FLOATS: usize = #total_floats;
 
-        #(#const_entries)*
+            #(#const_entries)*
 
-        fn tensor_data_f32() -> &'static [f32] {
-            unsafe {
-                core::slice::from_raw_parts(
-                    TENSOR_DATA_BYTES.0.as_ptr() as *const f32,
-                    TENSOR_DATA_FLOATS,
+            fn tensor_data_f32() -> &'static [f32] {
+                unsafe {
+                    core::slice::from_raw_parts(
+                        TENSOR_DATA_BYTES.0.as_ptr() as *const f32,
+                        TENSOR_DATA_FLOATS,
+                    )
+                }
+            }
+
+            /// No-op for embedded weights. Provided so callers can
+            /// unconditionally call `init()` regardless of model size.
+            pub fn init() {}
+        }
+    } else {
+        // Pointer path: weights loaded from file at runtime
+        quote! {
+            #[allow(dead_code)]
+            #[repr(align(16))]
+            struct AlignedBytes<const N: usize>([u8; N]);
+
+            /// 16-byte aligned f32 array for VFPU `lv.q`/`sv.q`.
+            #[repr(C, align(16))]
+            struct Aligned16<const N: usize>([f32; N]);
+
+            const WEIGHT_BYTES: usize = #total_bytes;
+            const TENSOR_DATA_FLOATS: usize = #total_floats;
+
+            static mut WEIGHT_PTR: *const u8 = core::ptr::null();
+
+            #(#const_entries)*
+
+            fn tensor_data_f32() -> &'static [f32] {
+                unsafe {
+                    core::slice::from_raw_parts(
+                        WEIGHT_PTR as *const f32,
+                        TENSOR_DATA_FLOATS,
+                    )
+                }
+            }
+
+            /// Initialize the model by loading weights from file.
+            /// Must be called once before `forward()` or `forward_timed()`.
+            #[cfg(target_os = "psp")]
+            pub fn init() {
+                use psp::sys::{
+                    sceIoClose, sceIoOpen, sceIoRead,
+                    sceKernelAllocPartitionMemory, sceKernelGetBlockHeadAddr,
+                    IoOpenFlags, SceSysMemBlockTypes,
+                };
+
+                let uid = unsafe {
+                    sceKernelAllocPartitionMemory(
+                        core::mem::transmute(2i32),
+                        b"weights\0".as_ptr(),
+                        SceSysMemBlockTypes::Low,
+                        WEIGHT_BYTES as u32,
+                        core::ptr::null_mut(),
+                    )
+                };
+                if uid.0 < 0 {
+                    psp_ml::dprintln!("FATAL: weight alloc failed (0x{:08X})", uid.0 as u32);
+                    loop {} // halt — forward() would dereference null
+                }
+                let ptr = unsafe { sceKernelGetBlockHeadAddr(uid) } as *mut u8;
+
+                let fd = unsafe {
+                    sceIoOpen(
+                        b"host0:/weights.bin\0".as_ptr(),
+                        IoOpenFlags::RD_ONLY,
+                        0,
+                    )
+                };
+                if fd.0 < 0 {
+                    psp_ml::dprintln!("FATAL: could not open host0:/weights.bin");
+                    loop {} // halt — forward() would dereference null
+                }
+                let mut loaded = 0usize;
+                while loaded < WEIGHT_BYTES {
+                    let chunk = if WEIGHT_BYTES - loaded < 65536 {
+                        WEIGHT_BYTES - loaded
+                    } else {
+                        65536
+                    };
+                    let n = unsafe {
+                        sceIoRead(
+                            fd,
+                            ptr.add(loaded) as *mut core::ffi::c_void,
+                            chunk as u32,
+                        )
+                    };
+                    if n <= 0 {
+                        break;
+                    }
+                    loaded += n as usize;
+                }
+                unsafe { sceIoClose(fd) };
+                if loaded != WEIGHT_BYTES {
+                    psp_ml::dprintln!("FATAL: incomplete weight load: {} / {} bytes", loaded, WEIGHT_BYTES);
+                    loop {} // halt — partial weights produce wrong results
+                }
+                unsafe { WEIGHT_PTR = ptr };
+                psp_ml::dprintln!("Loaded weights: {} bytes", WEIGHT_BYTES);
+            }
+
+            /// Initialize the model by loading weights from file.
+            #[cfg(not(target_os = "psp"))]
+            pub fn init() {
+                let data = std::fs::read(
+                    concat!(env!("CARGO_MANIFEST_DIR"), "/src/weights.bin"),
                 )
+                .expect("failed to read weights.bin");
+                assert_eq!(data.len(), WEIGHT_BYTES, "weights.bin size mismatch");
+                let ptr = data.as_ptr();
+                std::mem::forget(data);
+                unsafe { WEIGHT_PTR = ptr };
             }
         }
     }

@@ -32,4 +32,12 @@ macro_rules! module {
 
         psp::module!($name, $version_major, $version_minor);
     };
+
+    ($name:expr, $version_major:expr, $version_minor:expr, $mod_attr:expr) => {
+        fn psp_main() {
+            app_main();
+        }
+
+        psp::module!($name, $version_major, $version_minor, $mod_attr);
+    };
 }
