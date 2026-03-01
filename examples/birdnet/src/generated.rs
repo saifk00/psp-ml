@@ -3,7 +3,7 @@
 use psp_ml::kernels::naive::*;
 #[allow(unused_imports)]
 use psp_ml::kernels::*;
-static mut ARENA: Aligned16<2525064usize> = Aligned16([0.0f32; 2525064usize]);
+static mut ARENA: Aligned16<42186840usize> = Aligned16([0.0f32; 42186840usize]);
 pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     let t_169 = unsafe {
         core::slice::from_raw_parts_mut(
@@ -242,211 +242,211 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     let t_267 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            1152usize,
+            588672usize,
         )
     };
     let t_268 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            1152usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            588672usize,
         )
     };
     let t_269 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2304usize),
-            2304usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1177344usize),
+            1177344usize,
         )
     };
     let t_270 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4608usize),
-            1152usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2525064usize),
+            588672usize,
         )
     };
     let t_271 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            3456usize,
+            1766016usize,
         )
     };
     let t_272 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3113736usize),
+            1766016usize,
         )
     };
     let t_273 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4879752usize),
+            1766016usize,
         )
     };
     let t_274 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
-            10800usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6645768usize),
+            5518800usize,
         )
     };
     let t_275 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            1728usize,
+            883008usize,
         )
     };
     let t_276 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            883008usize,
         )
     };
     let t_277 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            883008usize,
         )
     };
     let t_278 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            441504usize,
         )
     };
     let t_279 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            883008usize,
         )
     };
     let t_280 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            883008usize,
         )
     };
     let t_281 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            883008usize,
         )
     };
     let t_282 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            1728usize,
+            883008usize,
         )
     };
     let t_283 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            883008usize,
         )
     };
     let t_284 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            883008usize,
         )
     };
     let t_285 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            441504usize,
         )
     };
     let t_286 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let t_287 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            883008usize,
         )
     };
     let t_288 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            883008usize,
         )
     };
     let t_289 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            883008usize,
         )
     };
     let t_290 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            883008usize,
         )
     };
     let t_291 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            883008usize,
         )
     };
     let t_292 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            883008usize,
         )
     };
     let t_293 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            441504usize,
         )
     };
     let t_294 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            441504usize,
         )
     };
     let t_295 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12096usize),
-            6912usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            3532032usize,
         )
     };
     let t_296 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            6912usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415040usize),
+            3532032usize,
         )
     };
     let t_297 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(19008usize),
-            6912usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7947072usize),
+            3532032usize,
         )
     };
     let t_298 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25920usize),
-            22464usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12164568usize),
+            11479104usize,
         )
     };
     let t_299 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            3456usize,
+            1766016usize,
         )
     };
     let t_300 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            1766016usize,
         )
     };
     let t_301 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3532032usize),
+            1766016usize,
         )
     };
     let t_302 = unsafe {
@@ -494,49 +494,49 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     let t_312 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(636usize),
-            3456usize,
+            1766016usize,
         )
     };
     let t_313 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28284usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3532668usize),
+            441504usize,
         )
     };
     let t_314 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(20736usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            1766016usize,
         )
     };
     let t_315 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            1766016usize,
         )
     };
     let t_316 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3974172usize),
+            1766016usize,
         )
     };
     let t_317 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            3456usize,
+            1766016usize,
         )
     };
     let t_318 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            1766016usize,
         )
     };
     let t_319 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3974172usize),
+            1766016usize,
         )
     };
     let t_320 = unsafe {
@@ -584,151 +584,151 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     let t_330 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(636usize),
-            3456usize,
+            1766016usize,
         )
     };
     let t_331 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(29148usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3974172usize),
+            441504usize,
         )
     };
     let t_332 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let t_333 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(21600usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            1766016usize,
         )
     };
     let t_334 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            1766016usize,
         )
     };
     let t_335 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3973536usize),
+            1766016usize,
         )
     };
     let t_336 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            1766016usize,
         )
     };
     let t_337 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            1766016usize,
         )
     };
     let t_338 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7776usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3973536usize),
+            1766016usize,
         )
     };
     let t_339 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
             288usize,
         )
     };
     let t_343 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441792usize),
             288usize,
         )
     };
     let t_344 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
             18usize,
         )
     };
     let t_345 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(884usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441524usize),
             18usize,
         )
     };
     let t_346 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(904usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441544usize),
             18usize,
         )
     };
     let t_347 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(924usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441564usize),
             288usize,
         )
     };
     let t_348 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1212usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441852usize),
             288usize,
         )
     };
     let t_349 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1500usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(442140usize),
+            1766016usize,
         )
     };
     let t_350 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(29148usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3974172usize),
+            441504usize,
         )
     };
     let t_351 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            441504usize,
         )
     };
     let t_352 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(22464usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            1766016usize,
         )
     };
     let t_353 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            1766016usize,
         )
     };
     let t_354 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415040usize),
+            1766016usize,
         )
     };
     let t_355 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            1766016usize,
         )
     };
     let t_356 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            1766016usize,
         )
     };
     let t_357 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(8640usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415040usize),
+            1766016usize,
         )
     };
     let t_358 = unsafe {
@@ -775,62 +775,62 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     };
     let t_368 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            1766016usize,
         )
     };
     let t_369 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let t_370 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            441504usize,
         )
     };
     let t_371 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(64800usize),
-            10368usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            5298048usize,
         )
     };
     let t_372 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            10368usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6622560usize),
+            5298048usize,
         )
     };
     let t_373 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
-            10368usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11920608usize),
+            5298048usize,
         )
     };
     let t_374 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(20736usize),
-            36288usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(23643672usize),
+            18543168usize,
         )
     };
     let t_375 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            5184usize,
+            2649024usize,
         )
     };
     let t_376 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            2649024usize,
         )
     };
     let t_377 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5298048usize),
+            2649024usize,
         )
     };
     let t_378 = unsafe {
@@ -878,252 +878,252 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     let t_388 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1812usize),
-            5184usize,
+            2649024usize,
         )
     };
     let t_389 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2650836usize),
+            331128usize,
         )
     };
     let t_390 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            2649024usize,
         )
     };
     let t_391 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5832usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2981964usize),
+            2649024usize,
         )
     };
     let t_392 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11016usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5630988usize),
+            2649024usize,
         )
     };
     let t_393 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            2649024usize,
         )
     };
     let t_394 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5832usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2981964usize),
+            2649024usize,
         )
     };
     let t_395 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11016usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5630988usize),
+            2649024usize,
         )
     };
     let t_396 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
     let t_400 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1512usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             864usize,
         )
     };
     let t_401 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             27usize,
         )
     };
     let t_402 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(676usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28usize),
             27usize,
         )
     };
     let t_403 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(704usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(56usize),
             27usize,
         )
     };
     let t_404 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(732usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(84usize),
             864usize,
         )
     };
     let t_405 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1596usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(948usize),
             864usize,
         )
     };
     let t_406 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2460usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1812usize),
+            2649024usize,
         )
     };
     let t_407 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2981964usize),
+            331128usize,
         )
     };
     let t_408 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            331128usize,
         )
     };
     let t_409 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
+            2649024usize,
         )
     };
     let t_410 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2980152usize),
+            2649024usize,
         )
     };
     let t_411 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5629176usize),
+            2649024usize,
         )
     };
     let t_412 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
+            2649024usize,
         )
     };
     let t_413 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2980152usize),
+            2649024usize,
         )
     };
     let t_414 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5629176usize),
+            2649024usize,
         )
     };
     let t_415 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
             864usize,
         )
     };
     let t_419 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331992usize),
             864usize,
         )
     };
     let t_420 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
             27usize,
         )
     };
     let t_421 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331156usize),
             27usize,
         )
     };
     let t_422 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(56usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331184usize),
             27usize,
         )
     };
     let t_423 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(84usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331212usize),
             864usize,
         )
     };
     let t_424 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(332076usize),
             864usize,
         )
     };
     let t_425 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2808usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(332940usize),
+            2649024usize,
         )
     };
     let t_426 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2981964usize),
+            331128usize,
         )
     };
     let t_427 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
+            331128usize,
         )
     };
     let t_428 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662256usize),
+            2649024usize,
         )
     };
     let t_429 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6480usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3311280usize),
+            2649024usize,
         )
     };
     let t_430 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11664usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5960304usize),
+            2649024usize,
         )
     };
     let t_431 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662256usize),
+            2649024usize,
         )
     };
     let t_432 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6480usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3311280usize),
+            2649024usize,
         )
     };
     let t_433 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11664usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5960304usize),
+            2649024usize,
         )
     };
     let t_434 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
     let t_438 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2160usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             864usize,
         )
     };
@@ -1147,68 +1147,68 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     };
     let t_442 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(84usize),
             864usize,
         )
     };
     let t_443 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2160usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(948usize),
             864usize,
         )
     };
     let t_444 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3024usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662256usize),
+            2649024usize,
         )
     };
     let t_445 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            648usize,
+            331128usize,
         )
     };
     let t_446 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662256usize),
+            331128usize,
         )
     };
     let t_447 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(993384usize),
+            2649024usize,
         )
     };
     let t_448 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3642408usize),
+            2649024usize,
         )
     };
     let t_449 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6291432usize),
+            2649024usize,
         )
     };
     let t_450 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(993384usize),
+            2649024usize,
         )
     };
     let t_451 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3642408usize),
+            2649024usize,
         )
     };
     let t_452 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6291432usize),
+            2649024usize,
         )
     };
     let t_453 = unsafe {
@@ -1219,7 +1219,7 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     };
     let t_457 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             864usize,
         )
     };
@@ -1249,68 +1249,68 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     };
     let t_462 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(948usize),
             864usize,
         )
     };
     let t_463 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2808usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(993384usize),
+            2649024usize,
         )
     };
     let t_464 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            648usize,
+            331128usize,
         )
     };
     let t_465 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
+            331128usize,
         )
     };
     let t_466 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
-            9216usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662256usize),
+            4709376usize,
         )
     };
     let t_467 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10512usize),
-            9216usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5371632usize),
+            4709376usize,
         )
     };
     let t_468 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(19728usize),
-            9216usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10081008usize),
+            4709376usize,
         )
     };
     let t_469 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28944usize),
-            36864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(14790384usize),
+            18837504usize,
         )
     };
     let t_470 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            4608usize,
+            2354688usize,
         )
     };
     let t_471 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4608usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2354688usize),
+            2354688usize,
         )
     };
     let t_472 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(9216usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4709376usize),
+            2354688usize,
         )
     };
     let t_473 = unsafe {
@@ -1358,252 +1358,252 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     let t_483 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3216usize),
-            4608usize,
+            2354688usize,
         )
     };
     let t_484 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2357904usize),
+            294336usize,
         )
     };
     let t_485 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            2354688usize,
         )
     };
     let t_486 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2652240usize),
+            2354688usize,
         )
     };
     let t_487 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(9792usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5006928usize),
+            2354688usize,
         )
     };
     let t_488 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            2354688usize,
         )
     };
     let t_489 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2652240usize),
+            2354688usize,
         )
     };
     let t_490 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(9792usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5006928usize),
+            2354688usize,
         )
     };
     let t_491 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1536usize,
         )
     };
     let t_495 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2112usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1536usize),
             1536usize,
         )
     };
     let t_496 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             48usize,
         )
     };
     let t_497 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(624usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(48usize),
             48usize,
         )
     };
     let t_498 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             48usize,
         )
     };
     let t_499 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(720usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144usize),
             1536usize,
         )
     };
     let t_500 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2256usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1680usize),
             1536usize,
         )
     };
     let t_501 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3792usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3216usize),
+            2354688usize,
         )
     };
     let t_502 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2652240usize),
+            294336usize,
         )
     };
     let t_503 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            294336usize,
         )
     };
     let t_504 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
+            2354688usize,
         )
     };
     let t_505 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6336usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            2354688usize,
         )
     };
     let t_506 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10944usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5003712usize),
+            2354688usize,
         )
     };
     let t_507 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
+            2354688usize,
         )
     };
     let t_508 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6336usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            2354688usize,
         )
     };
     let t_509 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10944usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5003712usize),
+            2354688usize,
         )
     };
     let t_510 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
             1536usize,
         )
     };
     let t_514 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3264usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(295872usize),
             1536usize,
         )
     };
     let t_515 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
             48usize,
         )
     };
     let t_516 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(48usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294384usize),
             48usize,
         )
     };
     let t_517 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294432usize),
             48usize,
         )
     };
     let t_518 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294480usize),
             1536usize,
         )
     };
     let t_519 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3264usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(296016usize),
             1536usize,
         )
     };
     let t_520 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4800usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(297552usize),
+            2354688usize,
         )
     };
     let t_521 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2652240usize),
+            294336usize,
         )
     };
     let t_522 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
+            294336usize,
         )
     };
     let t_523 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            2354688usize,
         )
     };
     let t_524 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2943360usize),
+            2354688usize,
         )
     };
     let t_525 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5298048usize),
+            2354688usize,
         )
     };
     let t_526 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            2354688usize,
         )
     };
     let t_527 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2943360usize),
+            2354688usize,
         )
     };
     let t_528 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5298048usize),
+            2354688usize,
         )
     };
     let t_529 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1536usize,
         )
     };
     let t_533 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2688usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1536usize),
             1536usize,
         )
     };
@@ -1627,50 +1627,50 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     };
     let t_537 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144usize),
             1536usize,
         )
     };
     let t_538 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2688usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1680usize),
             1536usize,
         )
     };
     let t_539 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4224usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            2354688usize,
         )
     };
     let t_540 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            576usize,
+            294336usize,
         )
     };
     let t_541 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            294336usize,
         )
     };
     let t_542 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            576usize,
+            294336usize,
         )
     };
     let t_543 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
+            294336usize,
         )
     };
     let t_544 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            1024usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            523264usize,
         )
     };
     let t_545 = unsafe {
@@ -1898,7 +1898,18 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     fft_butterfly_stage(scratch_12_0, t_556, 1024usize, 512usize);
     rfft_unpack(scratch_12_0, t_557, t_206, 2048usize);
     reshape(t_206, t_214);
-    fully_connected(t_214, 523775usize, t_166, None, t_215, 49056usize);
+    for _batch_idx in 0..511usize {
+        let _in_off = _batch_idx * 1025usize;
+        let _out_off = _batch_idx * 96usize;
+        fully_connected(
+            &t_214[_in_off.._in_off + 1025usize],
+            1025usize,
+            t_166,
+            None,
+            &mut t_215[_out_off.._out_off + 96usize],
+            96usize,
+        );
+    }
     reshape(t_215, t_216);
     binary_mul(t_216, t_216, t_217, 49056usize);
     binary_pow(t_217, t_165, t_218, 1usize);
@@ -1951,7 +1962,18 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     fft_butterfly_stage(scratch_26_0, t_566, 512usize, 256usize);
     rfft_unpack(scratch_26_0, t_567, t_247, 1024usize);
     reshape(t_247, t_255);
-    fully_connected(t_255, 262143usize, t_168, None, t_256, 49056usize);
+    for _batch_idx in 0..511usize {
+        let _in_off = _batch_idx * 513usize;
+        let _out_off = _batch_idx * 96usize;
+        fully_connected(
+            &t_255[_in_off.._in_off + 513usize],
+            513usize,
+            t_168,
+            None,
+            &mut t_256[_out_off.._out_off + 96usize],
+            96usize,
+        );
+    }
     reshape(t_256, t_257);
     binary_mul(t_257, t_257, t_258, 49056usize);
     binary_pow(t_258, t_167, t_259, 1usize);
@@ -2020,7 +2042,7 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
         [1usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_267,
-        [1usize, 48usize, 1usize, 24usize],
+        [511usize, 48usize, 1usize, 24usize],
     );
     max_pool2d(
         t_266,
@@ -2029,11 +2051,11 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
         [1usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_268,
-        [1usize, 48usize, 1usize, 24usize],
+        [511usize, 48usize, 1usize, 24usize],
     );
     {
         let src = t_268;
-        for p in 0..48usize {
+        for p in 0..24528usize {
             for a in 0..24usize {
                 let src_off = p * (24usize * 1usize) + a * 1usize;
                 let dst_off = p * (48usize * 1usize) + (0usize + a) * 1usize;
@@ -2044,7 +2066,7 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     }
     {
         let src = t_267;
-        for p in 0..48usize {
+        for p in 0..24528usize {
             for a in 0..24usize {
                 let src_off = p * (24usize * 1usize) + a * 1usize;
                 let dst_off = p * (48usize * 1usize) + (24usize + a) * 1usize;
@@ -2056,271 +2078,271 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     let scratch_42_0 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            2304usize,
+            1177344usize,
         )
     };
     let scratch_42_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2354688usize),
             1152usize,
         )
     };
     scratch_42_1.copy_from_slice(t_121);
     im2col_padded(
         t_269,
-        [1usize, 48usize, 1usize, 48usize],
+        [511usize, 48usize, 1usize, 48usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         [48usize, 1usize],
         scratch_42_0,
     );
-    matmul_bt_tiled(scratch_42_0, scratch_42_1, t_270, 12usize, 12usize, 6usize);
-    bias_add(t_270, t_50, 48usize, 24usize);
+    matmul_bt_tiled(scratch_42_0, scratch_42_1, t_270, 6132usize, 12usize, 6usize);
+    bias_add(t_270, t_50, 24528usize, 24usize);
     let scratch_43_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1152usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            588672usize,
         )
     };
     let scratch_43_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2354688usize),
             1728usize,
         )
     };
     scratch_43_1.copy_from_slice(t_120);
     im2col_padded(
         t_270,
-        [1usize, 48usize, 1usize, 24usize],
+        [511usize, 48usize, 1usize, 24usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         [48usize, 1usize],
         scratch_43_0,
     );
-    matmul_bt_tiled(scratch_43_0, scratch_43_1, t_271, 12usize, 6usize, 18usize);
-    bias_add(t_271, t_49, 48usize, 72usize);
+    matmul_bt_tiled(scratch_43_0, scratch_43_1, t_271, 6132usize, 6usize, 18usize);
+    bias_add(t_271, t_49, 24528usize, 72usize);
     unary_logistic(t_271, t_272);
-    binary_mul(t_271, t_272, t_273, 3456usize);
+    binary_mul(t_271, t_272, t_273, 1766016usize);
     pad(
         t_273,
-        [1usize, 48usize, 1usize, 72usize],
+        [511usize, 48usize, 1usize, 72usize],
         t_274,
-        [1usize, 50usize, 3usize, 72usize],
+        [511usize, 50usize, 3usize, 72usize],
         [[0usize, 0usize], [1usize, 1usize], [1usize, 1usize], [0usize, 0usize]],
     );
     depthwise_conv2d(
         t_274,
-        [1usize, 50usize, 3usize, 72usize],
+        [511usize, 50usize, 3usize, 72usize],
         t_48,
         [1usize, 3usize, 3usize, 72usize],
         Some(t_47),
         [2usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_275,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
     );
     unary_logistic(t_275, t_276);
-    binary_mul(t_275, t_276, t_277, 1728usize);
+    binary_mul(t_275, t_276, t_277, 883008usize);
     let scratch_50_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            883008usize,
         )
     };
     let scratch_50_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
             2592usize,
         )
     };
     scratch_50_1.copy_from_slice(t_118);
     im2col_padded(
         t_277,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         [24usize, 1usize],
         scratch_50_0,
     );
-    matmul_bt_tiled(scratch_50_0, scratch_50_1, t_278, 6usize, 18usize, 9usize);
-    bias_add(t_278, t_117, 24usize, 36usize);
+    matmul_bt_tiled(scratch_50_0, scratch_50_1, t_278, 3066usize, 18usize, 9usize);
+    bias_add(t_278, t_117, 12264usize, 36usize);
     let scratch_51_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            441504usize,
         )
     };
     let scratch_51_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
             2592usize,
         )
     };
     scratch_51_1.copy_from_slice(t_116);
     im2col_padded(
         t_278,
-        [1usize, 24usize, 1usize, 36usize],
+        [511usize, 24usize, 1usize, 36usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         [24usize, 1usize],
         scratch_51_0,
     );
-    matmul_bt_tiled(scratch_51_0, scratch_51_1, t_279, 6usize, 9usize, 18usize);
-    bias_add(t_279, t_46, 24usize, 72usize);
+    matmul_bt_tiled(scratch_51_0, scratch_51_1, t_279, 3066usize, 9usize, 18usize);
+    bias_add(t_279, t_46, 12264usize, 72usize);
     unary_logistic(t_279, t_280);
-    binary_mul(t_279, t_280, t_281, 1728usize);
+    binary_mul(t_279, t_280, t_281, 883008usize);
     depthwise_conv2d(
         t_281,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
         t_45,
         [1usize, 3usize, 3usize, 72usize],
         Some(t_44),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_282,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
     );
     unary_logistic(t_282, t_283);
-    binary_mul(t_282, t_283, t_284, 1728usize);
+    binary_mul(t_282, t_283, t_284, 883008usize);
     let scratch_57_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            883008usize,
         )
     };
     let scratch_57_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
             2592usize,
         )
     };
     scratch_57_1.copy_from_slice(t_115);
     im2col_padded(
         t_284,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         [24usize, 1usize],
         scratch_57_0,
     );
-    matmul_bt_tiled(scratch_57_0, scratch_57_1, t_285, 6usize, 18usize, 9usize);
-    bias_add(t_285, t_117, 24usize, 36usize);
-    binary_add(t_285, t_278, t_286, 864usize);
+    matmul_bt_tiled(scratch_57_0, scratch_57_1, t_285, 3066usize, 18usize, 9usize);
+    bias_add(t_285, t_117, 12264usize, 36usize);
+    binary_add(t_285, t_278, t_286, 441504usize);
     let scratch_59_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            441504usize,
         )
     };
     let scratch_59_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
             2592usize,
         )
     };
     scratch_59_1.copy_from_slice(t_114);
     im2col_padded(
         t_286,
-        [1usize, 24usize, 1usize, 36usize],
+        [511usize, 24usize, 1usize, 36usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         [24usize, 1usize],
         scratch_59_0,
     );
-    matmul_bt_tiled(scratch_59_0, scratch_59_1, t_287, 6usize, 9usize, 18usize);
-    bias_add(t_287, t_43, 24usize, 72usize);
+    matmul_bt_tiled(scratch_59_0, scratch_59_1, t_287, 3066usize, 9usize, 18usize);
+    bias_add(t_287, t_43, 12264usize, 72usize);
     unary_logistic(t_287, t_288);
-    binary_mul(t_287, t_288, t_289, 1728usize);
+    binary_mul(t_287, t_288, t_289, 883008usize);
     depthwise_conv2d(
         t_289,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
         t_42,
         [1usize, 3usize, 3usize, 72usize],
         Some(t_41),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_290,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
     );
     unary_logistic(t_290, t_291);
-    binary_mul(t_290, t_291, t_292, 1728usize);
+    binary_mul(t_290, t_291, t_292, 883008usize);
     let scratch_65_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6048usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            883008usize,
         )
     };
     let scratch_65_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
             2592usize,
         )
     };
     scratch_65_1.copy_from_slice(t_113);
     im2col_padded(
         t_292,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         [24usize, 1usize],
         scratch_65_0,
     );
-    matmul_bt_tiled(scratch_65_0, scratch_65_1, t_293, 6usize, 18usize, 9usize);
-    bias_add(t_293, t_117, 24usize, 36usize);
-    binary_add(t_293, t_286, t_294, 864usize);
+    matmul_bt_tiled(scratch_65_0, scratch_65_1, t_293, 3066usize, 18usize, 9usize);
+    bias_add(t_293, t_117, 12264usize, 36usize);
+    binary_add(t_293, t_286, t_294, 441504usize);
     let scratch_67_0 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let scratch_67_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415040usize),
             10368usize,
         )
     };
     scratch_67_1.copy_from_slice(t_112);
     im2col_padded(
         t_294,
-        [1usize, 24usize, 1usize, 36usize],
+        [511usize, 24usize, 1usize, 36usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         [24usize, 1usize],
         scratch_67_0,
     );
-    matmul_bt_tiled(scratch_67_0, scratch_67_1, t_295, 6usize, 9usize, 72usize);
-    bias_add(t_295, t_40, 24usize, 288usize);
+    matmul_bt_tiled(scratch_67_0, scratch_67_1, t_295, 3066usize, 9usize, 72usize);
+    bias_add(t_295, t_40, 12264usize, 288usize);
     unary_logistic(t_295, t_296);
-    binary_mul(t_295, t_296, t_297, 6912usize);
+    binary_mul(t_295, t_296, t_297, 3532032usize);
     pad(
         t_297,
-        [1usize, 24usize, 1usize, 288usize],
+        [511usize, 24usize, 1usize, 288usize],
         t_298,
-        [1usize, 26usize, 3usize, 288usize],
+        [511usize, 26usize, 3usize, 288usize],
         [[0usize, 0usize], [1usize, 1usize], [1usize, 1usize], [0usize, 0usize]],
     );
     depthwise_conv2d(
         t_298,
-        [1usize, 26usize, 3usize, 288usize],
+        [511usize, 26usize, 3usize, 288usize],
         t_39,
         [1usize, 3usize, 3usize, 288usize],
         Some(t_38),
         [2usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_299,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
     );
     unary_logistic(t_299, t_300);
-    binary_mul(t_299, t_300, t_301, 3456usize);
+    binary_mul(t_299, t_300, t_301, 1766016usize);
     reduce_mean_hw(t_301, t_302);
     reshape(t_302, t_306);
     conv2d(
@@ -2351,67 +2373,67 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     binary_mul(t_301, t_311, t_312, 288usize);
     let scratch_82_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(24828usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766652usize),
+            1766016usize,
         )
     };
     let scratch_82_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4092usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3974172usize),
             20736usize,
         )
     };
     scratch_82_1.copy_from_slice(t_107);
     im2col_padded(
         t_312,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         [12usize, 1usize],
         scratch_82_0,
     );
-    matmul_bt_tiled(scratch_82_0, scratch_82_1, t_313, 3usize, 72usize, 18usize);
-    bias_add(t_313, t_119, 12usize, 72usize);
+    matmul_bt_tiled(scratch_82_0, scratch_82_1, t_313, 1533usize, 72usize, 18usize);
+    bias_add(t_313, t_119, 6132usize, 72usize);
     let scratch_83_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(24192usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            441504usize,
         )
     };
     let scratch_83_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
             20736usize,
         )
     };
     scratch_83_1.copy_from_slice(t_106);
     im2col_padded(
         t_313,
-        [1usize, 12usize, 1usize, 72usize],
+        [511usize, 12usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         [12usize, 1usize],
         scratch_83_0,
     );
-    matmul_bt_tiled(scratch_83_0, scratch_83_1, t_314, 3usize, 18usize, 72usize);
-    bias_add(t_314, t_37, 12usize, 288usize);
+    matmul_bt_tiled(scratch_83_0, scratch_83_1, t_314, 1533usize, 18usize, 72usize);
+    bias_add(t_314, t_37, 6132usize, 288usize);
     unary_logistic(t_314, t_315);
-    binary_mul(t_314, t_315, t_316, 3456usize);
+    binary_mul(t_314, t_315, t_316, 1766016usize);
     depthwise_conv2d(
         t_316,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         t_36,
         [1usize, 3usize, 3usize, 288usize],
         Some(t_35),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_317,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
     );
     unary_logistic(t_317, t_318);
-    binary_mul(t_317, t_318, t_319, 3456usize);
+    binary_mul(t_317, t_318, t_319, 1766016usize);
     reduce_mean_hw(t_319, t_320);
     reshape(t_320, t_324);
     conv2d(
@@ -2442,68 +2464,68 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     binary_mul(t_319, t_329, t_330, 288usize);
     let scratch_97_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(24828usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766652usize),
+            1766016usize,
         )
     };
     let scratch_97_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4092usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415676usize),
             20736usize,
         )
     };
     scratch_97_1.copy_from_slice(t_103);
     im2col_padded(
         t_330,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         [12usize, 1usize],
         scratch_97_0,
     );
-    matmul_bt_tiled(scratch_97_0, scratch_97_1, t_331, 3usize, 72usize, 18usize);
-    bias_add(t_331, t_119, 12usize, 72usize);
-    binary_add(t_331, t_313, t_332, 864usize);
+    matmul_bt_tiled(scratch_97_0, scratch_97_1, t_331, 1533usize, 72usize, 18usize);
+    bias_add(t_331, t_119, 6132usize, 72usize);
+    binary_add(t_331, t_313, t_332, 441504usize);
     let scratch_99_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25056usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            441504usize,
         )
     };
     let scratch_99_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
             20736usize,
         )
     };
     scratch_99_1.copy_from_slice(t_102);
     im2col_padded(
         t_332,
-        [1usize, 12usize, 1usize, 72usize],
+        [511usize, 12usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         [12usize, 1usize],
         scratch_99_0,
     );
-    matmul_bt_tiled(scratch_99_0, scratch_99_1, t_333, 3usize, 18usize, 72usize);
-    bias_add(t_333, t_34, 12usize, 288usize);
+    matmul_bt_tiled(scratch_99_0, scratch_99_1, t_333, 1533usize, 18usize, 72usize);
+    bias_add(t_333, t_34, 6132usize, 288usize);
     unary_logistic(t_333, t_334);
-    binary_mul(t_333, t_334, t_335, 3456usize);
+    binary_mul(t_333, t_334, t_335, 1766016usize);
     depthwise_conv2d(
         t_335,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         t_33,
         [1usize, 3usize, 3usize, 288usize],
         Some(t_32),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_336,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
     );
     unary_logistic(t_336, t_337);
-    binary_mul(t_336, t_337, t_338, 3456usize);
+    binary_mul(t_336, t_337, t_338, 1766016usize);
     reduce_mean_hw(t_338, t_339);
     reshape(t_339, t_343);
     conv2d(
@@ -2534,68 +2556,68 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     binary_mul(t_338, t_348, t_349, 288usize);
     let scratch_113_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25692usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2208156usize),
+            1766016usize,
         )
     };
     let scratch_113_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4956usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415676usize),
             20736usize,
         )
     };
     scratch_113_1.copy_from_slice(t_99);
     im2col_padded(
         t_349,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         [12usize, 1usize],
         scratch_113_0,
     );
-    matmul_bt_tiled(scratch_113_0, scratch_113_1, t_350, 3usize, 72usize, 18usize);
-    bias_add(t_350, t_119, 12usize, 72usize);
-    binary_add(t_350, t_332, t_351, 864usize);
+    matmul_bt_tiled(scratch_113_0, scratch_113_1, t_350, 1533usize, 72usize, 18usize);
+    bias_add(t_350, t_119, 6132usize, 72usize);
+    binary_add(t_350, t_332, t_351, 441504usize);
     let scratch_115_0 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let scratch_115_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
             20736usize,
         )
     };
     scratch_115_1.copy_from_slice(t_98);
     im2col_padded(
         t_351,
-        [1usize, 12usize, 1usize, 72usize],
+        [511usize, 12usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         [12usize, 1usize],
         scratch_115_0,
     );
-    matmul_bt_tiled(scratch_115_0, scratch_115_1, t_352, 3usize, 18usize, 72usize);
-    bias_add(t_352, t_31, 12usize, 288usize);
+    matmul_bt_tiled(scratch_115_0, scratch_115_1, t_352, 1533usize, 18usize, 72usize);
+    bias_add(t_352, t_31, 6132usize, 288usize);
     unary_logistic(t_352, t_353);
-    binary_mul(t_352, t_353, t_354, 3456usize);
+    binary_mul(t_352, t_353, t_354, 1766016usize);
     depthwise_conv2d(
         t_354,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         t_30,
         [1usize, 3usize, 3usize, 288usize],
         Some(t_29),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_355,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
     );
     unary_logistic(t_355, t_356);
-    binary_mul(t_355, t_356, t_357, 3456usize);
+    binary_mul(t_355, t_356, t_357, 1766016usize);
     reduce_mean_hw(t_357, t_358);
     reshape(t_358, t_362);
     conv2d(
@@ -2626,75 +2648,75 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     binary_mul(t_357, t_367, t_368, 288usize);
     let scratch_129_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25920usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            1766016usize,
         )
     };
     let scratch_129_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415040usize),
             20736usize,
         )
     };
     scratch_129_1.copy_from_slice(t_95);
     im2col_padded(
         t_368,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         [12usize, 1usize],
         scratch_129_0,
     );
-    matmul_bt_tiled(scratch_129_0, scratch_129_1, t_369, 3usize, 72usize, 18usize);
-    bias_add(t_369, t_119, 12usize, 72usize);
-    binary_add(t_369, t_351, t_370, 864usize);
+    matmul_bt_tiled(scratch_129_0, scratch_129_1, t_369, 1533usize, 72usize, 18usize);
+    bias_add(t_369, t_119, 6132usize, 72usize);
+    binary_add(t_369, t_351, t_370, 441504usize);
     let scratch_131_0 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let scratch_131_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
             62208usize,
         )
     };
     scratch_131_1.copy_from_slice(t_94);
     im2col_padded(
         t_370,
-        [1usize, 12usize, 1usize, 72usize],
+        [511usize, 12usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         [12usize, 1usize],
         scratch_131_0,
     );
-    matmul_bt_tiled(scratch_131_0, scratch_131_1, t_371, 3usize, 18usize, 216usize);
-    bias_add(t_371, t_28, 12usize, 864usize);
+    matmul_bt_tiled(scratch_131_0, scratch_131_1, t_371, 1533usize, 18usize, 216usize);
+    bias_add(t_371, t_28, 6132usize, 864usize);
     unary_logistic(t_371, t_372);
-    binary_mul(t_371, t_372, t_373, 10368usize);
+    binary_mul(t_371, t_372, t_373, 5298048usize);
     pad(
         t_373,
-        [1usize, 12usize, 1usize, 864usize],
+        [511usize, 12usize, 1usize, 864usize],
         t_374,
-        [1usize, 14usize, 3usize, 864usize],
+        [511usize, 14usize, 3usize, 864usize],
         [[0usize, 0usize], [1usize, 1usize], [1usize, 1usize], [0usize, 0usize]],
     );
     depthwise_conv2d(
         t_374,
-        [1usize, 14usize, 3usize, 864usize],
+        [511usize, 14usize, 3usize, 864usize],
         t_27,
         [1usize, 3usize, 3usize, 864usize],
         Some(t_26),
         [2usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_375,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     unary_logistic(t_375, t_376);
-    binary_mul(t_375, t_376, t_377, 5184usize);
+    binary_mul(t_375, t_376, t_377, 2649024usize);
     reduce_mean_hw(t_377, t_378);
     reshape(t_378, t_382);
     conv2d(
@@ -2725,41 +2747,41 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     binary_mul(t_377, t_387, t_388, 864usize);
     conv2d(
         t_388,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_89,
         [108usize, 1usize, 1usize, 864usize],
         Some(t_88),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_389,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
     );
     conv2d(
         t_389,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
         t_87,
         [864usize, 1usize, 1usize, 108usize],
         Some(t_25),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_390,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     unary_logistic(t_390, t_391);
-    binary_mul(t_390, t_391, t_392, 5184usize);
+    binary_mul(t_390, t_391, t_392, 2649024usize);
     depthwise_conv2d(
         t_392,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_24,
         [1usize, 3usize, 3usize, 864usize],
         Some(t_23),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_393,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     unary_logistic(t_393, t_394);
-    binary_mul(t_393, t_394, t_395, 5184usize);
+    binary_mul(t_393, t_394, t_395, 2649024usize);
     reduce_mean_hw(t_395, t_396);
     reshape(t_396, t_400);
     conv2d(
@@ -2790,42 +2812,42 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     binary_mul(t_395, t_405, t_406, 864usize);
     conv2d(
         t_406,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_84,
         [108usize, 1usize, 1usize, 864usize],
         Some(t_88),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_407,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
     );
-    binary_add(t_407, t_389, t_408, 648usize);
+    binary_add(t_407, t_389, t_408, 331128usize);
     conv2d(
         t_408,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
         t_83,
         [864usize, 1usize, 1usize, 108usize],
         Some(t_22),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_409,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     unary_logistic(t_409, t_410);
-    binary_mul(t_409, t_410, t_411, 5184usize);
+    binary_mul(t_409, t_410, t_411, 2649024usize);
     depthwise_conv2d(
         t_411,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_21,
         [1usize, 3usize, 3usize, 864usize],
         Some(t_20),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_412,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     unary_logistic(t_412, t_413);
-    binary_mul(t_412, t_413, t_414, 5184usize);
+    binary_mul(t_412, t_413, t_414, 2649024usize);
     reduce_mean_hw(t_414, t_415);
     reshape(t_415, t_419);
     conv2d(
@@ -2856,42 +2878,42 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     binary_mul(t_414, t_424, t_425, 864usize);
     conv2d(
         t_425,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_80,
         [108usize, 1usize, 1usize, 864usize],
         Some(t_88),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_426,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
     );
-    binary_add(t_426, t_408, t_427, 648usize);
+    binary_add(t_426, t_408, t_427, 331128usize);
     conv2d(
         t_427,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
         t_79,
         [864usize, 1usize, 1usize, 108usize],
         Some(t_19),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_428,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     unary_logistic(t_428, t_429);
-    binary_mul(t_428, t_429, t_430, 5184usize);
+    binary_mul(t_428, t_429, t_430, 2649024usize);
     depthwise_conv2d(
         t_430,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_18,
         [1usize, 3usize, 3usize, 864usize],
         Some(t_17),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_431,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     unary_logistic(t_431, t_432);
-    binary_mul(t_431, t_432, t_433, 5184usize);
+    binary_mul(t_431, t_432, t_433, 2649024usize);
     reduce_mean_hw(t_433, t_434);
     reshape(t_434, t_438);
     conv2d(
@@ -2922,42 +2944,42 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     binary_mul(t_433, t_443, t_444, 864usize);
     conv2d(
         t_444,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_76,
         [108usize, 1usize, 1usize, 864usize],
         Some(t_88),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_445,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
     );
-    binary_add(t_445, t_427, t_446, 648usize);
+    binary_add(t_445, t_427, t_446, 331128usize);
     conv2d(
         t_446,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
         t_75,
         [864usize, 1usize, 1usize, 108usize],
         Some(t_16),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_447,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     unary_logistic(t_447, t_448);
-    binary_mul(t_447, t_448, t_449, 5184usize);
+    binary_mul(t_447, t_448, t_449, 2649024usize);
     depthwise_conv2d(
         t_449,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_15,
         [1usize, 3usize, 3usize, 864usize],
         Some(t_14),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_450,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     unary_logistic(t_450, t_451);
-    binary_mul(t_450, t_451, t_452, 5184usize);
+    binary_mul(t_450, t_451, t_452, 2649024usize);
     reduce_mean_hw(t_452, t_453);
     reshape(t_453, t_457);
     conv2d(
@@ -2988,49 +3010,49 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     binary_mul(t_452, t_462, t_463, 864usize);
     conv2d(
         t_463,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_72,
         [108usize, 1usize, 1usize, 864usize],
         Some(t_88),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_464,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
     );
-    binary_add(t_464, t_446, t_465, 648usize);
+    binary_add(t_464, t_446, t_465, 331128usize);
     conv2d(
         t_465,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
         t_71,
         [1536usize, 1usize, 1usize, 108usize],
         Some(t_13),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_466,
-        [1usize, 6usize, 1usize, 1536usize],
+        [511usize, 6usize, 1usize, 1536usize],
     );
     unary_logistic(t_466, t_467);
-    binary_mul(t_466, t_467, t_468, 9216usize);
+    binary_mul(t_466, t_467, t_468, 4709376usize);
     pad(
         t_468,
-        [1usize, 6usize, 1usize, 1536usize],
+        [511usize, 6usize, 1usize, 1536usize],
         t_469,
-        [1usize, 8usize, 3usize, 1536usize],
+        [511usize, 8usize, 3usize, 1536usize],
         [[0usize, 0usize], [1usize, 1usize], [1usize, 1usize], [0usize, 0usize]],
     );
     depthwise_conv2d(
         t_469,
-        [1usize, 8usize, 3usize, 1536usize],
+        [511usize, 8usize, 3usize, 1536usize],
         t_12,
         [1usize, 3usize, 3usize, 1536usize],
         Some(t_11),
         [2usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_470,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     unary_logistic(t_470, t_471);
-    binary_mul(t_470, t_471, t_472, 4608usize);
+    binary_mul(t_470, t_471, t_472, 2354688usize);
     reduce_mean_hw(t_472, t_473);
     reshape(t_473, t_477);
     conv2d(
@@ -3061,41 +3083,41 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     binary_mul(t_472, t_482, t_483, 1536usize);
     conv2d(
         t_483,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_66,
         [192usize, 1usize, 1usize, 1536usize],
         Some(t_65),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_484,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
     );
     conv2d(
         t_484,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
         t_64,
         [1536usize, 1usize, 1usize, 192usize],
         Some(t_10),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_485,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     unary_logistic(t_485, t_486);
-    binary_mul(t_485, t_486, t_487, 4608usize);
+    binary_mul(t_485, t_486, t_487, 2354688usize);
     depthwise_conv2d(
         t_487,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_9,
         [1usize, 3usize, 3usize, 1536usize],
         Some(t_8),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_488,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     unary_logistic(t_488, t_489);
-    binary_mul(t_488, t_489, t_490, 4608usize);
+    binary_mul(t_488, t_489, t_490, 2354688usize);
     reduce_mean_hw(t_490, t_491);
     reshape(t_491, t_495);
     conv2d(
@@ -3126,42 +3148,42 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     binary_mul(t_490, t_500, t_501, 1536usize);
     conv2d(
         t_501,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_61,
         [192usize, 1usize, 1usize, 1536usize],
         Some(t_65),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_502,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
     );
-    binary_add(t_502, t_484, t_503, 576usize);
+    binary_add(t_502, t_484, t_503, 294336usize);
     conv2d(
         t_503,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
         t_60,
         [1536usize, 1usize, 1usize, 192usize],
         Some(t_7),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_504,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     unary_logistic(t_504, t_505);
-    binary_mul(t_504, t_505, t_506, 4608usize);
+    binary_mul(t_504, t_505, t_506, 2354688usize);
     depthwise_conv2d(
         t_506,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_6,
         [1usize, 3usize, 3usize, 1536usize],
         Some(t_5),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_507,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     unary_logistic(t_507, t_508);
-    binary_mul(t_507, t_508, t_509, 4608usize);
+    binary_mul(t_507, t_508, t_509, 2354688usize);
     reduce_mean_hw(t_509, t_510);
     reshape(t_510, t_514);
     conv2d(
@@ -3192,42 +3214,42 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     binary_mul(t_509, t_519, t_520, 1536usize);
     conv2d(
         t_520,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_57,
         [192usize, 1usize, 1usize, 1536usize],
         Some(t_65),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_521,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
     );
-    binary_add(t_521, t_503, t_522, 576usize);
+    binary_add(t_521, t_503, t_522, 294336usize);
     conv2d(
         t_522,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
         t_56,
         [1536usize, 1usize, 1usize, 192usize],
         Some(t_4),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_523,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     unary_logistic(t_523, t_524);
-    binary_mul(t_523, t_524, t_525, 4608usize);
+    binary_mul(t_523, t_524, t_525, 2354688usize);
     depthwise_conv2d(
         t_525,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_3,
         [1usize, 3usize, 3usize, 1536usize],
         Some(t_2),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_526,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     unary_logistic(t_526, t_527);
-    binary_mul(t_526, t_527, t_528, 4608usize);
+    binary_mul(t_526, t_527, t_528, 2354688usize);
     reduce_mean_hw(t_528, t_529);
     reshape(t_529, t_533);
     conv2d(
@@ -3258,28 +3280,28 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     binary_mul(t_528, t_538, t_539, 1536usize);
     conv2d(
         t_539,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_53,
         [192usize, 1usize, 1usize, 1536usize],
         Some(t_65),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_540,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
     );
-    binary_add(t_540, t_522, t_541, 576usize);
+    binary_add(t_540, t_522, t_541, 294336usize);
     binary_mul(t_541, t_161, t_542, 192usize);
     binary_add(t_542, t_160, t_543, 192usize);
     conv2d_relu(
         t_543,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
         t_52,
         [1024usize, 3usize, 3usize, 192usize],
         Some(t_1),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_544,
-        [1usize, 1usize, 1usize, 1024usize],
+        [511usize, 1usize, 1usize, 1024usize],
     );
     reduce_mean_hw(t_544, t_545);
     fully_connected(t_545, 1024usize, t_164, Some(t_142), &mut t_546, 6522usize);
@@ -3528,211 +3550,211 @@ pub fn forward_timed(
     let t_267 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            1152usize,
+            588672usize,
         )
     };
     let t_268 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            1152usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            588672usize,
         )
     };
     let t_269 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2304usize),
-            2304usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1177344usize),
+            1177344usize,
         )
     };
     let t_270 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4608usize),
-            1152usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2525064usize),
+            588672usize,
         )
     };
     let t_271 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            3456usize,
+            1766016usize,
         )
     };
     let t_272 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3113736usize),
+            1766016usize,
         )
     };
     let t_273 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4879752usize),
+            1766016usize,
         )
     };
     let t_274 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
-            10800usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6645768usize),
+            5518800usize,
         )
     };
     let t_275 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            1728usize,
+            883008usize,
         )
     };
     let t_276 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            883008usize,
         )
     };
     let t_277 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            883008usize,
         )
     };
     let t_278 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            441504usize,
         )
     };
     let t_279 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            883008usize,
         )
     };
     let t_280 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            883008usize,
         )
     };
     let t_281 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            883008usize,
         )
     };
     let t_282 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            1728usize,
+            883008usize,
         )
     };
     let t_283 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            883008usize,
         )
     };
     let t_284 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            883008usize,
         )
     };
     let t_285 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            441504usize,
         )
     };
     let t_286 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let t_287 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            883008usize,
         )
     };
     let t_288 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            883008usize,
         )
     };
     let t_289 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            883008usize,
         )
     };
     let t_290 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            883008usize,
         )
     };
     let t_291 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            883008usize,
         )
     };
     let t_292 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            883008usize,
         )
     };
     let t_293 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            441504usize,
         )
     };
     let t_294 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            441504usize,
         )
     };
     let t_295 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12096usize),
-            6912usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            3532032usize,
         )
     };
     let t_296 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            6912usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415040usize),
+            3532032usize,
         )
     };
     let t_297 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(19008usize),
-            6912usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7947072usize),
+            3532032usize,
         )
     };
     let t_298 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25920usize),
-            22464usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12164568usize),
+            11479104usize,
         )
     };
     let t_299 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            3456usize,
+            1766016usize,
         )
     };
     let t_300 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            1766016usize,
         )
     };
     let t_301 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3532032usize),
+            1766016usize,
         )
     };
     let t_302 = unsafe {
@@ -3780,49 +3802,49 @@ pub fn forward_timed(
     let t_312 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(636usize),
-            3456usize,
+            1766016usize,
         )
     };
     let t_313 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28284usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3532668usize),
+            441504usize,
         )
     };
     let t_314 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(20736usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            1766016usize,
         )
     };
     let t_315 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            1766016usize,
         )
     };
     let t_316 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3974172usize),
+            1766016usize,
         )
     };
     let t_317 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            3456usize,
+            1766016usize,
         )
     };
     let t_318 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            1766016usize,
         )
     };
     let t_319 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3974172usize),
+            1766016usize,
         )
     };
     let t_320 = unsafe {
@@ -3870,151 +3892,151 @@ pub fn forward_timed(
     let t_330 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(636usize),
-            3456usize,
+            1766016usize,
         )
     };
     let t_331 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(29148usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3974172usize),
+            441504usize,
         )
     };
     let t_332 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let t_333 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(21600usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            1766016usize,
         )
     };
     let t_334 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            1766016usize,
         )
     };
     let t_335 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3973536usize),
+            1766016usize,
         )
     };
     let t_336 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            1766016usize,
         )
     };
     let t_337 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            1766016usize,
         )
     };
     let t_338 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7776usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3973536usize),
+            1766016usize,
         )
     };
     let t_339 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
             288usize,
         )
     };
     let t_343 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441792usize),
             288usize,
         )
     };
     let t_344 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
             18usize,
         )
     };
     let t_345 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(884usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441524usize),
             18usize,
         )
     };
     let t_346 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(904usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441544usize),
             18usize,
         )
     };
     let t_347 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(924usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441564usize),
             288usize,
         )
     };
     let t_348 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1212usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441852usize),
             288usize,
         )
     };
     let t_349 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1500usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(442140usize),
+            1766016usize,
         )
     };
     let t_350 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(29148usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3974172usize),
+            441504usize,
         )
     };
     let t_351 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            441504usize,
         )
     };
     let t_352 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(22464usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            1766016usize,
         )
     };
     let t_353 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            1766016usize,
         )
     };
     let t_354 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415040usize),
+            1766016usize,
         )
     };
     let t_355 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            1766016usize,
         )
     };
     let t_356 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            1766016usize,
         )
     };
     let t_357 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(8640usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415040usize),
+            1766016usize,
         )
     };
     let t_358 = unsafe {
@@ -4061,62 +4083,62 @@ pub fn forward_timed(
     };
     let t_368 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            1766016usize,
         )
     };
     let t_369 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let t_370 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            441504usize,
         )
     };
     let t_371 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(64800usize),
-            10368usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            5298048usize,
         )
     };
     let t_372 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            10368usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6622560usize),
+            5298048usize,
         )
     };
     let t_373 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
-            10368usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11920608usize),
+            5298048usize,
         )
     };
     let t_374 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(20736usize),
-            36288usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(23643672usize),
+            18543168usize,
         )
     };
     let t_375 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            5184usize,
+            2649024usize,
         )
     };
     let t_376 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            2649024usize,
         )
     };
     let t_377 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5298048usize),
+            2649024usize,
         )
     };
     let t_378 = unsafe {
@@ -4164,252 +4186,252 @@ pub fn forward_timed(
     let t_388 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1812usize),
-            5184usize,
+            2649024usize,
         )
     };
     let t_389 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2650836usize),
+            331128usize,
         )
     };
     let t_390 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            2649024usize,
         )
     };
     let t_391 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5832usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2981964usize),
+            2649024usize,
         )
     };
     let t_392 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11016usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5630988usize),
+            2649024usize,
         )
     };
     let t_393 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            2649024usize,
         )
     };
     let t_394 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5832usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2981964usize),
+            2649024usize,
         )
     };
     let t_395 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11016usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5630988usize),
+            2649024usize,
         )
     };
     let t_396 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
     let t_400 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1512usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             864usize,
         )
     };
     let t_401 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             27usize,
         )
     };
     let t_402 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(676usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28usize),
             27usize,
         )
     };
     let t_403 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(704usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(56usize),
             27usize,
         )
     };
     let t_404 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(732usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(84usize),
             864usize,
         )
     };
     let t_405 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1596usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(948usize),
             864usize,
         )
     };
     let t_406 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2460usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1812usize),
+            2649024usize,
         )
     };
     let t_407 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2981964usize),
+            331128usize,
         )
     };
     let t_408 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            331128usize,
         )
     };
     let t_409 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
+            2649024usize,
         )
     };
     let t_410 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2980152usize),
+            2649024usize,
         )
     };
     let t_411 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5629176usize),
+            2649024usize,
         )
     };
     let t_412 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
+            2649024usize,
         )
     };
     let t_413 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2980152usize),
+            2649024usize,
         )
     };
     let t_414 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5629176usize),
+            2649024usize,
         )
     };
     let t_415 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
             864usize,
         )
     };
     let t_419 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331992usize),
             864usize,
         )
     };
     let t_420 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
             27usize,
         )
     };
     let t_421 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331156usize),
             27usize,
         )
     };
     let t_422 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(56usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331184usize),
             27usize,
         )
     };
     let t_423 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(84usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331212usize),
             864usize,
         )
     };
     let t_424 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(332076usize),
             864usize,
         )
     };
     let t_425 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2808usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(332940usize),
+            2649024usize,
         )
     };
     let t_426 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2981964usize),
+            331128usize,
         )
     };
     let t_427 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
+            331128usize,
         )
     };
     let t_428 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662256usize),
+            2649024usize,
         )
     };
     let t_429 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6480usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3311280usize),
+            2649024usize,
         )
     };
     let t_430 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11664usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5960304usize),
+            2649024usize,
         )
     };
     let t_431 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662256usize),
+            2649024usize,
         )
     };
     let t_432 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6480usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3311280usize),
+            2649024usize,
         )
     };
     let t_433 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11664usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5960304usize),
+            2649024usize,
         )
     };
     let t_434 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
     let t_438 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2160usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             864usize,
         )
     };
@@ -4433,68 +4455,68 @@ pub fn forward_timed(
     };
     let t_442 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(84usize),
             864usize,
         )
     };
     let t_443 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2160usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(948usize),
             864usize,
         )
     };
     let t_444 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3024usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662256usize),
+            2649024usize,
         )
     };
     let t_445 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            648usize,
+            331128usize,
         )
     };
     let t_446 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662256usize),
+            331128usize,
         )
     };
     let t_447 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(993384usize),
+            2649024usize,
         )
     };
     let t_448 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3642408usize),
+            2649024usize,
         )
     };
     let t_449 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6291432usize),
+            2649024usize,
         )
     };
     let t_450 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(993384usize),
+            2649024usize,
         )
     };
     let t_451 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3642408usize),
+            2649024usize,
         )
     };
     let t_452 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6291432usize),
+            2649024usize,
         )
     };
     let t_453 = unsafe {
@@ -4505,7 +4527,7 @@ pub fn forward_timed(
     };
     let t_457 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             864usize,
         )
     };
@@ -4535,68 +4557,68 @@ pub fn forward_timed(
     };
     let t_462 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(948usize),
             864usize,
         )
     };
     let t_463 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2808usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(993384usize),
+            2649024usize,
         )
     };
     let t_464 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            648usize,
+            331128usize,
         )
     };
     let t_465 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
+            331128usize,
         )
     };
     let t_466 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
-            9216usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662256usize),
+            4709376usize,
         )
     };
     let t_467 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10512usize),
-            9216usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5371632usize),
+            4709376usize,
         )
     };
     let t_468 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(19728usize),
-            9216usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10081008usize),
+            4709376usize,
         )
     };
     let t_469 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28944usize),
-            36864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(14790384usize),
+            18837504usize,
         )
     };
     let t_470 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            4608usize,
+            2354688usize,
         )
     };
     let t_471 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4608usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2354688usize),
+            2354688usize,
         )
     };
     let t_472 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(9216usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4709376usize),
+            2354688usize,
         )
     };
     let t_473 = unsafe {
@@ -4644,252 +4666,252 @@ pub fn forward_timed(
     let t_483 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3216usize),
-            4608usize,
+            2354688usize,
         )
     };
     let t_484 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2357904usize),
+            294336usize,
         )
     };
     let t_485 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            2354688usize,
         )
     };
     let t_486 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2652240usize),
+            2354688usize,
         )
     };
     let t_487 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(9792usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5006928usize),
+            2354688usize,
         )
     };
     let t_488 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            2354688usize,
         )
     };
     let t_489 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2652240usize),
+            2354688usize,
         )
     };
     let t_490 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(9792usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5006928usize),
+            2354688usize,
         )
     };
     let t_491 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1536usize,
         )
     };
     let t_495 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2112usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1536usize),
             1536usize,
         )
     };
     let t_496 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             48usize,
         )
     };
     let t_497 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(624usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(48usize),
             48usize,
         )
     };
     let t_498 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             48usize,
         )
     };
     let t_499 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(720usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144usize),
             1536usize,
         )
     };
     let t_500 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2256usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1680usize),
             1536usize,
         )
     };
     let t_501 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3792usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3216usize),
+            2354688usize,
         )
     };
     let t_502 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2652240usize),
+            294336usize,
         )
     };
     let t_503 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            294336usize,
         )
     };
     let t_504 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
+            2354688usize,
         )
     };
     let t_505 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6336usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            2354688usize,
         )
     };
     let t_506 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10944usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5003712usize),
+            2354688usize,
         )
     };
     let t_507 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
+            2354688usize,
         )
     };
     let t_508 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6336usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            2354688usize,
         )
     };
     let t_509 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10944usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5003712usize),
+            2354688usize,
         )
     };
     let t_510 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
             1536usize,
         )
     };
     let t_514 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3264usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(295872usize),
             1536usize,
         )
     };
     let t_515 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
             48usize,
         )
     };
     let t_516 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(48usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294384usize),
             48usize,
         )
     };
     let t_517 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294432usize),
             48usize,
         )
     };
     let t_518 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294480usize),
             1536usize,
         )
     };
     let t_519 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3264usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(296016usize),
             1536usize,
         )
     };
     let t_520 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4800usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(297552usize),
+            2354688usize,
         )
     };
     let t_521 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2652240usize),
+            294336usize,
         )
     };
     let t_522 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
+            294336usize,
         )
     };
     let t_523 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            2354688usize,
         )
     };
     let t_524 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2943360usize),
+            2354688usize,
         )
     };
     let t_525 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5298048usize),
+            2354688usize,
         )
     };
     let t_526 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            2354688usize,
         )
     };
     let t_527 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2943360usize),
+            2354688usize,
         )
     };
     let t_528 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5298048usize),
+            2354688usize,
         )
     };
     let t_529 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1536usize,
         )
     };
     let t_533 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2688usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1536usize),
             1536usize,
         )
     };
@@ -4913,50 +4935,50 @@ pub fn forward_timed(
     };
     let t_537 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144usize),
             1536usize,
         )
     };
     let t_538 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2688usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1680usize),
             1536usize,
         )
     };
     let t_539 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4224usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            2354688usize,
         )
     };
     let t_540 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            576usize,
+            294336usize,
         )
     };
     let t_541 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            294336usize,
         )
     };
     let t_542 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            576usize,
+            294336usize,
         )
     };
     let t_543 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
+            294336usize,
         )
     };
     let t_544 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            1024usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            523264usize,
         )
     };
     let t_545 = unsafe {
@@ -5235,7 +5257,18 @@ pub fn forward_timed(
     reshape(t_206, t_214);
     op_ticks[24usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    fully_connected(t_214, 523775usize, t_166, None, t_215, 49056usize);
+    for _batch_idx in 0..511usize {
+        let _in_off = _batch_idx * 1025usize;
+        let _out_off = _batch_idx * 96usize;
+        fully_connected(
+            &t_214[_in_off.._in_off + 1025usize],
+            1025usize,
+            t_166,
+            None,
+            &mut t_215[_out_off.._out_off + 96usize],
+            96usize,
+        );
+    }
     op_ticks[25usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reshape(t_215, t_216);
@@ -5336,7 +5369,18 @@ pub fn forward_timed(
     reshape(t_247, t_255);
     op_ticks[48usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    fully_connected(t_255, 262143usize, t_168, None, t_256, 49056usize);
+    for _batch_idx in 0..511usize {
+        let _in_off = _batch_idx * 513usize;
+        let _out_off = _batch_idx * 96usize;
+        fully_connected(
+            &t_255[_in_off.._in_off + 513usize],
+            513usize,
+            t_168,
+            None,
+            &mut t_256[_out_off.._out_off + 96usize],
+            96usize,
+        );
+    }
     op_ticks[49usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reshape(t_256, t_257);
@@ -5431,7 +5475,7 @@ pub fn forward_timed(
         [1usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_267,
-        [1usize, 48usize, 1usize, 24usize],
+        [511usize, 48usize, 1usize, 24usize],
     );
     op_ticks[62usize] += get_tick() - __t0;
     let __t0 = get_tick();
@@ -5442,13 +5486,13 @@ pub fn forward_timed(
         [1usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_268,
-        [1usize, 48usize, 1usize, 24usize],
+        [511usize, 48usize, 1usize, 24usize],
     );
     op_ticks[63usize] += get_tick() - __t0;
     let __t0 = get_tick();
     {
         let src = t_268;
-        for p in 0..48usize {
+        for p in 0..24528usize {
             for a in 0..24usize {
                 let src_off = p * (24usize * 1usize) + a * 1usize;
                 let dst_off = p * (48usize * 1usize) + (0usize + a) * 1usize;
@@ -5459,7 +5503,7 @@ pub fn forward_timed(
     }
     {
         let src = t_267;
-        for p in 0..48usize {
+        for p in 0..24528usize {
             for a in 0..24usize {
                 let src_off = p * (24usize * 1usize) + a * 1usize;
                 let dst_off = p * (48usize * 1usize) + (24usize + a) * 1usize;
@@ -5472,12 +5516,12 @@ pub fn forward_timed(
     let scratch_42_0 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            2304usize,
+            1177344usize,
         )
     };
     let scratch_42_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2354688usize),
             1152usize,
         )
     };
@@ -5485,7 +5529,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     im2col_padded(
         t_269,
-        [1usize, 48usize, 1usize, 48usize],
+        [511usize, 48usize, 1usize, 48usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -5494,20 +5538,20 @@ pub fn forward_timed(
     );
     op_ticks[65usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_42_0, scratch_42_1, t_270, 12usize, 12usize, 6usize);
+    matmul_bt_tiled(scratch_42_0, scratch_42_1, t_270, 6132usize, 12usize, 6usize);
     op_ticks[66usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    bias_add(t_270, t_50, 48usize, 24usize);
+    bias_add(t_270, t_50, 24528usize, 24usize);
     op_ticks[67usize] += get_tick() - __t0;
     let scratch_43_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1152usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            588672usize,
         )
     };
     let scratch_43_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2354688usize),
             1728usize,
         )
     };
@@ -5515,7 +5559,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     im2col_padded(
         t_270,
-        [1usize, 48usize, 1usize, 24usize],
+        [511usize, 48usize, 1usize, 24usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -5524,54 +5568,54 @@ pub fn forward_timed(
     );
     op_ticks[68usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_43_0, scratch_43_1, t_271, 12usize, 6usize, 18usize);
+    matmul_bt_tiled(scratch_43_0, scratch_43_1, t_271, 6132usize, 6usize, 18usize);
     op_ticks[69usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    bias_add(t_271, t_49, 48usize, 72usize);
+    bias_add(t_271, t_49, 24528usize, 72usize);
     op_ticks[70usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_271, t_272);
     op_ticks[71usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_271, t_272, t_273, 3456usize);
+    binary_mul(t_271, t_272, t_273, 1766016usize);
     op_ticks[72usize] += get_tick() - __t0;
     let __t0 = get_tick();
     pad(
         t_273,
-        [1usize, 48usize, 1usize, 72usize],
+        [511usize, 48usize, 1usize, 72usize],
         t_274,
-        [1usize, 50usize, 3usize, 72usize],
+        [511usize, 50usize, 3usize, 72usize],
         [[0usize, 0usize], [1usize, 1usize], [1usize, 1usize], [0usize, 0usize]],
     );
     op_ticks[73usize] += get_tick() - __t0;
     let __t0 = get_tick();
     depthwise_conv2d(
         t_274,
-        [1usize, 50usize, 3usize, 72usize],
+        [511usize, 50usize, 3usize, 72usize],
         t_48,
         [1usize, 3usize, 3usize, 72usize],
         Some(t_47),
         [2usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_275,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
     );
     op_ticks[74usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_275, t_276);
     op_ticks[75usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_275, t_276, t_277, 1728usize);
+    binary_mul(t_275, t_276, t_277, 883008usize);
     op_ticks[76usize] += get_tick() - __t0;
     let scratch_50_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            883008usize,
         )
     };
     let scratch_50_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
             2592usize,
         )
     };
@@ -5579,7 +5623,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     im2col_padded(
         t_277,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -5588,20 +5632,20 @@ pub fn forward_timed(
     );
     op_ticks[77usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_50_0, scratch_50_1, t_278, 6usize, 18usize, 9usize);
+    matmul_bt_tiled(scratch_50_0, scratch_50_1, t_278, 3066usize, 18usize, 9usize);
     op_ticks[78usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    bias_add(t_278, t_117, 24usize, 36usize);
+    bias_add(t_278, t_117, 12264usize, 36usize);
     op_ticks[79usize] += get_tick() - __t0;
     let scratch_51_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            441504usize,
         )
     };
     let scratch_51_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
             2592usize,
         )
     };
@@ -5609,7 +5653,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     im2col_padded(
         t_278,
-        [1usize, 24usize, 1usize, 36usize],
+        [511usize, 24usize, 1usize, 36usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -5618,45 +5662,45 @@ pub fn forward_timed(
     );
     op_ticks[80usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_51_0, scratch_51_1, t_279, 6usize, 9usize, 18usize);
+    matmul_bt_tiled(scratch_51_0, scratch_51_1, t_279, 3066usize, 9usize, 18usize);
     op_ticks[81usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    bias_add(t_279, t_46, 24usize, 72usize);
+    bias_add(t_279, t_46, 12264usize, 72usize);
     op_ticks[82usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_279, t_280);
     op_ticks[83usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_279, t_280, t_281, 1728usize);
+    binary_mul(t_279, t_280, t_281, 883008usize);
     op_ticks[84usize] += get_tick() - __t0;
     let __t0 = get_tick();
     depthwise_conv2d(
         t_281,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
         t_45,
         [1usize, 3usize, 3usize, 72usize],
         Some(t_44),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_282,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
     );
     op_ticks[85usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_282, t_283);
     op_ticks[86usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_282, t_283, t_284, 1728usize);
+    binary_mul(t_282, t_283, t_284, 883008usize);
     op_ticks[87usize] += get_tick() - __t0;
     let scratch_57_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            883008usize,
         )
     };
     let scratch_57_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
             2592usize,
         )
     };
@@ -5664,7 +5708,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     im2col_padded(
         t_284,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -5673,23 +5717,23 @@ pub fn forward_timed(
     );
     op_ticks[88usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_57_0, scratch_57_1, t_285, 6usize, 18usize, 9usize);
+    matmul_bt_tiled(scratch_57_0, scratch_57_1, t_285, 3066usize, 18usize, 9usize);
     op_ticks[89usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    bias_add(t_285, t_117, 24usize, 36usize);
+    bias_add(t_285, t_117, 12264usize, 36usize);
     op_ticks[90usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_add(t_285, t_278, t_286, 864usize);
+    binary_add(t_285, t_278, t_286, 441504usize);
     op_ticks[91usize] += get_tick() - __t0;
     let scratch_59_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            441504usize,
         )
     };
     let scratch_59_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
             2592usize,
         )
     };
@@ -5697,7 +5741,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     im2col_padded(
         t_286,
-        [1usize, 24usize, 1usize, 36usize],
+        [511usize, 24usize, 1usize, 36usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -5706,45 +5750,45 @@ pub fn forward_timed(
     );
     op_ticks[92usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_59_0, scratch_59_1, t_287, 6usize, 9usize, 18usize);
+    matmul_bt_tiled(scratch_59_0, scratch_59_1, t_287, 3066usize, 9usize, 18usize);
     op_ticks[93usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    bias_add(t_287, t_43, 24usize, 72usize);
+    bias_add(t_287, t_43, 12264usize, 72usize);
     op_ticks[94usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_287, t_288);
     op_ticks[95usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_287, t_288, t_289, 1728usize);
+    binary_mul(t_287, t_288, t_289, 883008usize);
     op_ticks[96usize] += get_tick() - __t0;
     let __t0 = get_tick();
     depthwise_conv2d(
         t_289,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
         t_42,
         [1usize, 3usize, 3usize, 72usize],
         Some(t_41),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_290,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
     );
     op_ticks[97usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_290, t_291);
     op_ticks[98usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_290, t_291, t_292, 1728usize);
+    binary_mul(t_290, t_291, t_292, 883008usize);
     op_ticks[99usize] += get_tick() - __t0;
     let scratch_65_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6048usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            883008usize,
         )
     };
     let scratch_65_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
             2592usize,
         )
     };
@@ -5752,7 +5796,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     im2col_padded(
         t_292,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -5761,23 +5805,23 @@ pub fn forward_timed(
     );
     op_ticks[100usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_65_0, scratch_65_1, t_293, 6usize, 18usize, 9usize);
+    matmul_bt_tiled(scratch_65_0, scratch_65_1, t_293, 3066usize, 18usize, 9usize);
     op_ticks[101usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    bias_add(t_293, t_117, 24usize, 36usize);
+    bias_add(t_293, t_117, 12264usize, 36usize);
     op_ticks[102usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_add(t_293, t_286, t_294, 864usize);
+    binary_add(t_293, t_286, t_294, 441504usize);
     op_ticks[103usize] += get_tick() - __t0;
     let scratch_67_0 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let scratch_67_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415040usize),
             10368usize,
         )
     };
@@ -5785,7 +5829,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     im2col_padded(
         t_294,
-        [1usize, 24usize, 1usize, 36usize],
+        [511usize, 24usize, 1usize, 36usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -5794,44 +5838,44 @@ pub fn forward_timed(
     );
     op_ticks[104usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_67_0, scratch_67_1, t_295, 6usize, 9usize, 72usize);
+    matmul_bt_tiled(scratch_67_0, scratch_67_1, t_295, 3066usize, 9usize, 72usize);
     op_ticks[105usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    bias_add(t_295, t_40, 24usize, 288usize);
+    bias_add(t_295, t_40, 12264usize, 288usize);
     op_ticks[106usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_295, t_296);
     op_ticks[107usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_295, t_296, t_297, 6912usize);
+    binary_mul(t_295, t_296, t_297, 3532032usize);
     op_ticks[108usize] += get_tick() - __t0;
     let __t0 = get_tick();
     pad(
         t_297,
-        [1usize, 24usize, 1usize, 288usize],
+        [511usize, 24usize, 1usize, 288usize],
         t_298,
-        [1usize, 26usize, 3usize, 288usize],
+        [511usize, 26usize, 3usize, 288usize],
         [[0usize, 0usize], [1usize, 1usize], [1usize, 1usize], [0usize, 0usize]],
     );
     op_ticks[109usize] += get_tick() - __t0;
     let __t0 = get_tick();
     depthwise_conv2d(
         t_298,
-        [1usize, 26usize, 3usize, 288usize],
+        [511usize, 26usize, 3usize, 288usize],
         t_39,
         [1usize, 3usize, 3usize, 288usize],
         Some(t_38),
         [2usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_299,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
     );
     op_ticks[110usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_299, t_300);
     op_ticks[111usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_299, t_300, t_301, 3456usize);
+    binary_mul(t_299, t_300, t_301, 1766016usize);
     op_ticks[112usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reduce_mean_hw(t_301, t_302);
@@ -5879,13 +5923,13 @@ pub fn forward_timed(
     op_ticks[120usize] += get_tick() - __t0;
     let scratch_82_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(24828usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766652usize),
+            1766016usize,
         )
     };
     let scratch_82_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4092usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3974172usize),
             20736usize,
         )
     };
@@ -5893,7 +5937,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     im2col_padded(
         t_312,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -5902,20 +5946,20 @@ pub fn forward_timed(
     );
     op_ticks[121usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_82_0, scratch_82_1, t_313, 3usize, 72usize, 18usize);
+    matmul_bt_tiled(scratch_82_0, scratch_82_1, t_313, 1533usize, 72usize, 18usize);
     op_ticks[122usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    bias_add(t_313, t_119, 12usize, 72usize);
+    bias_add(t_313, t_119, 6132usize, 72usize);
     op_ticks[123usize] += get_tick() - __t0;
     let scratch_83_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(24192usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            441504usize,
         )
     };
     let scratch_83_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
             20736usize,
         )
     };
@@ -5923,7 +5967,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     im2col_padded(
         t_313,
-        [1usize, 12usize, 1usize, 72usize],
+        [511usize, 12usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -5932,35 +5976,35 @@ pub fn forward_timed(
     );
     op_ticks[124usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_83_0, scratch_83_1, t_314, 3usize, 18usize, 72usize);
+    matmul_bt_tiled(scratch_83_0, scratch_83_1, t_314, 1533usize, 18usize, 72usize);
     op_ticks[125usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    bias_add(t_314, t_37, 12usize, 288usize);
+    bias_add(t_314, t_37, 6132usize, 288usize);
     op_ticks[126usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_314, t_315);
     op_ticks[127usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_314, t_315, t_316, 3456usize);
+    binary_mul(t_314, t_315, t_316, 1766016usize);
     op_ticks[128usize] += get_tick() - __t0;
     let __t0 = get_tick();
     depthwise_conv2d(
         t_316,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         t_36,
         [1usize, 3usize, 3usize, 288usize],
         Some(t_35),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_317,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
     );
     op_ticks[129usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_317, t_318);
     op_ticks[130usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_317, t_318, t_319, 3456usize);
+    binary_mul(t_317, t_318, t_319, 1766016usize);
     op_ticks[131usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reduce_mean_hw(t_319, t_320);
@@ -6008,13 +6052,13 @@ pub fn forward_timed(
     op_ticks[139usize] += get_tick() - __t0;
     let scratch_97_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(24828usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766652usize),
+            1766016usize,
         )
     };
     let scratch_97_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4092usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415676usize),
             20736usize,
         )
     };
@@ -6022,7 +6066,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     im2col_padded(
         t_330,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -6031,23 +6075,23 @@ pub fn forward_timed(
     );
     op_ticks[140usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_97_0, scratch_97_1, t_331, 3usize, 72usize, 18usize);
+    matmul_bt_tiled(scratch_97_0, scratch_97_1, t_331, 1533usize, 72usize, 18usize);
     op_ticks[141usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    bias_add(t_331, t_119, 12usize, 72usize);
+    bias_add(t_331, t_119, 6132usize, 72usize);
     op_ticks[142usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_add(t_331, t_313, t_332, 864usize);
+    binary_add(t_331, t_313, t_332, 441504usize);
     op_ticks[143usize] += get_tick() - __t0;
     let scratch_99_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25056usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            441504usize,
         )
     };
     let scratch_99_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
             20736usize,
         )
     };
@@ -6055,7 +6099,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     im2col_padded(
         t_332,
-        [1usize, 12usize, 1usize, 72usize],
+        [511usize, 12usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -6064,35 +6108,35 @@ pub fn forward_timed(
     );
     op_ticks[144usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_99_0, scratch_99_1, t_333, 3usize, 18usize, 72usize);
+    matmul_bt_tiled(scratch_99_0, scratch_99_1, t_333, 1533usize, 18usize, 72usize);
     op_ticks[145usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    bias_add(t_333, t_34, 12usize, 288usize);
+    bias_add(t_333, t_34, 6132usize, 288usize);
     op_ticks[146usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_333, t_334);
     op_ticks[147usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_333, t_334, t_335, 3456usize);
+    binary_mul(t_333, t_334, t_335, 1766016usize);
     op_ticks[148usize] += get_tick() - __t0;
     let __t0 = get_tick();
     depthwise_conv2d(
         t_335,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         t_33,
         [1usize, 3usize, 3usize, 288usize],
         Some(t_32),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_336,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
     );
     op_ticks[149usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_336, t_337);
     op_ticks[150usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_336, t_337, t_338, 3456usize);
+    binary_mul(t_336, t_337, t_338, 1766016usize);
     op_ticks[151usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reduce_mean_hw(t_338, t_339);
@@ -6140,13 +6184,13 @@ pub fn forward_timed(
     op_ticks[159usize] += get_tick() - __t0;
     let scratch_113_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25692usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2208156usize),
+            1766016usize,
         )
     };
     let scratch_113_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4956usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415676usize),
             20736usize,
         )
     };
@@ -6154,7 +6198,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     im2col_padded(
         t_349,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -6163,23 +6207,23 @@ pub fn forward_timed(
     );
     op_ticks[160usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_113_0, scratch_113_1, t_350, 3usize, 72usize, 18usize);
+    matmul_bt_tiled(scratch_113_0, scratch_113_1, t_350, 1533usize, 72usize, 18usize);
     op_ticks[161usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    bias_add(t_350, t_119, 12usize, 72usize);
+    bias_add(t_350, t_119, 6132usize, 72usize);
     op_ticks[162usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_add(t_350, t_332, t_351, 864usize);
+    binary_add(t_350, t_332, t_351, 441504usize);
     op_ticks[163usize] += get_tick() - __t0;
     let scratch_115_0 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let scratch_115_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
             20736usize,
         )
     };
@@ -6187,7 +6231,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     im2col_padded(
         t_351,
-        [1usize, 12usize, 1usize, 72usize],
+        [511usize, 12usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -6196,35 +6240,35 @@ pub fn forward_timed(
     );
     op_ticks[164usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_115_0, scratch_115_1, t_352, 3usize, 18usize, 72usize);
+    matmul_bt_tiled(scratch_115_0, scratch_115_1, t_352, 1533usize, 18usize, 72usize);
     op_ticks[165usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    bias_add(t_352, t_31, 12usize, 288usize);
+    bias_add(t_352, t_31, 6132usize, 288usize);
     op_ticks[166usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_352, t_353);
     op_ticks[167usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_352, t_353, t_354, 3456usize);
+    binary_mul(t_352, t_353, t_354, 1766016usize);
     op_ticks[168usize] += get_tick() - __t0;
     let __t0 = get_tick();
     depthwise_conv2d(
         t_354,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         t_30,
         [1usize, 3usize, 3usize, 288usize],
         Some(t_29),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_355,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
     );
     op_ticks[169usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_355, t_356);
     op_ticks[170usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_355, t_356, t_357, 3456usize);
+    binary_mul(t_355, t_356, t_357, 1766016usize);
     op_ticks[171usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reduce_mean_hw(t_357, t_358);
@@ -6272,13 +6316,13 @@ pub fn forward_timed(
     op_ticks[179usize] += get_tick() - __t0;
     let scratch_129_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25920usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            1766016usize,
         )
     };
     let scratch_129_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415040usize),
             20736usize,
         )
     };
@@ -6286,7 +6330,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     im2col_padded(
         t_368,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -6295,23 +6339,23 @@ pub fn forward_timed(
     );
     op_ticks[180usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_129_0, scratch_129_1, t_369, 3usize, 72usize, 18usize);
+    matmul_bt_tiled(scratch_129_0, scratch_129_1, t_369, 1533usize, 72usize, 18usize);
     op_ticks[181usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    bias_add(t_369, t_119, 12usize, 72usize);
+    bias_add(t_369, t_119, 6132usize, 72usize);
     op_ticks[182usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_add(t_369, t_351, t_370, 864usize);
+    binary_add(t_369, t_351, t_370, 441504usize);
     op_ticks[183usize] += get_tick() - __t0;
     let scratch_131_0 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let scratch_131_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
             62208usize,
         )
     };
@@ -6319,7 +6363,7 @@ pub fn forward_timed(
     let __t0 = get_tick();
     im2col_padded(
         t_370,
-        [1usize, 12usize, 1usize, 72usize],
+        [511usize, 12usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -6328,44 +6372,44 @@ pub fn forward_timed(
     );
     op_ticks[184usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_131_0, scratch_131_1, t_371, 3usize, 18usize, 216usize);
+    matmul_bt_tiled(scratch_131_0, scratch_131_1, t_371, 1533usize, 18usize, 216usize);
     op_ticks[185usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    bias_add(t_371, t_28, 12usize, 864usize);
+    bias_add(t_371, t_28, 6132usize, 864usize);
     op_ticks[186usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_371, t_372);
     op_ticks[187usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_371, t_372, t_373, 10368usize);
+    binary_mul(t_371, t_372, t_373, 5298048usize);
     op_ticks[188usize] += get_tick() - __t0;
     let __t0 = get_tick();
     pad(
         t_373,
-        [1usize, 12usize, 1usize, 864usize],
+        [511usize, 12usize, 1usize, 864usize],
         t_374,
-        [1usize, 14usize, 3usize, 864usize],
+        [511usize, 14usize, 3usize, 864usize],
         [[0usize, 0usize], [1usize, 1usize], [1usize, 1usize], [0usize, 0usize]],
     );
     op_ticks[189usize] += get_tick() - __t0;
     let __t0 = get_tick();
     depthwise_conv2d(
         t_374,
-        [1usize, 14usize, 3usize, 864usize],
+        [511usize, 14usize, 3usize, 864usize],
         t_27,
         [1usize, 3usize, 3usize, 864usize],
         Some(t_26),
         [2usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_375,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[190usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_375, t_376);
     op_ticks[191usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_375, t_376, t_377, 5184usize);
+    binary_mul(t_375, t_376, t_377, 2649024usize);
     op_ticks[192usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reduce_mean_hw(t_377, t_378);
@@ -6414,53 +6458,53 @@ pub fn forward_timed(
     let __t0 = get_tick();
     conv2d(
         t_388,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_89,
         [108usize, 1usize, 1usize, 864usize],
         Some(t_88),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_389,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
     );
     op_ticks[201usize] += get_tick() - __t0;
     let __t0 = get_tick();
     conv2d(
         t_389,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
         t_87,
         [864usize, 1usize, 1usize, 108usize],
         Some(t_25),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_390,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[202usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_390, t_391);
     op_ticks[203usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_390, t_391, t_392, 5184usize);
+    binary_mul(t_390, t_391, t_392, 2649024usize);
     op_ticks[204usize] += get_tick() - __t0;
     let __t0 = get_tick();
     depthwise_conv2d(
         t_392,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_24,
         [1usize, 3usize, 3usize, 864usize],
         Some(t_23),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_393,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[205usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_393, t_394);
     op_ticks[206usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_393, t_394, t_395, 5184usize);
+    binary_mul(t_393, t_394, t_395, 2649024usize);
     op_ticks[207usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reduce_mean_hw(t_395, t_396);
@@ -6509,56 +6553,56 @@ pub fn forward_timed(
     let __t0 = get_tick();
     conv2d(
         t_406,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_84,
         [108usize, 1usize, 1usize, 864usize],
         Some(t_88),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_407,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
     );
     op_ticks[216usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_add(t_407, t_389, t_408, 648usize);
+    binary_add(t_407, t_389, t_408, 331128usize);
     op_ticks[217usize] += get_tick() - __t0;
     let __t0 = get_tick();
     conv2d(
         t_408,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
         t_83,
         [864usize, 1usize, 1usize, 108usize],
         Some(t_22),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_409,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[218usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_409, t_410);
     op_ticks[219usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_409, t_410, t_411, 5184usize);
+    binary_mul(t_409, t_410, t_411, 2649024usize);
     op_ticks[220usize] += get_tick() - __t0;
     let __t0 = get_tick();
     depthwise_conv2d(
         t_411,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_21,
         [1usize, 3usize, 3usize, 864usize],
         Some(t_20),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_412,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[221usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_412, t_413);
     op_ticks[222usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_412, t_413, t_414, 5184usize);
+    binary_mul(t_412, t_413, t_414, 2649024usize);
     op_ticks[223usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reduce_mean_hw(t_414, t_415);
@@ -6607,56 +6651,56 @@ pub fn forward_timed(
     let __t0 = get_tick();
     conv2d(
         t_425,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_80,
         [108usize, 1usize, 1usize, 864usize],
         Some(t_88),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_426,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
     );
     op_ticks[232usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_add(t_426, t_408, t_427, 648usize);
+    binary_add(t_426, t_408, t_427, 331128usize);
     op_ticks[233usize] += get_tick() - __t0;
     let __t0 = get_tick();
     conv2d(
         t_427,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
         t_79,
         [864usize, 1usize, 1usize, 108usize],
         Some(t_19),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_428,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[234usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_428, t_429);
     op_ticks[235usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_428, t_429, t_430, 5184usize);
+    binary_mul(t_428, t_429, t_430, 2649024usize);
     op_ticks[236usize] += get_tick() - __t0;
     let __t0 = get_tick();
     depthwise_conv2d(
         t_430,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_18,
         [1usize, 3usize, 3usize, 864usize],
         Some(t_17),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_431,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[237usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_431, t_432);
     op_ticks[238usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_431, t_432, t_433, 5184usize);
+    binary_mul(t_431, t_432, t_433, 2649024usize);
     op_ticks[239usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reduce_mean_hw(t_433, t_434);
@@ -6705,56 +6749,56 @@ pub fn forward_timed(
     let __t0 = get_tick();
     conv2d(
         t_444,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_76,
         [108usize, 1usize, 1usize, 864usize],
         Some(t_88),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_445,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
     );
     op_ticks[248usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_add(t_445, t_427, t_446, 648usize);
+    binary_add(t_445, t_427, t_446, 331128usize);
     op_ticks[249usize] += get_tick() - __t0;
     let __t0 = get_tick();
     conv2d(
         t_446,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
         t_75,
         [864usize, 1usize, 1usize, 108usize],
         Some(t_16),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_447,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[250usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_447, t_448);
     op_ticks[251usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_447, t_448, t_449, 5184usize);
+    binary_mul(t_447, t_448, t_449, 2649024usize);
     op_ticks[252usize] += get_tick() - __t0;
     let __t0 = get_tick();
     depthwise_conv2d(
         t_449,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_15,
         [1usize, 3usize, 3usize, 864usize],
         Some(t_14),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_450,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[253usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_450, t_451);
     op_ticks[254usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_450, t_451, t_452, 5184usize);
+    binary_mul(t_450, t_451, t_452, 2649024usize);
     op_ticks[255usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reduce_mean_hw(t_452, t_453);
@@ -6803,65 +6847,65 @@ pub fn forward_timed(
     let __t0 = get_tick();
     conv2d(
         t_463,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_72,
         [108usize, 1usize, 1usize, 864usize],
         Some(t_88),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_464,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
     );
     op_ticks[264usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_add(t_464, t_446, t_465, 648usize);
+    binary_add(t_464, t_446, t_465, 331128usize);
     op_ticks[265usize] += get_tick() - __t0;
     let __t0 = get_tick();
     conv2d(
         t_465,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
         t_71,
         [1536usize, 1usize, 1usize, 108usize],
         Some(t_13),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_466,
-        [1usize, 6usize, 1usize, 1536usize],
+        [511usize, 6usize, 1usize, 1536usize],
     );
     op_ticks[266usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_466, t_467);
     op_ticks[267usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_466, t_467, t_468, 9216usize);
+    binary_mul(t_466, t_467, t_468, 4709376usize);
     op_ticks[268usize] += get_tick() - __t0;
     let __t0 = get_tick();
     pad(
         t_468,
-        [1usize, 6usize, 1usize, 1536usize],
+        [511usize, 6usize, 1usize, 1536usize],
         t_469,
-        [1usize, 8usize, 3usize, 1536usize],
+        [511usize, 8usize, 3usize, 1536usize],
         [[0usize, 0usize], [1usize, 1usize], [1usize, 1usize], [0usize, 0usize]],
     );
     op_ticks[269usize] += get_tick() - __t0;
     let __t0 = get_tick();
     depthwise_conv2d(
         t_469,
-        [1usize, 8usize, 3usize, 1536usize],
+        [511usize, 8usize, 3usize, 1536usize],
         t_12,
         [1usize, 3usize, 3usize, 1536usize],
         Some(t_11),
         [2usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_470,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     op_ticks[270usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_470, t_471);
     op_ticks[271usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_470, t_471, t_472, 4608usize);
+    binary_mul(t_470, t_471, t_472, 2354688usize);
     op_ticks[272usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reduce_mean_hw(t_472, t_473);
@@ -6910,53 +6954,53 @@ pub fn forward_timed(
     let __t0 = get_tick();
     conv2d(
         t_483,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_66,
         [192usize, 1usize, 1usize, 1536usize],
         Some(t_65),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_484,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
     );
     op_ticks[281usize] += get_tick() - __t0;
     let __t0 = get_tick();
     conv2d(
         t_484,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
         t_64,
         [1536usize, 1usize, 1usize, 192usize],
         Some(t_10),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_485,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     op_ticks[282usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_485, t_486);
     op_ticks[283usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_485, t_486, t_487, 4608usize);
+    binary_mul(t_485, t_486, t_487, 2354688usize);
     op_ticks[284usize] += get_tick() - __t0;
     let __t0 = get_tick();
     depthwise_conv2d(
         t_487,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_9,
         [1usize, 3usize, 3usize, 1536usize],
         Some(t_8),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_488,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     op_ticks[285usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_488, t_489);
     op_ticks[286usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_488, t_489, t_490, 4608usize);
+    binary_mul(t_488, t_489, t_490, 2354688usize);
     op_ticks[287usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reduce_mean_hw(t_490, t_491);
@@ -7005,56 +7049,56 @@ pub fn forward_timed(
     let __t0 = get_tick();
     conv2d(
         t_501,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_61,
         [192usize, 1usize, 1usize, 1536usize],
         Some(t_65),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_502,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
     );
     op_ticks[296usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_add(t_502, t_484, t_503, 576usize);
+    binary_add(t_502, t_484, t_503, 294336usize);
     op_ticks[297usize] += get_tick() - __t0;
     let __t0 = get_tick();
     conv2d(
         t_503,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
         t_60,
         [1536usize, 1usize, 1usize, 192usize],
         Some(t_7),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_504,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     op_ticks[298usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_504, t_505);
     op_ticks[299usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_504, t_505, t_506, 4608usize);
+    binary_mul(t_504, t_505, t_506, 2354688usize);
     op_ticks[300usize] += get_tick() - __t0;
     let __t0 = get_tick();
     depthwise_conv2d(
         t_506,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_6,
         [1usize, 3usize, 3usize, 1536usize],
         Some(t_5),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_507,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     op_ticks[301usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_507, t_508);
     op_ticks[302usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_507, t_508, t_509, 4608usize);
+    binary_mul(t_507, t_508, t_509, 2354688usize);
     op_ticks[303usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reduce_mean_hw(t_509, t_510);
@@ -7103,56 +7147,56 @@ pub fn forward_timed(
     let __t0 = get_tick();
     conv2d(
         t_520,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_57,
         [192usize, 1usize, 1usize, 1536usize],
         Some(t_65),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_521,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
     );
     op_ticks[312usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_add(t_521, t_503, t_522, 576usize);
+    binary_add(t_521, t_503, t_522, 294336usize);
     op_ticks[313usize] += get_tick() - __t0;
     let __t0 = get_tick();
     conv2d(
         t_522,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
         t_56,
         [1536usize, 1usize, 1usize, 192usize],
         Some(t_4),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_523,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     op_ticks[314usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_523, t_524);
     op_ticks[315usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_523, t_524, t_525, 4608usize);
+    binary_mul(t_523, t_524, t_525, 2354688usize);
     op_ticks[316usize] += get_tick() - __t0;
     let __t0 = get_tick();
     depthwise_conv2d(
         t_525,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_3,
         [1usize, 3usize, 3usize, 1536usize],
         Some(t_2),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_526,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     op_ticks[317usize] += get_tick() - __t0;
     let __t0 = get_tick();
     unary_logistic(t_526, t_527);
     op_ticks[318usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_mul(t_526, t_527, t_528, 4608usize);
+    binary_mul(t_526, t_527, t_528, 2354688usize);
     op_ticks[319usize] += get_tick() - __t0;
     let __t0 = get_tick();
     reduce_mean_hw(t_528, t_529);
@@ -7201,18 +7245,18 @@ pub fn forward_timed(
     let __t0 = get_tick();
     conv2d(
         t_539,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_53,
         [192usize, 1usize, 1usize, 1536usize],
         Some(t_65),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_540,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
     );
     op_ticks[328usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    binary_add(t_540, t_522, t_541, 576usize);
+    binary_add(t_540, t_522, t_541, 294336usize);
     op_ticks[329usize] += get_tick() - __t0;
     let __t0 = get_tick();
     binary_mul(t_541, t_161, t_542, 192usize);
@@ -7223,14 +7267,14 @@ pub fn forward_timed(
     let __t0 = get_tick();
     conv2d_relu(
         t_543,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
         t_52,
         [1024usize, 3usize, 3usize, 192usize],
         Some(t_1),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_544,
-        [1usize, 1usize, 1usize, 1024usize],
+        [511usize, 1usize, 1usize, 1024usize],
     );
     op_ticks[332usize] += get_tick() - __t0;
     let __t0 = get_tick();
@@ -7493,211 +7537,211 @@ pub fn forward_profiled(
     let t_267 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            1152usize,
+            588672usize,
         )
     };
     let t_268 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            1152usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            588672usize,
         )
     };
     let t_269 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2304usize),
-            2304usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1177344usize),
+            1177344usize,
         )
     };
     let t_270 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4608usize),
-            1152usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2525064usize),
+            588672usize,
         )
     };
     let t_271 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            3456usize,
+            1766016usize,
         )
     };
     let t_272 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3113736usize),
+            1766016usize,
         )
     };
     let t_273 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4879752usize),
+            1766016usize,
         )
     };
     let t_274 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
-            10800usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6645768usize),
+            5518800usize,
         )
     };
     let t_275 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            1728usize,
+            883008usize,
         )
     };
     let t_276 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            883008usize,
         )
     };
     let t_277 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            883008usize,
         )
     };
     let t_278 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            441504usize,
         )
     };
     let t_279 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            883008usize,
         )
     };
     let t_280 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            883008usize,
         )
     };
     let t_281 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            883008usize,
         )
     };
     let t_282 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            1728usize,
+            883008usize,
         )
     };
     let t_283 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            883008usize,
         )
     };
     let t_284 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            883008usize,
         )
     };
     let t_285 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            441504usize,
         )
     };
     let t_286 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let t_287 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            883008usize,
         )
     };
     let t_288 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            883008usize,
         )
     };
     let t_289 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            883008usize,
         )
     };
     let t_290 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            883008usize,
         )
     };
     let t_291 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            883008usize,
         )
     };
     let t_292 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            883008usize,
         )
     };
     let t_293 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            441504usize,
         )
     };
     let t_294 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            441504usize,
         )
     };
     let t_295 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12096usize),
-            6912usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            3532032usize,
         )
     };
     let t_296 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            6912usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415040usize),
+            3532032usize,
         )
     };
     let t_297 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(19008usize),
-            6912usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7947072usize),
+            3532032usize,
         )
     };
     let t_298 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25920usize),
-            22464usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12164568usize),
+            11479104usize,
         )
     };
     let t_299 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            3456usize,
+            1766016usize,
         )
     };
     let t_300 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            1766016usize,
         )
     };
     let t_301 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3532032usize),
+            1766016usize,
         )
     };
     let t_302 = unsafe {
@@ -7745,49 +7789,49 @@ pub fn forward_profiled(
     let t_312 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(636usize),
-            3456usize,
+            1766016usize,
         )
     };
     let t_313 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28284usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3532668usize),
+            441504usize,
         )
     };
     let t_314 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(20736usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            1766016usize,
         )
     };
     let t_315 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            1766016usize,
         )
     };
     let t_316 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3974172usize),
+            1766016usize,
         )
     };
     let t_317 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            3456usize,
+            1766016usize,
         )
     };
     let t_318 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            1766016usize,
         )
     };
     let t_319 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3974172usize),
+            1766016usize,
         )
     };
     let t_320 = unsafe {
@@ -7835,151 +7879,151 @@ pub fn forward_profiled(
     let t_330 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(636usize),
-            3456usize,
+            1766016usize,
         )
     };
     let t_331 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(29148usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3974172usize),
+            441504usize,
         )
     };
     let t_332 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let t_333 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(21600usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            1766016usize,
         )
     };
     let t_334 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            1766016usize,
         )
     };
     let t_335 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3973536usize),
+            1766016usize,
         )
     };
     let t_336 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            1766016usize,
         )
     };
     let t_337 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            1766016usize,
         )
     };
     let t_338 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7776usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3973536usize),
+            1766016usize,
         )
     };
     let t_339 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
             288usize,
         )
     };
     let t_343 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441792usize),
             288usize,
         )
     };
     let t_344 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
             18usize,
         )
     };
     let t_345 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(884usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441524usize),
             18usize,
         )
     };
     let t_346 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(904usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441544usize),
             18usize,
         )
     };
     let t_347 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(924usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441564usize),
             288usize,
         )
     };
     let t_348 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1212usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441852usize),
             288usize,
         )
     };
     let t_349 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1500usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(442140usize),
+            1766016usize,
         )
     };
     let t_350 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(29148usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3974172usize),
+            441504usize,
         )
     };
     let t_351 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            441504usize,
         )
     };
     let t_352 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(22464usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            1766016usize,
         )
     };
     let t_353 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            1766016usize,
         )
     };
     let t_354 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415040usize),
+            1766016usize,
         )
     };
     let t_355 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            1766016usize,
         )
     };
     let t_356 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            1766016usize,
         )
     };
     let t_357 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(8640usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415040usize),
+            1766016usize,
         )
     };
     let t_358 = unsafe {
@@ -8026,62 +8070,62 @@ pub fn forward_profiled(
     };
     let t_368 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            1766016usize,
         )
     };
     let t_369 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let t_370 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(883008usize),
+            441504usize,
         )
     };
     let t_371 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(64800usize),
-            10368usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            5298048usize,
         )
     };
     let t_372 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            10368usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6622560usize),
+            5298048usize,
         )
     };
     let t_373 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
-            10368usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11920608usize),
+            5298048usize,
         )
     };
     let t_374 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(20736usize),
-            36288usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(23643672usize),
+            18543168usize,
         )
     };
     let t_375 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            5184usize,
+            2649024usize,
         )
     };
     let t_376 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            2649024usize,
         )
     };
     let t_377 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5298048usize),
+            2649024usize,
         )
     };
     let t_378 = unsafe {
@@ -8129,252 +8173,252 @@ pub fn forward_profiled(
     let t_388 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1812usize),
-            5184usize,
+            2649024usize,
         )
     };
     let t_389 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2650836usize),
+            331128usize,
         )
     };
     let t_390 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            2649024usize,
         )
     };
     let t_391 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5832usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2981964usize),
+            2649024usize,
         )
     };
     let t_392 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11016usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5630988usize),
+            2649024usize,
         )
     };
     let t_393 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            2649024usize,
         )
     };
     let t_394 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5832usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2981964usize),
+            2649024usize,
         )
     };
     let t_395 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11016usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5630988usize),
+            2649024usize,
         )
     };
     let t_396 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
     let t_400 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1512usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             864usize,
         )
     };
     let t_401 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             27usize,
         )
     };
     let t_402 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(676usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28usize),
             27usize,
         )
     };
     let t_403 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(704usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(56usize),
             27usize,
         )
     };
     let t_404 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(732usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(84usize),
             864usize,
         )
     };
     let t_405 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1596usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(948usize),
             864usize,
         )
     };
     let t_406 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2460usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1812usize),
+            2649024usize,
         )
     };
     let t_407 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2981964usize),
+            331128usize,
         )
     };
     let t_408 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            331128usize,
         )
     };
     let t_409 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
+            2649024usize,
         )
     };
     let t_410 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2980152usize),
+            2649024usize,
         )
     };
     let t_411 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5629176usize),
+            2649024usize,
         )
     };
     let t_412 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
+            2649024usize,
         )
     };
     let t_413 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2980152usize),
+            2649024usize,
         )
     };
     let t_414 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5629176usize),
+            2649024usize,
         )
     };
     let t_415 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
             864usize,
         )
     };
     let t_419 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331992usize),
             864usize,
         )
     };
     let t_420 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
             27usize,
         )
     };
     let t_421 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331156usize),
             27usize,
         )
     };
     let t_422 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(56usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331184usize),
             27usize,
         )
     };
     let t_423 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(84usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331212usize),
             864usize,
         )
     };
     let t_424 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(332076usize),
             864usize,
         )
     };
     let t_425 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2808usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(332940usize),
+            2649024usize,
         )
     };
     let t_426 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2981964usize),
+            331128usize,
         )
     };
     let t_427 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
+            331128usize,
         )
     };
     let t_428 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662256usize),
+            2649024usize,
         )
     };
     let t_429 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6480usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3311280usize),
+            2649024usize,
         )
     };
     let t_430 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11664usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5960304usize),
+            2649024usize,
         )
     };
     let t_431 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662256usize),
+            2649024usize,
         )
     };
     let t_432 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6480usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3311280usize),
+            2649024usize,
         )
     };
     let t_433 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11664usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5960304usize),
+            2649024usize,
         )
     };
     let t_434 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
     let t_438 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2160usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             864usize,
         )
     };
@@ -8398,68 +8442,68 @@ pub fn forward_profiled(
     };
     let t_442 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(84usize),
             864usize,
         )
     };
     let t_443 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2160usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(948usize),
             864usize,
         )
     };
     let t_444 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3024usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662256usize),
+            2649024usize,
         )
     };
     let t_445 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            648usize,
+            331128usize,
         )
     };
     let t_446 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662256usize),
+            331128usize,
         )
     };
     let t_447 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(993384usize),
+            2649024usize,
         )
     };
     let t_448 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3642408usize),
+            2649024usize,
         )
     };
     let t_449 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6291432usize),
+            2649024usize,
         )
     };
     let t_450 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(993384usize),
+            2649024usize,
         )
     };
     let t_451 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3642408usize),
+            2649024usize,
         )
     };
     let t_452 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6291432usize),
+            2649024usize,
         )
     };
     let t_453 = unsafe {
@@ -8470,7 +8514,7 @@ pub fn forward_profiled(
     };
     let t_457 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             864usize,
         )
     };
@@ -8500,68 +8544,68 @@ pub fn forward_profiled(
     };
     let t_462 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(948usize),
             864usize,
         )
     };
     let t_463 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2808usize),
-            5184usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(993384usize),
+            2649024usize,
         )
     };
     let t_464 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            648usize,
+            331128usize,
         )
     };
     let t_465 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
-            648usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(331128usize),
+            331128usize,
         )
     };
     let t_466 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
-            9216usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662256usize),
+            4709376usize,
         )
     };
     let t_467 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10512usize),
-            9216usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5371632usize),
+            4709376usize,
         )
     };
     let t_468 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(19728usize),
-            9216usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10081008usize),
+            4709376usize,
         )
     };
     let t_469 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28944usize),
-            36864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(14790384usize),
+            18837504usize,
         )
     };
     let t_470 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            4608usize,
+            2354688usize,
         )
     };
     let t_471 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4608usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2354688usize),
+            2354688usize,
         )
     };
     let t_472 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(9216usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4709376usize),
+            2354688usize,
         )
     };
     let t_473 = unsafe {
@@ -8609,252 +8653,252 @@ pub fn forward_profiled(
     let t_483 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3216usize),
-            4608usize,
+            2354688usize,
         )
     };
     let t_484 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2357904usize),
+            294336usize,
         )
     };
     let t_485 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            2354688usize,
         )
     };
     let t_486 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2652240usize),
+            2354688usize,
         )
     };
     let t_487 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(9792usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5006928usize),
+            2354688usize,
         )
     };
     let t_488 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            2354688usize,
         )
     };
     let t_489 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2652240usize),
+            2354688usize,
         )
     };
     let t_490 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(9792usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5006928usize),
+            2354688usize,
         )
     };
     let t_491 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1536usize,
         )
     };
     let t_495 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2112usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1536usize),
             1536usize,
         )
     };
     let t_496 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             48usize,
         )
     };
     let t_497 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(624usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(48usize),
             48usize,
         )
     };
     let t_498 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             48usize,
         )
     };
     let t_499 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(720usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144usize),
             1536usize,
         )
     };
     let t_500 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2256usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1680usize),
             1536usize,
         )
     };
     let t_501 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3792usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3216usize),
+            2354688usize,
         )
     };
     let t_502 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2652240usize),
+            294336usize,
         )
     };
     let t_503 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            294336usize,
         )
     };
     let t_504 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
+            2354688usize,
         )
     };
     let t_505 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6336usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            2354688usize,
         )
     };
     let t_506 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10944usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5003712usize),
+            2354688usize,
         )
     };
     let t_507 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
+            2354688usize,
         )
     };
     let t_508 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6336usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            2354688usize,
         )
     };
     let t_509 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10944usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5003712usize),
+            2354688usize,
         )
     };
     let t_510 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
             1536usize,
         )
     };
     let t_514 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3264usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(295872usize),
             1536usize,
         )
     };
     let t_515 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
             48usize,
         )
     };
     let t_516 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(48usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294384usize),
             48usize,
         )
     };
     let t_517 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294432usize),
             48usize,
         )
     };
     let t_518 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294480usize),
             1536usize,
         )
     };
     let t_519 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3264usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(296016usize),
             1536usize,
         )
     };
     let t_520 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4800usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(297552usize),
+            2354688usize,
         )
     };
     let t_521 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2652240usize),
+            294336usize,
         )
     };
     let t_522 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
+            294336usize,
         )
     };
     let t_523 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            2354688usize,
         )
     };
     let t_524 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2943360usize),
+            2354688usize,
         )
     };
     let t_525 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5298048usize),
+            2354688usize,
         )
     };
     let t_526 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            2354688usize,
         )
     };
     let t_527 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2943360usize),
+            2354688usize,
         )
     };
     let t_528 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5298048usize),
+            2354688usize,
         )
     };
     let t_529 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1536usize,
         )
     };
     let t_533 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2688usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1536usize),
             1536usize,
         )
     };
@@ -8878,50 +8922,50 @@ pub fn forward_profiled(
     };
     let t_537 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144usize),
             1536usize,
         )
     };
     let t_538 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2688usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1680usize),
             1536usize,
         )
     };
     let t_539 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4224usize),
-            4608usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            2354688usize,
         )
     };
     let t_540 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            576usize,
+            294336usize,
         )
     };
     let t_541 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            294336usize,
         )
     };
     let t_542 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            576usize,
+            294336usize,
         )
     };
     let t_543 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
-            576usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(294336usize),
+            294336usize,
         )
     };
     let t_544 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
-            1024usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588672usize),
+            523264usize,
         )
     };
     let t_545 = unsafe {
@@ -9555,7 +9599,18 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    fully_connected(t_214, 523775usize, t_166, None, t_215, 49056usize);
+    for _batch_idx in 0..511usize {
+        let _in_off = _batch_idx * 1025usize;
+        let _out_off = _batch_idx * 96usize;
+        fully_connected(
+            &t_214[_in_off.._in_off + 1025usize],
+            1025usize,
+            t_166,
+            None,
+            &mut t_215[_out_off.._out_off + 96usize],
+            96usize,
+        );
+    }
     op_ticks[25usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -9992,7 +10047,18 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    fully_connected(t_255, 262143usize, t_168, None, t_256, 49056usize);
+    for _batch_idx in 0..511usize {
+        let _in_off = _batch_idx * 513usize;
+        let _out_off = _batch_idx * 96usize;
+        fully_connected(
+            &t_255[_in_off.._in_off + 513usize],
+            513usize,
+            t_168,
+            None,
+            &mut t_256[_out_off.._out_off + 96usize],
+            96usize,
+        );
+    }
     op_ticks[49usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10269,7 +10335,7 @@ pub fn forward_profiled(
         [1usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_267,
-        [1usize, 48usize, 1usize, 24usize],
+        [511usize, 48usize, 1usize, 24usize],
     );
     op_ticks[62usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -10294,7 +10360,7 @@ pub fn forward_profiled(
         [1usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_268,
-        [1usize, 48usize, 1usize, 24usize],
+        [511usize, 48usize, 1usize, 24usize],
     );
     op_ticks[63usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -10314,7 +10380,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     {
         let src = t_268;
-        for p in 0..48usize {
+        for p in 0..24528usize {
             for a in 0..24usize {
                 let src_off = p * (24usize * 1usize) + a * 1usize;
                 let dst_off = p * (48usize * 1usize) + (0usize + a) * 1usize;
@@ -10325,7 +10391,7 @@ pub fn forward_profiled(
     }
     {
         let src = t_267;
-        for p in 0..48usize {
+        for p in 0..24528usize {
             for a in 0..24usize {
                 let src_off = p * (24usize * 1usize) + a * 1usize;
                 let dst_off = p * (48usize * 1usize) + (24usize + a) * 1usize;
@@ -10347,12 +10413,12 @@ pub fn forward_profiled(
     let scratch_42_0 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            2304usize,
+            1177344usize,
         )
     };
     let scratch_42_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2354688usize),
             1152usize,
         )
     };
@@ -10365,7 +10431,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     im2col_padded(
         t_269,
-        [1usize, 48usize, 1usize, 48usize],
+        [511usize, 48usize, 1usize, 48usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -10388,7 +10454,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_42_0, scratch_42_1, t_270, 12usize, 12usize, 6usize);
+    matmul_bt_tiled(scratch_42_0, scratch_42_1, t_270, 6132usize, 12usize, 6usize);
     op_ticks[66usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10405,7 +10471,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    bias_add(t_270, t_50, 48usize, 24usize);
+    bias_add(t_270, t_50, 24528usize, 24usize);
     op_ticks[67usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10418,13 +10484,13 @@ pub fn forward_profiled(
     }
     let scratch_43_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1152usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            588672usize,
         )
     };
     let scratch_43_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2354688usize),
             1728usize,
         )
     };
@@ -10437,7 +10503,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     im2col_padded(
         t_270,
-        [1usize, 48usize, 1usize, 24usize],
+        [511usize, 48usize, 1usize, 24usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -10460,7 +10526,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_43_0, scratch_43_1, t_271, 12usize, 6usize, 18usize);
+    matmul_bt_tiled(scratch_43_0, scratch_43_1, t_271, 6132usize, 6usize, 18usize);
     op_ticks[69usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10477,7 +10543,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    bias_add(t_271, t_49, 48usize, 72usize);
+    bias_add(t_271, t_49, 24528usize, 72usize);
     op_ticks[70usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10511,7 +10577,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_271, t_272, t_273, 3456usize);
+    binary_mul(t_271, t_272, t_273, 1766016usize);
     op_ticks[72usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10530,9 +10596,9 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     pad(
         t_273,
-        [1usize, 48usize, 1usize, 72usize],
+        [511usize, 48usize, 1usize, 72usize],
         t_274,
-        [1usize, 50usize, 3usize, 72usize],
+        [511usize, 50usize, 3usize, 72usize],
         [[0usize, 0usize], [1usize, 1usize], [1usize, 1usize], [0usize, 0usize]],
     );
     op_ticks[73usize] += get_tick() - __t0;
@@ -10553,14 +10619,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     depthwise_conv2d(
         t_274,
-        [1usize, 50usize, 3usize, 72usize],
+        [511usize, 50usize, 3usize, 72usize],
         t_48,
         [1usize, 3usize, 3usize, 72usize],
         Some(t_47),
         [2usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_275,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
     );
     op_ticks[74usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -10595,7 +10661,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_275, t_276, t_277, 1728usize);
+    binary_mul(t_275, t_276, t_277, 883008usize);
     op_ticks[76usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10608,13 +10674,13 @@ pub fn forward_profiled(
     }
     let scratch_50_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            883008usize,
         )
     };
     let scratch_50_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
             2592usize,
         )
     };
@@ -10627,7 +10693,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     im2col_padded(
         t_277,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -10650,7 +10716,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_50_0, scratch_50_1, t_278, 6usize, 18usize, 9usize);
+    matmul_bt_tiled(scratch_50_0, scratch_50_1, t_278, 3066usize, 18usize, 9usize);
     op_ticks[78usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10667,7 +10733,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    bias_add(t_278, t_117, 24usize, 36usize);
+    bias_add(t_278, t_117, 12264usize, 36usize);
     op_ticks[79usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10680,13 +10746,13 @@ pub fn forward_profiled(
     }
     let scratch_51_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            441504usize,
         )
     };
     let scratch_51_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
             2592usize,
         )
     };
@@ -10699,7 +10765,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     im2col_padded(
         t_278,
-        [1usize, 24usize, 1usize, 36usize],
+        [511usize, 24usize, 1usize, 36usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -10722,7 +10788,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_51_0, scratch_51_1, t_279, 6usize, 9usize, 18usize);
+    matmul_bt_tiled(scratch_51_0, scratch_51_1, t_279, 3066usize, 9usize, 18usize);
     op_ticks[81usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10739,7 +10805,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    bias_add(t_279, t_46, 24usize, 72usize);
+    bias_add(t_279, t_46, 12264usize, 72usize);
     op_ticks[82usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10773,7 +10839,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_279, t_280, t_281, 1728usize);
+    binary_mul(t_279, t_280, t_281, 883008usize);
     op_ticks[84usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10792,14 +10858,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     depthwise_conv2d(
         t_281,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
         t_45,
         [1usize, 3usize, 3usize, 72usize],
         Some(t_44),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_282,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
     );
     op_ticks[85usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -10834,7 +10900,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_282, t_283, t_284, 1728usize);
+    binary_mul(t_282, t_283, t_284, 883008usize);
     op_ticks[87usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10847,13 +10913,13 @@ pub fn forward_profiled(
     }
     let scratch_57_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            883008usize,
         )
     };
     let scratch_57_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
             2592usize,
         )
     };
@@ -10866,7 +10932,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     im2col_padded(
         t_284,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -10889,7 +10955,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_57_0, scratch_57_1, t_285, 6usize, 18usize, 9usize);
+    matmul_bt_tiled(scratch_57_0, scratch_57_1, t_285, 3066usize, 18usize, 9usize);
     op_ticks[89usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10906,7 +10972,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    bias_add(t_285, t_117, 24usize, 36usize);
+    bias_add(t_285, t_117, 12264usize, 36usize);
     op_ticks[90usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10923,7 +10989,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_add(t_285, t_278, t_286, 864usize);
+    binary_add(t_285, t_278, t_286, 441504usize);
     op_ticks[91usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10936,13 +11002,13 @@ pub fn forward_profiled(
     }
     let scratch_59_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1324512usize),
+            441504usize,
         )
     };
     let scratch_59_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
             2592usize,
         )
     };
@@ -10955,7 +11021,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     im2col_padded(
         t_286,
-        [1usize, 24usize, 1usize, 36usize],
+        [511usize, 24usize, 1usize, 36usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -10978,7 +11044,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_59_0, scratch_59_1, t_287, 6usize, 9usize, 18usize);
+    matmul_bt_tiled(scratch_59_0, scratch_59_1, t_287, 3066usize, 9usize, 18usize);
     op_ticks[93usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -10995,7 +11061,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    bias_add(t_287, t_43, 24usize, 72usize);
+    bias_add(t_287, t_43, 12264usize, 72usize);
     op_ticks[94usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11029,7 +11095,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_287, t_288, t_289, 1728usize);
+    binary_mul(t_287, t_288, t_289, 883008usize);
     op_ticks[96usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11048,14 +11114,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     depthwise_conv2d(
         t_289,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
         t_42,
         [1usize, 3usize, 3usize, 72usize],
         Some(t_41),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_290,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
     );
     op_ticks[97usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -11090,7 +11156,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_290, t_291, t_292, 1728usize);
+    binary_mul(t_290, t_291, t_292, 883008usize);
     op_ticks[99usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11103,13 +11169,13 @@ pub fn forward_profiled(
     }
     let scratch_65_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6048usize),
-            1728usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
+            883008usize,
         )
     };
     let scratch_65_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
             2592usize,
         )
     };
@@ -11122,7 +11188,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     im2col_padded(
         t_292,
-        [1usize, 24usize, 1usize, 72usize],
+        [511usize, 24usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -11145,7 +11211,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_65_0, scratch_65_1, t_293, 6usize, 18usize, 9usize);
+    matmul_bt_tiled(scratch_65_0, scratch_65_1, t_293, 3066usize, 18usize, 9usize);
     op_ticks[101usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11162,7 +11228,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    bias_add(t_293, t_117, 24usize, 36usize);
+    bias_add(t_293, t_117, 12264usize, 36usize);
     op_ticks[102usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11179,7 +11245,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_add(t_293, t_286, t_294, 864usize);
+    binary_add(t_293, t_286, t_294, 441504usize);
     op_ticks[103usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11193,12 +11259,12 @@ pub fn forward_profiled(
     let scratch_67_0 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let scratch_67_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415040usize),
             10368usize,
         )
     };
@@ -11211,7 +11277,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     im2col_padded(
         t_294,
-        [1usize, 24usize, 1usize, 36usize],
+        [511usize, 24usize, 1usize, 36usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -11234,7 +11300,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_67_0, scratch_67_1, t_295, 6usize, 9usize, 72usize);
+    matmul_bt_tiled(scratch_67_0, scratch_67_1, t_295, 3066usize, 9usize, 72usize);
     op_ticks[105usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11251,7 +11317,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    bias_add(t_295, t_40, 24usize, 288usize);
+    bias_add(t_295, t_40, 12264usize, 288usize);
     op_ticks[106usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11285,7 +11351,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_295, t_296, t_297, 6912usize);
+    binary_mul(t_295, t_296, t_297, 3532032usize);
     op_ticks[108usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11304,9 +11370,9 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     pad(
         t_297,
-        [1usize, 24usize, 1usize, 288usize],
+        [511usize, 24usize, 1usize, 288usize],
         t_298,
-        [1usize, 26usize, 3usize, 288usize],
+        [511usize, 26usize, 3usize, 288usize],
         [[0usize, 0usize], [1usize, 1usize], [1usize, 1usize], [0usize, 0usize]],
     );
     op_ticks[109usize] += get_tick() - __t0;
@@ -11327,14 +11393,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     depthwise_conv2d(
         t_298,
-        [1usize, 26usize, 3usize, 288usize],
+        [511usize, 26usize, 3usize, 288usize],
         t_39,
         [1usize, 3usize, 3usize, 288usize],
         Some(t_38),
         [2usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_299,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
     );
     op_ticks[110usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -11369,7 +11435,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_299, t_300, t_301, 3456usize);
+    binary_mul(t_299, t_300, t_301, 1766016usize);
     op_ticks[112usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11538,13 +11604,13 @@ pub fn forward_profiled(
     }
     let scratch_82_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(24828usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766652usize),
+            1766016usize,
         )
     };
     let scratch_82_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4092usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3974172usize),
             20736usize,
         )
     };
@@ -11557,7 +11623,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     im2col_padded(
         t_312,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -11580,7 +11646,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_82_0, scratch_82_1, t_313, 3usize, 72usize, 18usize);
+    matmul_bt_tiled(scratch_82_0, scratch_82_1, t_313, 1533usize, 72usize, 18usize);
     op_ticks[122usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11597,7 +11663,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    bias_add(t_313, t_119, 12usize, 72usize);
+    bias_add(t_313, t_119, 6132usize, 72usize);
     op_ticks[123usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11610,13 +11676,13 @@ pub fn forward_profiled(
     }
     let scratch_83_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(24192usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766016usize),
+            441504usize,
         )
     };
     let scratch_83_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
             20736usize,
         )
     };
@@ -11629,7 +11695,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     im2col_padded(
         t_313,
-        [1usize, 12usize, 1usize, 72usize],
+        [511usize, 12usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -11652,7 +11718,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_83_0, scratch_83_1, t_314, 3usize, 18usize, 72usize);
+    matmul_bt_tiled(scratch_83_0, scratch_83_1, t_314, 1533usize, 18usize, 72usize);
     op_ticks[125usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11669,7 +11735,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    bias_add(t_314, t_37, 12usize, 288usize);
+    bias_add(t_314, t_37, 6132usize, 288usize);
     op_ticks[126usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11703,7 +11769,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_314, t_315, t_316, 3456usize);
+    binary_mul(t_314, t_315, t_316, 1766016usize);
     op_ticks[128usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11722,14 +11788,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     depthwise_conv2d(
         t_316,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         t_36,
         [1usize, 3usize, 3usize, 288usize],
         Some(t_35),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_317,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
     );
     op_ticks[129usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -11764,7 +11830,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_317, t_318, t_319, 3456usize);
+    binary_mul(t_317, t_318, t_319, 1766016usize);
     op_ticks[131usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11933,13 +11999,13 @@ pub fn forward_profiled(
     }
     let scratch_97_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(24828usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1766652usize),
+            1766016usize,
         )
     };
     let scratch_97_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4092usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415676usize),
             20736usize,
         )
     };
@@ -11952,7 +12018,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     im2col_padded(
         t_330,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -11975,7 +12041,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_97_0, scratch_97_1, t_331, 3usize, 72usize, 18usize);
+    matmul_bt_tiled(scratch_97_0, scratch_97_1, t_331, 1533usize, 72usize, 18usize);
     op_ticks[141usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -11992,7 +12058,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    bias_add(t_331, t_119, 12usize, 72usize);
+    bias_add(t_331, t_119, 6132usize, 72usize);
     op_ticks[142usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12009,7 +12075,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_add(t_331, t_313, t_332, 864usize);
+    binary_add(t_331, t_313, t_332, 441504usize);
     op_ticks[143usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12022,13 +12088,13 @@ pub fn forward_profiled(
     }
     let scratch_99_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25056usize),
-            864usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2207520usize),
+            441504usize,
         )
     };
     let scratch_99_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
             20736usize,
         )
     };
@@ -12041,7 +12107,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     im2col_padded(
         t_332,
-        [1usize, 12usize, 1usize, 72usize],
+        [511usize, 12usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -12064,7 +12130,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_99_0, scratch_99_1, t_333, 3usize, 18usize, 72usize);
+    matmul_bt_tiled(scratch_99_0, scratch_99_1, t_333, 1533usize, 18usize, 72usize);
     op_ticks[145usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12081,7 +12147,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    bias_add(t_333, t_34, 12usize, 288usize);
+    bias_add(t_333, t_34, 6132usize, 288usize);
     op_ticks[146usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12115,7 +12181,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_333, t_334, t_335, 3456usize);
+    binary_mul(t_333, t_334, t_335, 1766016usize);
     op_ticks[148usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12134,14 +12200,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     depthwise_conv2d(
         t_335,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         t_33,
         [1usize, 3usize, 3usize, 288usize],
         Some(t_32),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_336,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
     );
     op_ticks[149usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -12176,7 +12242,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_336, t_337, t_338, 3456usize);
+    binary_mul(t_336, t_337, t_338, 1766016usize);
     op_ticks[151usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12345,13 +12411,13 @@ pub fn forward_profiled(
     }
     let scratch_113_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25692usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2208156usize),
+            1766016usize,
         )
     };
     let scratch_113_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4956usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415676usize),
             20736usize,
         )
     };
@@ -12364,7 +12430,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     im2col_padded(
         t_349,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -12387,7 +12453,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_113_0, scratch_113_1, t_350, 3usize, 72usize, 18usize);
+    matmul_bt_tiled(scratch_113_0, scratch_113_1, t_350, 1533usize, 72usize, 18usize);
     op_ticks[161usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12404,7 +12470,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    bias_add(t_350, t_119, 12usize, 72usize);
+    bias_add(t_350, t_119, 6132usize, 72usize);
     op_ticks[162usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12421,7 +12487,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_add(t_350, t_332, t_351, 864usize);
+    binary_add(t_350, t_332, t_351, 441504usize);
     op_ticks[163usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12435,12 +12501,12 @@ pub fn forward_profiled(
     let scratch_115_0 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let scratch_115_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
             20736usize,
         )
     };
@@ -12453,7 +12519,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     im2col_padded(
         t_351,
-        [1usize, 12usize, 1usize, 72usize],
+        [511usize, 12usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -12476,7 +12542,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_115_0, scratch_115_1, t_352, 3usize, 18usize, 72usize);
+    matmul_bt_tiled(scratch_115_0, scratch_115_1, t_352, 1533usize, 18usize, 72usize);
     op_ticks[165usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12493,7 +12559,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    bias_add(t_352, t_31, 12usize, 288usize);
+    bias_add(t_352, t_31, 6132usize, 288usize);
     op_ticks[166usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12527,7 +12593,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_352, t_353, t_354, 3456usize);
+    binary_mul(t_352, t_353, t_354, 1766016usize);
     op_ticks[168usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12546,14 +12612,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     depthwise_conv2d(
         t_354,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         t_30,
         [1usize, 3usize, 3usize, 288usize],
         Some(t_29),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_355,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
     );
     op_ticks[169usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -12588,7 +12654,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_355, t_356, t_357, 3456usize);
+    binary_mul(t_355, t_356, t_357, 1766016usize);
     op_ticks[171usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12757,13 +12823,13 @@ pub fn forward_profiled(
     }
     let scratch_129_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25920usize),
-            3456usize,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2649024usize),
+            1766016usize,
         )
     };
     let scratch_129_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4415040usize),
             20736usize,
         )
     };
@@ -12776,7 +12842,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     im2col_padded(
         t_368,
-        [1usize, 12usize, 1usize, 288usize],
+        [511usize, 12usize, 1usize, 288usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -12799,7 +12865,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_129_0, scratch_129_1, t_369, 3usize, 72usize, 18usize);
+    matmul_bt_tiled(scratch_129_0, scratch_129_1, t_369, 1533usize, 72usize, 18usize);
     op_ticks[181usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12816,7 +12882,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    bias_add(t_369, t_119, 12usize, 72usize);
+    bias_add(t_369, t_119, 6132usize, 72usize);
     op_ticks[182usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12833,7 +12899,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_add(t_369, t_351, t_370, 864usize);
+    binary_add(t_369, t_351, t_370, 441504usize);
     op_ticks[183usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12847,12 +12913,12 @@ pub fn forward_profiled(
     let scratch_131_0 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            864usize,
+            441504usize,
         )
     };
     let scratch_131_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(441504usize),
             62208usize,
         )
     };
@@ -12865,7 +12931,7 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     im2col_padded(
         t_370,
-        [1usize, 12usize, 1usize, 72usize],
+        [511usize, 12usize, 1usize, 72usize],
         [1usize, 1usize],
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
@@ -12888,7 +12954,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    matmul_bt_tiled(scratch_131_0, scratch_131_1, t_371, 3usize, 18usize, 216usize);
+    matmul_bt_tiled(scratch_131_0, scratch_131_1, t_371, 1533usize, 18usize, 216usize);
     op_ticks[185usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12905,7 +12971,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    bias_add(t_371, t_28, 12usize, 864usize);
+    bias_add(t_371, t_28, 6132usize, 864usize);
     op_ticks[186usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12939,7 +13005,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_371, t_372, t_373, 10368usize);
+    binary_mul(t_371, t_372, t_373, 5298048usize);
     op_ticks[188usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -12958,9 +13024,9 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     pad(
         t_373,
-        [1usize, 12usize, 1usize, 864usize],
+        [511usize, 12usize, 1usize, 864usize],
         t_374,
-        [1usize, 14usize, 3usize, 864usize],
+        [511usize, 14usize, 3usize, 864usize],
         [[0usize, 0usize], [1usize, 1usize], [1usize, 1usize], [0usize, 0usize]],
     );
     op_ticks[189usize] += get_tick() - __t0;
@@ -12981,14 +13047,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     depthwise_conv2d(
         t_374,
-        [1usize, 14usize, 3usize, 864usize],
+        [511usize, 14usize, 3usize, 864usize],
         t_27,
         [1usize, 3usize, 3usize, 864usize],
         Some(t_26),
         [2usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_375,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[190usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -13023,7 +13089,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_375, t_376, t_377, 5184usize);
+    binary_mul(t_375, t_376, t_377, 2649024usize);
     op_ticks[192usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -13198,14 +13264,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_388,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_89,
         [108usize, 1usize, 1usize, 864usize],
         Some(t_88),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_389,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
     );
     op_ticks[201usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -13225,14 +13291,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_389,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
         t_87,
         [864usize, 1usize, 1usize, 108usize],
         Some(t_25),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_390,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[202usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -13267,7 +13333,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_390, t_391, t_392, 5184usize);
+    binary_mul(t_390, t_391, t_392, 2649024usize);
     op_ticks[204usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -13286,14 +13352,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     depthwise_conv2d(
         t_392,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_24,
         [1usize, 3usize, 3usize, 864usize],
         Some(t_23),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_393,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[205usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -13328,7 +13394,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_393, t_394, t_395, 5184usize);
+    binary_mul(t_393, t_394, t_395, 2649024usize);
     op_ticks[207usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -13503,14 +13569,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_406,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_84,
         [108usize, 1usize, 1usize, 864usize],
         Some(t_88),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_407,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
     );
     op_ticks[216usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -13528,7 +13594,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_add(t_407, t_389, t_408, 648usize);
+    binary_add(t_407, t_389, t_408, 331128usize);
     op_ticks[217usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -13547,14 +13613,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_408,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
         t_83,
         [864usize, 1usize, 1usize, 108usize],
         Some(t_22),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_409,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[218usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -13589,7 +13655,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_409, t_410, t_411, 5184usize);
+    binary_mul(t_409, t_410, t_411, 2649024usize);
     op_ticks[220usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -13608,14 +13674,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     depthwise_conv2d(
         t_411,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_21,
         [1usize, 3usize, 3usize, 864usize],
         Some(t_20),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_412,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[221usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -13650,7 +13716,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_412, t_413, t_414, 5184usize);
+    binary_mul(t_412, t_413, t_414, 2649024usize);
     op_ticks[223usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -13825,14 +13891,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_425,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_80,
         [108usize, 1usize, 1usize, 864usize],
         Some(t_88),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_426,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
     );
     op_ticks[232usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -13850,7 +13916,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_add(t_426, t_408, t_427, 648usize);
+    binary_add(t_426, t_408, t_427, 331128usize);
     op_ticks[233usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -13869,14 +13935,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_427,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
         t_79,
         [864usize, 1usize, 1usize, 108usize],
         Some(t_19),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_428,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[234usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -13911,7 +13977,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_428, t_429, t_430, 5184usize);
+    binary_mul(t_428, t_429, t_430, 2649024usize);
     op_ticks[236usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -13930,14 +13996,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     depthwise_conv2d(
         t_430,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_18,
         [1usize, 3usize, 3usize, 864usize],
         Some(t_17),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_431,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[237usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -13972,7 +14038,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_431, t_432, t_433, 5184usize);
+    binary_mul(t_431, t_432, t_433, 2649024usize);
     op_ticks[239usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -14147,14 +14213,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_444,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_76,
         [108usize, 1usize, 1usize, 864usize],
         Some(t_88),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_445,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
     );
     op_ticks[248usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -14172,7 +14238,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_add(t_445, t_427, t_446, 648usize);
+    binary_add(t_445, t_427, t_446, 331128usize);
     op_ticks[249usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -14191,14 +14257,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_446,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
         t_75,
         [864usize, 1usize, 1usize, 108usize],
         Some(t_16),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_447,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[250usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -14233,7 +14299,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_447, t_448, t_449, 5184usize);
+    binary_mul(t_447, t_448, t_449, 2649024usize);
     op_ticks[252usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -14252,14 +14318,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     depthwise_conv2d(
         t_449,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_15,
         [1usize, 3usize, 3usize, 864usize],
         Some(t_14),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_450,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
     );
     op_ticks[253usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -14294,7 +14360,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_450, t_451, t_452, 5184usize);
+    binary_mul(t_450, t_451, t_452, 2649024usize);
     op_ticks[255usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -14469,14 +14535,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_463,
-        [1usize, 6usize, 1usize, 864usize],
+        [511usize, 6usize, 1usize, 864usize],
         t_72,
         [108usize, 1usize, 1usize, 864usize],
         Some(t_88),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_464,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
     );
     op_ticks[264usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -14494,7 +14560,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_add(t_464, t_446, t_465, 648usize);
+    binary_add(t_464, t_446, t_465, 331128usize);
     op_ticks[265usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -14513,14 +14579,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_465,
-        [1usize, 6usize, 1usize, 108usize],
+        [511usize, 6usize, 1usize, 108usize],
         t_71,
         [1536usize, 1usize, 1usize, 108usize],
         Some(t_13),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_466,
-        [1usize, 6usize, 1usize, 1536usize],
+        [511usize, 6usize, 1usize, 1536usize],
     );
     op_ticks[266usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -14555,7 +14621,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_466, t_467, t_468, 9216usize);
+    binary_mul(t_466, t_467, t_468, 4709376usize);
     op_ticks[268usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -14574,9 +14640,9 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     pad(
         t_468,
-        [1usize, 6usize, 1usize, 1536usize],
+        [511usize, 6usize, 1usize, 1536usize],
         t_469,
-        [1usize, 8usize, 3usize, 1536usize],
+        [511usize, 8usize, 3usize, 1536usize],
         [[0usize, 0usize], [1usize, 1usize], [1usize, 1usize], [0usize, 0usize]],
     );
     op_ticks[269usize] += get_tick() - __t0;
@@ -14597,14 +14663,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     depthwise_conv2d(
         t_469,
-        [1usize, 8usize, 3usize, 1536usize],
+        [511usize, 8usize, 3usize, 1536usize],
         t_12,
         [1usize, 3usize, 3usize, 1536usize],
         Some(t_11),
         [2usize, 2usize],
         [0usize, 0usize, 0usize, 0usize],
         t_470,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     op_ticks[270usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -14639,7 +14705,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_470, t_471, t_472, 4608usize);
+    binary_mul(t_470, t_471, t_472, 2354688usize);
     op_ticks[272usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -14814,14 +14880,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_483,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_66,
         [192usize, 1usize, 1usize, 1536usize],
         Some(t_65),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_484,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
     );
     op_ticks[281usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -14841,14 +14907,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_484,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
         t_64,
         [1536usize, 1usize, 1usize, 192usize],
         Some(t_10),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_485,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     op_ticks[282usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -14883,7 +14949,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_485, t_486, t_487, 4608usize);
+    binary_mul(t_485, t_486, t_487, 2354688usize);
     op_ticks[284usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -14902,14 +14968,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     depthwise_conv2d(
         t_487,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_9,
         [1usize, 3usize, 3usize, 1536usize],
         Some(t_8),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_488,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     op_ticks[285usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -14944,7 +15010,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_488, t_489, t_490, 4608usize);
+    binary_mul(t_488, t_489, t_490, 2354688usize);
     op_ticks[287usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -15119,14 +15185,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_501,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_61,
         [192usize, 1usize, 1usize, 1536usize],
         Some(t_65),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_502,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
     );
     op_ticks[296usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -15144,7 +15210,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_add(t_502, t_484, t_503, 576usize);
+    binary_add(t_502, t_484, t_503, 294336usize);
     op_ticks[297usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -15163,14 +15229,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_503,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
         t_60,
         [1536usize, 1usize, 1usize, 192usize],
         Some(t_7),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_504,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     op_ticks[298usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -15205,7 +15271,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_504, t_505, t_506, 4608usize);
+    binary_mul(t_504, t_505, t_506, 2354688usize);
     op_ticks[300usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -15224,14 +15290,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     depthwise_conv2d(
         t_506,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_6,
         [1usize, 3usize, 3usize, 1536usize],
         Some(t_5),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_507,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     op_ticks[301usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -15266,7 +15332,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_507, t_508, t_509, 4608usize);
+    binary_mul(t_507, t_508, t_509, 2354688usize);
     op_ticks[303usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -15441,14 +15507,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_520,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_57,
         [192usize, 1usize, 1usize, 1536usize],
         Some(t_65),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_521,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
     );
     op_ticks[312usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -15466,7 +15532,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_add(t_521, t_503, t_522, 576usize);
+    binary_add(t_521, t_503, t_522, 294336usize);
     op_ticks[313usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -15485,14 +15551,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_522,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
         t_56,
         [1536usize, 1usize, 1usize, 192usize],
         Some(t_4),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_523,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     op_ticks[314usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -15527,7 +15593,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_523, t_524, t_525, 4608usize);
+    binary_mul(t_523, t_524, t_525, 2354688usize);
     op_ticks[316usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -15546,14 +15612,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     depthwise_conv2d(
         t_525,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_3,
         [1usize, 3usize, 3usize, 1536usize],
         Some(t_2),
         [1usize, 1usize],
         [1usize, 1usize, 1usize, 1usize],
         t_526,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
     );
     op_ticks[317usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -15588,7 +15654,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_mul(t_526, t_527, t_528, 4608usize);
+    binary_mul(t_526, t_527, t_528, 2354688usize);
     op_ticks[319usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -15763,14 +15829,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d(
         t_539,
-        [1usize, 3usize, 1usize, 1536usize],
+        [511usize, 3usize, 1usize, 1536usize],
         t_53,
         [192usize, 1usize, 1usize, 1536usize],
         Some(t_65),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_540,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
     );
     op_ticks[328usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
@@ -15788,7 +15854,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    binary_add(t_540, t_522, t_541, 576usize);
+    binary_add(t_540, t_522, t_541, 294336usize);
     op_ticks[329usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -15841,14 +15907,14 @@ pub fn forward_profiled(
     let __t0 = get_tick();
     conv2d_relu(
         t_543,
-        [1usize, 3usize, 1usize, 192usize],
+        [511usize, 3usize, 1usize, 192usize],
         t_52,
         [1024usize, 3usize, 3usize, 192usize],
         Some(t_1),
         [1usize, 1usize],
         [0usize, 0usize, 0usize, 0usize],
         t_544,
-        [1usize, 1usize, 1usize, 1024usize],
+        [511usize, 1usize, 1usize, 1024usize],
     );
     op_ticks[332usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]

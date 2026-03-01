@@ -415,7 +415,6 @@ fn lower_pool2d(
         }
         _ => [0, 0, 0, 0],
     };
-
     Ok(PspOp::Pool2d {
         pool_type,
         input,

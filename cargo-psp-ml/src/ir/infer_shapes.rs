@@ -407,6 +407,8 @@ pub fn infer(model: &mut PspModel) {
                     if out_h > 0 && out_w > 0 {
                         let shape = vec![in_s[0], out_h, out_w, w_s[0]];
                         shape_changes += set_shape(model, *output, shape);
+                    } else {
+                        shape_changes += propagate_batch(model, *input, *output);
                     }
                 }
             }
@@ -418,6 +420,8 @@ pub fn infer(model: &mut PspModel) {
                     if out_h > 0 && out_w > 0 {
                         let shape = vec![in_s[0], out_h, out_w, in_s[3]];
                         shape_changes += set_shape(model, *output, shape);
+                    } else {
+                        shape_changes += propagate_batch(model, *input, *output);
                     }
                 }
             }
@@ -429,6 +433,8 @@ pub fn infer(model: &mut PspModel) {
                     if out_h > 0 && out_w > 0 {
                         let shape = vec![in_s[0], out_h, out_w, in_s[3]];
                         shape_changes += set_shape(model, *output, shape);
+                    } else {
+                        shape_changes += propagate_batch(model, *input, *output);
                     }
                 }
             }
@@ -508,6 +514,20 @@ fn set_shape(model: &mut PspModel, id: usize, shape: Vec<usize>) -> usize {
         eprintln!("  t{}: {:?} -> {:?}", id, old, shape);
         model.graph.tensor_mut(id).shape = shape;
         1
+    } else {
+        0
+    }
+}
+
+/// When conv_dim fails (stale padding after upstream shape changes), we can't
+/// recompute H/W but can still propagate the batch dimension.
+fn propagate_batch(model: &mut PspModel, input: usize, output: usize) -> usize {
+    let in_s = &model.graph.tensor(input).shape;
+    let out_s = &model.graph.tensor(output).shape;
+    if !out_s.is_empty() && !in_s.is_empty() && out_s[0] != in_s[0] {
+        let mut shape = out_s.clone();
+        shape[0] = in_s[0];
+        set_shape(model, output, shape)
     } else {
         0
     }

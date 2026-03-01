@@ -592,6 +592,7 @@ fn render_kernel_call(
             output,
             out_features,
             has_relu,
+            batch_size,
         } => {
             let input_expr = writer.read(*input);
             let weight_expr = writer.read(*weights);
@@ -603,17 +604,27 @@ fn render_kernel_call(
                 }
                 None => quote!(None),
             };
-            if *has_relu {
+            let fc_fn = if *has_relu {
+                quote!(fully_connected_relu)
+            } else {
+                quote!(fully_connected)
+            };
+            if *batch_size > 1 {
+                let batch = *batch_size;
                 quote! {
-                    fully_connected_relu(
-                        #input_expr, #in_features,
-                        #weight_expr, #bias_tok,
-                        #output_expr, #out_features
-                    );
+                    for _batch_idx in 0..#batch {
+                        let _in_off = _batch_idx * #in_features;
+                        let _out_off = _batch_idx * #out_features;
+                        #fc_fn(
+                            &#input_expr[_in_off.._in_off + #in_features], #in_features,
+                            #weight_expr, #bias_tok,
+                            &mut #output_expr[_out_off.._out_off + #out_features], #out_features
+                        );
+                    }
                 }
             } else {
                 quote! {
-                    fully_connected(
+                    #fc_fn(
                         #input_expr, #in_features,
                         #weight_expr, #bias_tok,
                         #output_expr, #out_features

@@ -292,8 +292,10 @@ fn lower_ops(
                 output,
                 fused_activation,
             } => {
-                let in_features = graph.tensor(*input).shape.iter().product::<usize>();
-                let out_features = graph.tensor(*output).shape.iter().product::<usize>();
+                let in_shape = &graph.tensor(*input).shape;
+                let in_features = *in_shape.last().unwrap_or(&0);
+                let batch_size: usize = in_shape[..in_shape.len() - 1].iter().product::<usize>().max(1);
+                let out_features = *graph.tensor(*weights).shape.first().unwrap_or(&0);
                 let has_relu = matches!(fused_activation.fused_activation, Some(Activation::Relu));
 
                 if let Some(Activation::Relu6) = fused_activation.fused_activation {
@@ -318,6 +320,7 @@ fn lower_ops(
                             output: *output,
                             out_features,
                             has_relu,
+                            batch_size,
                         }],
                     }],
                 }

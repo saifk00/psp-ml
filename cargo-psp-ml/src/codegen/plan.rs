@@ -157,6 +157,7 @@ pub enum KernelCall {
         output: TensorId,
         out_features: usize,
         has_relu: bool,
+        batch_size: usize,
     },
     ElementWise {
         op: BinaryOp,
