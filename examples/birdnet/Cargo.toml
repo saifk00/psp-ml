@@ -1,0 +1,18 @@
+[package]
+name = "birdnet"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "birdnet"
+path = "src/main.rs"
+
+[features]
+default = []
+local = []
+
+[dependencies]
+psp-ml = { path = "../../psp-ml" }
+
+[target.'cfg(target_os = "psp")'.dependencies]
+psp = "0.3"

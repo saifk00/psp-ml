@@ -2,6 +2,12 @@
 //!
 //! Evaluates ops whose inputs are all `TensorKind::Constant` (e.g. INT32 shape
 //! computation subgraphs), promotes their outputs to constants, and removes the ops.
+//!
+//! Shape contract: when this pass stores a folded result via `store_i32`, it also
+//! sets the output tensor's shape to match the data. This is correct because the
+//! folded op is removed — its output becomes a plain constant tensor whose shape
+//! is the data length. The downstream `infer_shapes` pass only handles ops that
+//! survive folding.
 
 use super::graph::{DType, Graph, TensorKind};
 use super::psp::{BinaryOp, PspModel, PspOp, ReduceOp};
@@ -45,7 +51,7 @@ pub fn fold(model: &mut PspModel) {
                 if *axis == 0 {
                     let mut result = Vec::new();
                     for id in inputs {
-                        result.extend(read_i32(&model.model_data, &model.graph, *id));
+                        result.extend(model.read_i32_const(*id).unwrap());
                     }
                     store_i32(&mut model.model_data, &mut model.graph, *output, &result);
                     to_remove.push(op_idx);
@@ -61,10 +67,10 @@ pub fn fold(model: &mut PspModel) {
                 end_mask,
                 shrink_axis_mask,
             } => {
-                let data = read_i32(&model.model_data, &model.graph, *input);
-                let begins = read_i32(&model.model_data, &model.graph, *begin);
-                let ends = read_i32(&model.model_data, &model.graph, *end);
-                let strs = read_i32(&model.model_data, &model.graph, *strides);
+                let data = model.read_i32_const(*input).unwrap();
+                let begins = model.read_i32_const(*begin).unwrap();
+                let ends = model.read_i32_const(*end).unwrap();
+                let strs = model.read_i32_const(*strides).unwrap();
 
                 if let Some(result) =
                     eval_strided_slice(&data, &begins, &ends, &strs, *begin_mask, *end_mask, *shrink_axis_mask)
@@ -76,7 +82,7 @@ pub fn fold(model: &mut PspModel) {
             PspOp::Concatenation { inputs, output, .. } => {
                 let mut result = Vec::new();
                 for id in inputs {
-                    result.extend(read_i32(&model.model_data, &model.graph, *id));
+                    result.extend(model.read_i32_const(*id).unwrap());
                 }
                 store_i32(&mut model.model_data, &mut model.graph, *output, &result);
                 to_remove.push(op_idx);
@@ -88,8 +94,8 @@ pub fn fold(model: &mut PspModel) {
                 axis,
             } => {
                 if *axis == 0 {
-                    let data = read_i32(&model.model_data, &model.graph, *input);
-                    let idxs = read_i32(&model.model_data, &model.graph, *indices);
+                    let data = model.read_i32_const(*input).unwrap();
+                    let idxs = model.read_i32_const(*indices).unwrap();
                     let result: Vec<i32> = idxs.iter().map(|&i| data[i as usize]).collect();
                     store_i32(&mut model.model_data, &mut model.graph, *output, &result);
                     to_remove.push(op_idx);
@@ -104,7 +110,7 @@ pub fn fold(model: &mut PspModel) {
                 if model.graph.tensor(*input).dtype != DType::I32 {
                     continue;
                 }
-                let data = read_i32(&model.model_data, &model.graph, *input);
+                let data = model.read_i32_const(*input).unwrap();
                 let result = match reduce_op {
                     ReduceOp::Prod => data.iter().copied().product::<i32>(),
                     ReduceOp::Max => data.iter().copied().max().unwrap_or(0),
@@ -120,9 +126,9 @@ pub fn fold(model: &mut PspModel) {
                 delta,
                 output,
             } => {
-                let s = read_i32(&model.model_data, &model.graph, *start)[0];
-                let l = read_i32(&model.model_data, &model.graph, *limit)[0];
-                let d = read_i32(&model.model_data, &model.graph, *delta)[0];
+                let s = model.read_i32_const(*start).unwrap()[0];
+                let l = model.read_i32_const(*limit).unwrap()[0];
+                let d = model.read_i32_const(*delta).unwrap()[0];
                 let mut result = Vec::new();
                 let mut v = s;
                 while (d > 0 && v < l) || (d < 0 && v > l) {
@@ -138,8 +144,8 @@ pub fn fold(model: &mut PspModel) {
                 outputs,
                 ..
             } => {
-                let data = read_i32(&model.model_data, &model.graph, *input);
-                let splits = read_i32(&model.model_data, &model.graph, *size_splits);
+                let data = model.read_i32_const(*input).unwrap();
+                let splits = model.read_i32_const(*size_splits).unwrap();
                 let mut offset = 0usize;
                 for (i, &sz) in splits.iter().enumerate() {
                     let sz = sz as usize;
@@ -166,13 +172,13 @@ pub fn fold(model: &mut PspModel) {
                 if model.graph.tensor(*input_a).dtype != DType::I32 {
                     continue;
                 }
-                let a = read_i32(&model.model_data, &model.graph, *input_a);
-                let b = read_i32(&model.model_data, &model.graph, *input_b);
+                let a = model.read_i32_const(*input_a).unwrap();
+                let b = model.read_i32_const(*input_b).unwrap();
                 let result = eval_binary_i32(&a, &b, *binary_op);
                 store_i32(&mut model.model_data, &mut model.graph, *output, &result);
                 to_remove.push(op_idx);
             }
-            PspOp::Reshape { input, output } => {
+            PspOp::Reshape { input, output, .. } => {
                 if model.graph.tensor(*input).dtype != DType::I32 {
                     continue;
                 }
@@ -204,6 +210,9 @@ pub fn fold(model: &mut PspModel) {
 fn store_i32(data: &mut Vec<u8>, graph: &mut Graph<PspOp>, id: usize, vals: &[i32]) {
     let bytes: Vec<u8> = vals.iter().flat_map(|v| v.to_le_bytes()).collect();
     store_bytes(data, graph, id, &bytes);
+    // Set shape for the folded constant (the op producing it is removed, so
+    // infer_shapes won't touch it — this is the authoritative shape).
+    graph.tensor_mut(id).shape = vec![vals.len()];
 }
 
 fn store_bytes(data: &mut Vec<u8>, graph: &mut Graph<PspOp>, id: usize, bytes: &[u8]) {
@@ -219,18 +228,6 @@ fn store_bytes(data: &mut Vec<u8>, graph: &mut Graph<PspOp>, id: usize, bytes: &
     };
 }
 
-fn read_i32(data: &[u8], graph: &Graph<PspOp>, id: usize) -> Vec<i32> {
-    let t = graph.tensor(id);
-    if let TensorKind::Constant { offset, len } = t.kind {
-        data[offset..offset + len]
-            .chunks_exact(4)
-            .map(|c| i32::from_le_bytes(c.try_into().unwrap()))
-            .collect()
-    } else {
-        panic!("expected constant tensor {}", id)
-    }
-}
-
 fn eval_binary_i32(a: &[i32], b: &[i32], op: BinaryOp) -> Vec<i32> {
     let op_fn: fn(i32, i32) -> i32 = match op {
         BinaryOp::Add => |a, b| a + b,
@@ -241,15 +238,16 @@ fn eval_binary_i32(a: &[i32], b: &[i32], op: BinaryOp) -> Vec<i32> {
         BinaryOp::Max => |a, b| a.max(b),
         BinaryOp::Pow => |a, b| a.pow(b as u32),
     };
-    if b.len() == a.len() {
+    if a.len() == b.len() {
         a.iter().zip(b.iter()).map(|(&x, &y)| op_fn(x, y)).collect()
     } else if b.len() == 1 {
         a.iter().map(|&x| op_fn(x, b[0])).collect()
+    } else if a.len() == 1 {
+        b.iter().map(|&y| op_fn(a[0], y)).collect()
     } else {
-        a.iter()
-            .enumerate()
-            .map(|(i, &x)| op_fn(x, b[i % b.len()]))
-            .collect()
+        // General broadcast: output length is the larger of the two
+        let n = a.len().max(b.len());
+        (0..n).map(|i| op_fn(a[i % a.len()], b[i % b.len()])).collect()
     }
 }
 
@@ -326,7 +324,7 @@ mod tests {
     }
 
     fn read_result(model: &PspModel, id: usize) -> Vec<i32> {
-        read_i32(&model.model_data, &model.graph, id)
+        model.read_i32_const(id).unwrap()
     }
 
     #[test]

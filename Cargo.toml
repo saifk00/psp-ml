@@ -6,6 +6,8 @@ members = [
     "audio-recorder",
     "examples/mnist-bench",
     "examples/hello-psp",
+    "examples/birdnet",
+    "examples/meminfo",
 ]
 default-members = [
     "psp-ml",

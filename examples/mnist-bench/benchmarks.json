@@ -5,21 +5,22 @@
   },
   "inference": {
     "num_images": 100,
-    "total_us": 2243579,
-    "per_image_us": 22435,
+    "total_us": 2289183,
+    "per_image_us": 22891,
     "correct": 99,
     "total": 100
   },
   "ops": [
-    { "index": 0, "name": "im2col", "total_us": 450601, "calls": 100 },
-    { "index": 1, "name": "matmul", "total_us": 122244, "calls": 100 },
-    { "index": 2, "name": "bias_add_relu", "total_us": 77543, "calls": 100 },
-    { "index": 3, "name": "max_pool2d", "total_us": 105081, "calls": 100 },
-    { "index": 4, "name": "im2col", "total_us": 408345, "calls": 100 },
-    { "index": 5, "name": "matmul", "total_us": 458161, "calls": 100 },
-    { "index": 6, "name": "bias_add_relu", "total_us": 37165, "calls": 100 },
-    { "index": 7, "name": "max_pool2d", "total_us": 47344, "calls": 100 },
-    { "index": 8, "name": "fully_connected_relu", "total_us": 450483, "calls": 100 },
-    { "index": 9, "name": "fully_connected", "total_us": 5970, "calls": 100 }
+    { "index": 0, "name": "im2col", "total_us": 451533, "calls": 100 },
+    { "index": 1, "name": "matmul", "total_us": 118260, "calls": 100 },
+    { "index": 2, "name": "bias_add_relu", "total_us": 77719, "calls": 100 },
+    { "index": 3, "name": "max_pool2d", "total_us": 134132, "calls": 100 },
+    { "index": 4, "name": "im2col", "total_us": 406909, "calls": 100 },
+    { "index": 5, "name": "matmul", "total_us": 452900, "calls": 100 },
+    { "index": 6, "name": "bias_add_relu", "total_us": 36998, "calls": 100 },
+    { "index": 7, "name": "max_pool2d", "total_us": 61969, "calls": 100 },
+    { "index": 8, "name": "reshape", "total_us": 11765, "calls": 100 },
+    { "index": 9, "name": "fully_connected_relu", "total_us": 450876, "calls": 100 },
+    { "index": 10, "name": "fully_connected", "total_us": 6537, "calls": 100 }
   ]
 }

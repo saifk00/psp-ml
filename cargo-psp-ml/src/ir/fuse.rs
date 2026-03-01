@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use super::graph::{DType, TensorKind};
+use super::graph::DType;
 use super::psp::{PspModel, PspOp};
 use crate::ir::graph::TensorId;
 
@@ -28,21 +28,6 @@ fn consumer_map(model: &PspModel) -> HashMap<TensorId, Vec<usize>> {
     map
 }
 
-/// Read an INT32 constant tensor as a Vec<i32>.
-fn read_i32(model: &PspModel, id: TensorId) -> Option<Vec<i32>> {
-    let t = model.graph.tensor(id);
-    if let TensorKind::Constant { offset, len } = t.kind {
-        Some(
-            model.model_data[offset..offset + len]
-                .chunks_exact(4)
-                .map(|c| i32::from_le_bytes(c.try_into().unwrap()))
-                .collect(),
-        )
-    } else {
-        None
-    }
-}
-
 /// Fuse RFFT2D → Reshape(SQUEEZE) → Cast(C64→F32) into a single Rfft op.
 ///
 /// Returns the number of fused chains.
@@ -62,7 +47,7 @@ fn fuse_rfft(model: &mut PspModel) -> usize {
         };
 
         // Read fft_length constant: expect [1, N] (1D FFT along last dim)
-        let fft_length_vals = match read_i32(model, fft_length_id) {
+        let fft_length_vals = match model.read_i32_const(fft_length_id) {
             Some(v) => v,
             None => continue,
         };

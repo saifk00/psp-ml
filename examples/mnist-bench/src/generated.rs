@@ -32,6 +32,13 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
             784usize,
         )
     };
+    static mut T_14_BUF: Aligned16<784usize> = Aligned16([0.0f32; 784usize]);
+    let t_14 = unsafe {
+        core::slice::from_raw_parts_mut(
+            core::ptr::addr_of_mut!(T_14_BUF) as *mut f32,
+            784usize,
+        )
+    };
     static mut T_15_BUF: Aligned16<64usize> = Aligned16([0.0f32; 64usize]);
     let t_15 = unsafe {
         core::slice::from_raw_parts_mut(
@@ -71,7 +78,8 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
         input,
         [1usize, 28usize, 28usize, 1usize],
         [5usize, 5usize],
-        [2usize, 2usize],
+        [1usize, 1usize],
+        [2usize, 2usize, 2usize, 2usize],
         [28usize, 28usize],
         scratch_0_0,
     );
@@ -83,6 +91,7 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
         [1usize, 28usize, 28usize, 8usize],
         [2usize, 2usize],
         [2usize, 2usize],
+        [0usize, 0usize, 0usize, 0usize],
         t_11,
         [1usize, 14usize, 14usize, 8usize],
     );
@@ -105,7 +114,8 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
         t_11,
         [1usize, 14usize, 14usize, 8usize],
         [5usize, 5usize],
-        [2usize, 2usize],
+        [1usize, 1usize],
+        [2usize, 2usize, 2usize, 2usize],
         [14usize, 14usize],
         scratch_2_0,
     );
@@ -117,11 +127,13 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
         [1usize, 14usize, 14usize, 16usize],
         [2usize, 2usize],
         [2usize, 2usize],
+        [0usize, 0usize, 0usize, 0usize],
         t_13,
         [1usize, 7usize, 7usize, 16usize],
     );
-    fully_connected_relu(t_13, 784usize, t_6, t_1, t_15, 64usize);
-    fully_connected(t_15, 64usize, t_5, t_3, &mut t_16, 10usize);
+    reshape(t_13, t_14);
+    fully_connected_relu(t_14, 784usize, t_6, Some(t_1), t_15, 64usize);
+    fully_connected(t_15, 64usize, t_5, Some(t_3), &mut t_16, 10usize);
     t_16
 }
 /// Instrumented inference: accumulates per-op tick deltas into `op_ticks`.
@@ -155,6 +167,13 @@ pub fn forward_timed(
     let t_13 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_13_BUF) as *mut f32,
+            784usize,
+        )
+    };
+    static mut T_14_BUF: Aligned16<784usize> = Aligned16([0.0f32; 784usize]);
+    let t_14 = unsafe {
+        core::slice::from_raw_parts_mut(
+            core::ptr::addr_of_mut!(T_14_BUF) as *mut f32,
             784usize,
         )
     };
@@ -198,7 +217,8 @@ pub fn forward_timed(
         input,
         [1usize, 28usize, 28usize, 1usize],
         [5usize, 5usize],
-        [2usize, 2usize],
+        [1usize, 1usize],
+        [2usize, 2usize, 2usize, 2usize],
         [28usize, 28usize],
         scratch_0_0,
     );
@@ -216,6 +236,7 @@ pub fn forward_timed(
         [1usize, 28usize, 28usize, 8usize],
         [2usize, 2usize],
         [2usize, 2usize],
+        [0usize, 0usize, 0usize, 0usize],
         t_11,
         [1usize, 14usize, 14usize, 8usize],
     );
@@ -240,7 +261,8 @@ pub fn forward_timed(
         t_11,
         [1usize, 14usize, 14usize, 8usize],
         [5usize, 5usize],
-        [2usize, 2usize],
+        [1usize, 1usize],
+        [2usize, 2usize, 2usize, 2usize],
         [14usize, 14usize],
         scratch_2_0,
     );
@@ -258,19 +280,23 @@ pub fn forward_timed(
         [1usize, 14usize, 14usize, 16usize],
         [2usize, 2usize],
         [2usize, 2usize],
+        [0usize, 0usize, 0usize, 0usize],
         t_13,
         [1usize, 7usize, 7usize, 16usize],
     );
     op_ticks[7usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    fully_connected_relu(t_13, 784usize, t_6, t_1, t_15, 64usize);
+    reshape(t_13, t_14);
     op_ticks[8usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    fully_connected(t_15, 64usize, t_5, t_3, &mut t_16, 10usize);
+    fully_connected_relu(t_14, 784usize, t_6, Some(t_1), t_15, 64usize);
     op_ticks[9usize] += get_tick() - __t0;
+    let __t0 = get_tick();
+    fully_connected(t_15, 64usize, t_5, Some(t_3), &mut t_16, 10usize);
+    op_ticks[10usize] += get_tick() - __t0;
     t_16
 }
-pub const NUM_OPS: usize = 10usize;
+pub const NUM_OPS: usize = 11usize;
 pub const OP_NAMES: [&str; NUM_OPS] = [
     "im2col",
     "matmul",
@@ -280,6 +306,7 @@ pub const OP_NAMES: [&str; NUM_OPS] = [
     "matmul",
     "bias_add_relu",
     "max_pool2d",
+    "reshape",
     "fully_connected_relu",
     "fully_connected",
 ];

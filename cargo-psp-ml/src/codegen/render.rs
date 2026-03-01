@@ -361,6 +361,7 @@ fn render_kernel_call(
             output,
             filter,
             stride,
+            padding,
             pool_type,
         } => {
             let fn_name = match pool_type {
@@ -374,10 +375,12 @@ fn render_kernel_call(
             let output_shape_tok = shape_tokens(&output.shape);
             let [fh, fw] = filter;
             let [sh, sw] = stride;
+            let [pt, pb, pl, pr] = padding;
             quote! {
                 #fn_ident(
                     #input_expr, #input_shape_tok,
                     [#fh, #fw], [#sh, #sw],
+                    [#pt, #pb, #pl, #pr],
                     #output_expr, #output_shape_tok
                 );
             }

@@ -139,6 +139,7 @@ pub enum KernelCall {
         output: Tensor4d,
         filter: [usize; 2],
         stride: [usize; 2],
+        padding: [usize; 4],
         pool_type: PoolType,
     },
     Reshape {

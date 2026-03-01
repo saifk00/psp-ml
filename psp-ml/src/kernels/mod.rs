@@ -212,6 +212,7 @@ pub fn matmul_bt(a: &[f32], b: &[f32], c: &mut [f32], m: usize, k: usize, n: usi
 /// - `b`: [n_tiles*VFPU_Q, k_tiles*VFPU_Q] — padded weights (row-major, 16-byte aligned)
 /// - `c`: [m_tiles*VFPU_Q, n_tiles*VFPU_Q] — output (16-byte aligned)
 #[cfg(target_os = "psp")]
+#[inline(never)]
 pub fn matmul_bt_tiled(
     a: &[f32],
     b: &[f32],
@@ -234,52 +235,60 @@ pub fn matmul_bt_tiled(
     let b_ptr = b.as_ptr();
     let c_ptr = c.as_mut_ptr();
 
+    let k_stride_bytes = k * core::mem::size_of::<f32>();
+
     for ti in 0..m_tiles {
         for tj in 0..n_tiles {
             unsafe {
                 let a0 = a_ptr.add(ti * VFPU_Q * k);
-                let a1 = a0.add(k);
-                let a2 = a1.add(k);
-                let a3 = a2.add(k);
-
                 let b0 = b_ptr.add(tj * VFPU_Q * k);
-                let b1 = b0.add(k);
-                let b2 = b1.add(k);
-                let b3 = b2.add(k);
-
                 let c_base = c_ptr.add(ti * VFPU_Q * n + tj * VFPU_Q);
                 let n_stride_bytes = n * core::mem::size_of::<f32>();
 
+                // Compute loop: accumulate M200 = sum(A_tile @ B_tile^T)
                 vfpu_asm!(
                     "vzero.q R200",
                     "vzero.q R201",
                     "vzero.q R202",
                     "vzero.q R203",
                     "2:",
+                    // Load A: 4 rows from a0, a0+ks, a0+2*ks, a0+3*ks
                     "lv.q R000, 0({a0})",
-                    "lv.q R001, 0({a1})",
-                    "lv.q R002, 0({a2})",
-                    "lv.q R003, 0({a3})",
+                    "addu {tmp}, {a0}, {ks}",
+                    "lv.q R001, 0({tmp})",
+                    "addu {tmp}, {tmp}, {ks}",
+                    "lv.q R002, 0({tmp})",
+                    "addu {tmp}, {tmp}, {ks}",
+                    "lv.q R003, 0({tmp})",
+                    // Load B: 4 rows from b0, b0+ks, b0+2*ks, b0+3*ks
                     "lv.q R100, 0({b0})",
-                    "lv.q R101, 0({b1})",
-                    "lv.q R102, 0({b2})",
-                    "lv.q R103, 0({b3})",
+                    "addu {tmp}, {b0}, {ks}",
+                    "lv.q R101, 0({tmp})",
+                    "addu {tmp}, {tmp}, {ks}",
+                    "lv.q R102, 0({tmp})",
+                    "addu {tmp}, {tmp}, {ks}",
+                    "lv.q R103, 0({tmp})",
+                    // Multiply and accumulate
                     "vmmul.q M300, M000, E100",
                     "vadd.q R200, R200, R300",
                     "vadd.q R201, R201, R301",
                     "vadd.q R202, R202, R302",
                     "vadd.q R203, R203, R303",
+                    // Advance base pointers by one float4 column (16 bytes)
                     "addiu {a0}, {a0}, 16",
-                    "addiu {a1}, {a1}, 16",
-                    "addiu {a2}, {a2}, 16",
-                    "addiu {a3}, {a3}, 16",
-                    "addiu {b0}, {b0}, 16",
-                    "addiu {b1}, {b1}, 16",
-                    "addiu {b2}, {b2}, 16",
                     "addiu {k}, {k}, -1",
                     "bnez {k}, 2b",
-                    "addiu {b3}, {b3}, 16",  // branch delay slot
-                    // Store accumulator rows to C
+                    "addiu {b0}, {b0}, 16",  // branch delay slot
+                    a0 = inout(reg) (a0) => _,
+                    b0 = inout(reg) (b0) => _,
+                    ks = in(reg) (k_stride_bytes),
+                    k = inout(reg) (k_tiles) => _,
+                    tmp = out(reg) _,
+                    options(nostack),
+                );
+
+                // Store accumulator M200 to C rows (separate block to reduce register pressure)
+                vfpu_asm!(
                     "sv.q R200, 0({c})",
                     "addu {c}, {c}, {ns}",
                     "sv.q R201, 0({c})",
@@ -287,15 +296,6 @@ pub fn matmul_bt_tiled(
                     "sv.q R202, 0({c})",
                     "addu {c}, {c}, {ns}",
                     "sv.q R203, 0({c})",
-                    a0 = inout(reg) (a0) => _,
-                    a1 = inout(reg) (a1) => _,
-                    a2 = inout(reg) (a2) => _,
-                    a3 = inout(reg) (a3) => _,
-                    b0 = inout(reg) (b0) => _,
-                    b1 = inout(reg) (b1) => _,
-                    b2 = inout(reg) (b2) => _,
-                    b3 = inout(reg) (b3) => _,
-                    k = inout(reg) (k_tiles) => _,
                     c = inout(reg) (c_base) => _,
                     ns = in(reg) (n_stride_bytes),
                     options(nostack),

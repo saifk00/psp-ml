@@ -328,6 +328,7 @@ fn lower_ops(
                 output,
                 filter,
                 stride,
+                padding,
             } => {
                 let in_shape = &graph.tensor(*input).shape;
                 let out_shape = &graph.tensor(*output).shape;
@@ -360,13 +361,14 @@ fn lower_ops(
                             },
                             filter: *filter,
                             stride: *stride,
+                            padding: *padding,
                             pool_type: *pool_type,
                         }],
                     }],
                 }
             }
 
-            PspOp::Reshape { input, output } => OpPlan {
+            PspOp::Reshape { input, output, .. } => OpPlan {
                 scratch: vec![],
                 sub_ops: vec![SubOpPlan {
                     name: "reshape".into(),
@@ -623,24 +625,12 @@ fn lower_ops(
                 let in_shape = graph.tensor(*input).shape.clone();
                 let out_shape = graph.tensor(*output).shape.clone();
 
-                // Read begin/end/strides from constant tensors
-                let read_i32_const = |tid: TensorId| -> Result<Vec<i32>, String> {
-                    let t = graph.tensor(tid);
-                    if let TensorKind::Constant { offset, len } = t.kind {
-                        Ok(model.model_data[offset..offset + len]
-                            .chunks_exact(4)
-                            .map(|c| i32::from_le_bytes(c.try_into().unwrap()))
-                            .collect())
-                    } else {
-                        Err(format!(
-                            "Op {i}: StridedSlice requires constant begin/end/strides"
-                        ))
-                    }
-                };
-
-                let begin_vals = read_i32_const(*begin)?;
-                let end_vals = read_i32_const(*end)?;
-                let stride_vals = read_i32_const(*strides)?;
+                let begin_vals = model.read_i32_const(*begin)
+                    .ok_or_else(|| format!("Op {i}: StridedSlice requires constant begin"))?;
+                let end_vals = model.read_i32_const(*end)
+                    .ok_or_else(|| format!("Op {i}: StridedSlice requires constant end"))?;
+                let stride_vals = model.read_i32_const(*strides)
+                    .ok_or_else(|| format!("Op {i}: StridedSlice requires constant strides"))?;
 
                 OpPlan {
                     scratch: vec![],

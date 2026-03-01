@@ -88,15 +88,17 @@ pub fn conv2d_relu(
     }
 }
 
-/// 2D Max Pooling (NHWC, naive)
+/// 2D Max Pooling (NHWC, naive) with padding support
 ///
 /// - `input`:  [N, H, W, C]
+/// - `padding`: [pad_top, pad_bottom, pad_left, pad_right]
 /// - `output`: [N, Ho, Wo, C]
 pub fn max_pool2d(
     input: &[f32],
     input_shape: [usize; 4],
     kernel: [usize; 2],
     stride: [usize; 2],
+    padding: [usize; 4],
     output: &mut [f32],
     output_shape: [usize; 4],
 ) {
@@ -104,6 +106,7 @@ pub fn max_pool2d(
     let [kh, kw] = kernel;
     let [sh, sw] = stride;
     let [_, ho, wo, _] = output_shape;
+    let [pad_top, _, pad_left, _] = padding;
 
     for batch in 0..n {
         for oy in 0..ho {
@@ -112,11 +115,13 @@ pub fn max_pool2d(
                     let mut max_val = f32::NEG_INFINITY;
                     for ky in 0..kh {
                         for kx in 0..kw {
-                            let iy = oy * sh + ky;
-                            let ix = ox * sw + kx;
-                            let in_idx = batch * (h * w * c) + iy * (w * c) + ix * c + ch;
-                            if input[in_idx] > max_val {
-                                max_val = input[in_idx];
+                            let iy = (oy * sh + ky) as isize - pad_top as isize;
+                            let ix = (ox * sw + kx) as isize - pad_left as isize;
+                            if iy >= 0 && iy < h as isize && ix >= 0 && ix < w as isize {
+                                let in_idx = batch * (h * w * c) + (iy as usize) * (w * c) + (ix as usize) * c + ch;
+                                if input[in_idx] > max_val {
+                                    max_val = input[in_idx];
+                                }
                             }
                         }
                     }
@@ -128,15 +133,17 @@ pub fn max_pool2d(
     }
 }
 
-/// 2D Average Pooling (NHWC, naive)
+/// 2D Average Pooling (NHWC, naive) with padding support
 ///
 /// - `input`:  [N, H, W, C]
+/// - `padding`: [pad_top, pad_bottom, pad_left, pad_right]
 /// - `output`: [N, Ho, Wo, C]
 pub fn average_pool2d(
     input: &[f32],
     input_shape: [usize; 4],
     kernel: [usize; 2],
     stride: [usize; 2],
+    padding: [usize; 4],
     output: &mut [f32],
     output_shape: [usize; 4],
 ) {
@@ -144,23 +151,27 @@ pub fn average_pool2d(
     let [kh, kw] = kernel;
     let [sh, sw] = stride;
     let [_, ho, wo, _] = output_shape;
-    let pool_size = (kh * kw) as f32;
+    let [pad_top, _, pad_left, _] = padding;
 
     for batch in 0..n {
         for oy in 0..ho {
             for ox in 0..wo {
                 for ch in 0..c {
                     let mut sum = 0.0f32;
+                    let mut count = 0usize;
                     for ky in 0..kh {
                         for kx in 0..kw {
-                            let iy = oy * sh + ky;
-                            let ix = ox * sw + kx;
-                            let in_idx = batch * (h * w * c) + iy * (w * c) + ix * c + ch;
-                            sum += input[in_idx];
+                            let iy = (oy * sh + ky) as isize - pad_top as isize;
+                            let ix = (ox * sw + kx) as isize - pad_left as isize;
+                            if iy >= 0 && iy < h as isize && ix >= 0 && ix < w as isize {
+                                let in_idx = batch * (h * w * c) + (iy as usize) * (w * c) + (ix as usize) * c + ch;
+                                sum += input[in_idx];
+                                count += 1;
+                            }
                         }
                     }
                     let out_idx = batch * (ho * wo * c) + oy * (wo * c) + ox * c + ch;
-                    output[out_idx] = sum / pool_size;
+                    output[out_idx] = if count > 0 { sum / count as f32 } else { 0.0 };
                 }
             }
         }

@@ -2,7 +2,7 @@
 //! each op maps to a kernel
 //!
 
-use crate::ir::graph::{Graph, TensorId};
+use crate::ir::graph::{Graph, TensorId, TensorKind};
 
 /// A lowered PSP model: pure IR graph paired with the raw model bytes.
 /// Constant tensors reference into `model_data` via `TensorKind::Constant { offset, len }`.
@@ -10,6 +10,24 @@ use crate::ir::graph::{Graph, TensorId};
 pub struct PspModel {
     pub graph: Graph<PspOp>,
     pub model_data: Vec<u8>,
+}
+
+impl PspModel {
+    /// Read an INT32 constant tensor as `Vec<i32>`.
+    /// Returns `None` if the tensor is not `TensorKind::Constant`.
+    pub fn read_i32_const(&self, tid: TensorId) -> Option<Vec<i32>> {
+        let t = self.graph.tensor(tid);
+        if let TensorKind::Constant { offset, len } = t.kind {
+            Some(
+                self.model_data[offset..offset + len]
+                    .chunks_exact(4)
+                    .map(|c| i32::from_le_bytes(c.try_into().unwrap()))
+                    .collect(),
+            )
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -48,10 +66,16 @@ pub enum PspOp {
         output: TensorId,
         filter: [usize; 2],
         stride: [usize; 2],
+        padding: [usize; 4],
     },
 
     /// Reshape (zero-cost pointer reinterpret)
-    Reshape { input: TensorId, output: TensorId },
+    Reshape {
+        input: TensorId,
+        output: TensorId,
+        /// Optional shape tensor (from TFLite RESHAPE). Used for dynamic shape inference.
+        shape_tensor: Option<TensorId>,
+    },
 
     /// Softmax over last dimension
     Softmax { input: TensorId, output: TensorId },
@@ -252,11 +276,11 @@ impl std::fmt::Display for PspOp {
                 }
                 write!(f, ")")
             }
-            PspOp::Pool2d { pool_type, input, output, filter, stride } => {
+            PspOp::Pool2d { pool_type, input, output, filter, stride, .. } => {
                 write!(f, "Pool2d(t{} → t{}; {} filter={}x{} stride={}x{})",
                     input, output, pool_type, filter[0], filter[1], stride[0], stride[1])
             }
-            PspOp::Reshape { input, output } => write!(f, "Reshape(t{} → t{})", input, output),
+            PspOp::Reshape { input, output, .. } => write!(f, "Reshape(t{} → t{})", input, output),
             PspOp::Softmax { input, output } => write!(f, "Softmax(t{} → t{})", input, output),
             PspOp::ElementWise { op, input_a, input_b, output } => {
                 write!(f, "ElementWise(t{}, t{} → t{}; {})", input_a, input_b, output, op)

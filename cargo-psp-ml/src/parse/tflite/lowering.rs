@@ -89,7 +89,7 @@ pub fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
             }
             BuiltinOperator::FULLY_CONNECTED => Some(lower_fc(&op, &tensor_map)?),
             BuiltinOperator::MAX_POOL_2D | BuiltinOperator::AVERAGE_POOL_2D => {
-                Some(lower_pool2d(&op, &tensor_map, builtin_code)?)
+                Some(lower_pool2d(&op, &tensor_map, &graph_tensors, builtin_code)?)
             }
             BuiltinOperator::RESHAPE | BuiltinOperator::SQUEEZE | BuiltinOperator::EXPAND_DIMS => {
                 Some(lower_reshape(&op, &tensor_map)?)
@@ -375,6 +375,7 @@ fn lower_fc(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String> {
 fn lower_pool2d(
     op: &Operator,
     tensor_map: &[TensorId],
+    graph_tensors: &[Tensor],
     builtin_code: BuiltinOperator,
 ) -> Result<PspOp, String> {
     let inputs = op.inputs().ok_or("POOL_2D: no inputs")?;
@@ -391,16 +392,35 @@ fn lower_pool2d(
 
     let input = tensor_map[inputs.get(0) as usize];
     let output = tensor_map[outputs.get(0) as usize];
+    let kernel_h = options.filter_height() as usize;
+    let kernel_w = options.filter_width() as usize;
+    let stride_h = options.stride_h() as usize;
+    let stride_w = options.stride_w() as usize;
+
+    let padding = match options.padding() {
+        Padding::VALID => [0, 0, 0, 0],
+        Padding::SAME => {
+            let input_tensor = &graph_tensors[input];
+            if input_tensor.shape.len() >= 4 {
+                let (pt, pb, pl, pr) = compute_same_padding(
+                    input_tensor.shape[1], input_tensor.shape[2],
+                    kernel_h, kernel_w, stride_h, stride_w,
+                );
+                [pt, pb, pl, pr]
+            } else {
+                [0, 0, 0, 0]
+            }
+        }
+        _ => [0, 0, 0, 0],
+    };
 
     Ok(PspOp::Pool2d {
         pool_type,
         input,
         output,
-        filter: [
-            options.filter_height() as usize,
-            options.filter_width() as usize,
-        ],
-        stride: [options.stride_h() as usize, options.stride_w() as usize],
+        filter: [kernel_h, kernel_w],
+        stride: [stride_h, stride_w],
+        padding,
     })
 }
 
@@ -411,8 +431,13 @@ fn lower_reshape(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String
 
     let input = tensor_map[inputs.get(0) as usize];
     let output = tensor_map[outputs.get(0) as usize];
+    let shape_tensor = if inputs.len() > 1 {
+        Some(tensor_map[inputs.get(1) as usize])
+    } else {
+        None
+    };
 
-    Ok(PspOp::Reshape { input, output })
+    Ok(PspOp::Reshape { input, output, shape_tensor })
 }
 
 /// Lower TFLite SOFTMAX to PspOp::Softmax
