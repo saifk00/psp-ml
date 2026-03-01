@@ -277,6 +277,319 @@ pub fn forward_timed(
     op_ticks[10usize] += get_tick() - __t0;
     t_16
 }
+/// Instrumented inference with per-op hardware profiling counters.
+///
+/// On PSP (with kernel plugin loaded): collects cache misses, VFPU stalls,
+/// memory stalls, instruction counts, etc. per sub-op. Adds 4 syscalls per
+/// sub-op (clear, enable, disable, read) so use `forward_timed` for
+/// lightweight timing only.
+///
+/// On host: `op_profile` entries stay zeroed; `op_ticks` still works.
+pub fn forward_profiled(
+    input: &[f32; 784usize],
+    op_ticks: &mut [u64; NUM_OPS],
+    #[allow(unused)]
+    op_profile: &mut [psp_ml::profiler::OpProfileStats; NUM_OPS],
+    get_tick: fn() -> u64,
+) -> [f32; 10usize] {
+    let t_10 = unsafe {
+        core::slice::from_raw_parts_mut(
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(21952usize),
+            6272usize,
+        )
+    };
+    let t_11 = unsafe {
+        core::slice::from_raw_parts_mut(
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            1568usize,
+        )
+    };
+    let t_12 = unsafe {
+        core::slice::from_raw_parts_mut(
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4768usize),
+            3136usize,
+        )
+    };
+    let t_13 = unsafe {
+        core::slice::from_raw_parts_mut(
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            784usize,
+        )
+    };
+    let t_14 = unsafe {
+        core::slice::from_raw_parts_mut(
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(784usize),
+            784usize,
+        )
+    };
+    let t_15 = unsafe {
+        core::slice::from_raw_parts_mut(
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            64usize,
+        )
+    };
+    let mut t_16 = [0.0f32; 10usize];
+    let tensor_data = tensor_data_f32();
+    let t_1 = &tensor_data[T_1_OFFSET..T_1_OFFSET + T_1_LEN];
+    let t_2 = &tensor_data[T_2_OFFSET..T_2_OFFSET + T_2_LEN];
+    let t_3 = &tensor_data[T_3_OFFSET..T_3_OFFSET + T_3_LEN];
+    let t_4 = &tensor_data[T_4_OFFSET..T_4_OFFSET + T_4_LEN];
+    let t_5 = &tensor_data[T_5_OFFSET..T_5_OFFSET + T_5_LEN];
+    let t_6 = &tensor_data[T_6_OFFSET..T_6_OFFSET + T_6_LEN];
+    let t_8 = &tensor_data[T_8_OFFSET..T_8_OFFSET + T_8_LEN];
+    let t_9 = &tensor_data[T_9_OFFSET..T_9_OFFSET + T_9_LEN];
+    let scratch_0_0 = unsafe {
+        core::slice::from_raw_parts_mut(
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            21952usize,
+        )
+    };
+    let scratch_0_1 = unsafe {
+        core::slice::from_raw_parts_mut(
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28224usize),
+            224usize,
+        )
+    };
+    for row in 0..8usize {
+        scratch_0_1[row * 28usize..row * 28usize + 25usize]
+            .copy_from_slice(&t_8[row * 25usize..(row + 1) * 25usize]);
+    }
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileClear();
+        psp_ml::profiler::ProfileEnable();
+    }
+    let __t0 = get_tick();
+    im2col_padded(
+        input,
+        [1usize, 28usize, 28usize, 1usize],
+        [5usize, 5usize],
+        [1usize, 1usize],
+        [2usize, 2usize, 2usize, 2usize],
+        [28usize, 28usize],
+        scratch_0_0,
+    );
+    op_ticks[0usize] += get_tick() - __t0;
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileDisable();
+        let mut __regs = core::mem::MaybeUninit::<
+            psp_ml::profiler::ProfileRegs,
+        >::zeroed();
+        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+        op_profile[0usize].accumulate(__regs.assume_init_ref());
+    }
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileClear();
+        psp_ml::profiler::ProfileEnable();
+    }
+    let __t0 = get_tick();
+    matmul_bt_tiled(scratch_0_0, scratch_0_1, t_10, 196usize, 7usize, 2usize);
+    op_ticks[1usize] += get_tick() - __t0;
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileDisable();
+        let mut __regs = core::mem::MaybeUninit::<
+            psp_ml::profiler::ProfileRegs,
+        >::zeroed();
+        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+        op_profile[1usize].accumulate(__regs.assume_init_ref());
+    }
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileClear();
+        psp_ml::profiler::ProfileEnable();
+    }
+    let __t0 = get_tick();
+    bias_add(t_10, t_9, 784usize, 8usize);
+    relu(t_10);
+    op_ticks[2usize] += get_tick() - __t0;
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileDisable();
+        let mut __regs = core::mem::MaybeUninit::<
+            psp_ml::profiler::ProfileRegs,
+        >::zeroed();
+        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+        op_profile[2usize].accumulate(__regs.assume_init_ref());
+    }
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileClear();
+        psp_ml::profiler::ProfileEnable();
+    }
+    let __t0 = get_tick();
+    max_pool2d(
+        t_10,
+        [1usize, 28usize, 28usize, 8usize],
+        [2usize, 2usize],
+        [2usize, 2usize],
+        [0usize, 0usize, 0usize, 0usize],
+        t_11,
+        [1usize, 14usize, 14usize, 8usize],
+    );
+    op_ticks[3usize] += get_tick() - __t0;
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileDisable();
+        let mut __regs = core::mem::MaybeUninit::<
+            psp_ml::profiler::ProfileRegs,
+        >::zeroed();
+        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+        op_profile[3usize].accumulate(__regs.assume_init_ref());
+    }
+    let scratch_2_0 = unsafe {
+        core::slice::from_raw_parts_mut(
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28448usize),
+            39200usize,
+        )
+    };
+    let scratch_2_1 = unsafe {
+        core::slice::from_raw_parts_mut(
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1568usize),
+            3200usize,
+        )
+    };
+    scratch_2_1.copy_from_slice(t_4);
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileClear();
+        psp_ml::profiler::ProfileEnable();
+    }
+    let __t0 = get_tick();
+    im2col_padded(
+        t_11,
+        [1usize, 14usize, 14usize, 8usize],
+        [5usize, 5usize],
+        [1usize, 1usize],
+        [2usize, 2usize, 2usize, 2usize],
+        [14usize, 14usize],
+        scratch_2_0,
+    );
+    op_ticks[4usize] += get_tick() - __t0;
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileDisable();
+        let mut __regs = core::mem::MaybeUninit::<
+            psp_ml::profiler::ProfileRegs,
+        >::zeroed();
+        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+        op_profile[4usize].accumulate(__regs.assume_init_ref());
+    }
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileClear();
+        psp_ml::profiler::ProfileEnable();
+    }
+    let __t0 = get_tick();
+    matmul_bt_tiled(scratch_2_0, scratch_2_1, t_12, 49usize, 50usize, 4usize);
+    op_ticks[5usize] += get_tick() - __t0;
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileDisable();
+        let mut __regs = core::mem::MaybeUninit::<
+            psp_ml::profiler::ProfileRegs,
+        >::zeroed();
+        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+        op_profile[5usize].accumulate(__regs.assume_init_ref());
+    }
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileClear();
+        psp_ml::profiler::ProfileEnable();
+    }
+    let __t0 = get_tick();
+    bias_add(t_12, t_2, 196usize, 16usize);
+    relu(t_12);
+    op_ticks[6usize] += get_tick() - __t0;
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileDisable();
+        let mut __regs = core::mem::MaybeUninit::<
+            psp_ml::profiler::ProfileRegs,
+        >::zeroed();
+        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+        op_profile[6usize].accumulate(__regs.assume_init_ref());
+    }
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileClear();
+        psp_ml::profiler::ProfileEnable();
+    }
+    let __t0 = get_tick();
+    max_pool2d(
+        t_12,
+        [1usize, 14usize, 14usize, 16usize],
+        [2usize, 2usize],
+        [2usize, 2usize],
+        [0usize, 0usize, 0usize, 0usize],
+        t_13,
+        [1usize, 7usize, 7usize, 16usize],
+    );
+    op_ticks[7usize] += get_tick() - __t0;
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileDisable();
+        let mut __regs = core::mem::MaybeUninit::<
+            psp_ml::profiler::ProfileRegs,
+        >::zeroed();
+        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+        op_profile[7usize].accumulate(__regs.assume_init_ref());
+    }
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileClear();
+        psp_ml::profiler::ProfileEnable();
+    }
+    let __t0 = get_tick();
+    reshape(t_13, t_14);
+    op_ticks[8usize] += get_tick() - __t0;
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileDisable();
+        let mut __regs = core::mem::MaybeUninit::<
+            psp_ml::profiler::ProfileRegs,
+        >::zeroed();
+        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+        op_profile[8usize].accumulate(__regs.assume_init_ref());
+    }
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileClear();
+        psp_ml::profiler::ProfileEnable();
+    }
+    let __t0 = get_tick();
+    fully_connected_relu(t_14, 784usize, t_6, Some(t_1), t_15, 64usize);
+    op_ticks[9usize] += get_tick() - __t0;
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileDisable();
+        let mut __regs = core::mem::MaybeUninit::<
+            psp_ml::profiler::ProfileRegs,
+        >::zeroed();
+        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+        op_profile[9usize].accumulate(__regs.assume_init_ref());
+    }
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileClear();
+        psp_ml::profiler::ProfileEnable();
+    }
+    let __t0 = get_tick();
+    fully_connected(t_15, 64usize, t_5, Some(t_3), &mut t_16, 10usize);
+    op_ticks[10usize] += get_tick() - __t0;
+    #[cfg(target_os = "psp")]
+    unsafe {
+        psp_ml::profiler::ProfileDisable();
+        let mut __regs = core::mem::MaybeUninit::<
+            psp_ml::profiler::ProfileRegs,
+        >::zeroed();
+        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+        op_profile[10usize].accumulate(__regs.assume_init_ref());
+    }
+    t_16
+}
 pub const NUM_OPS: usize = 11usize;
 pub const OP_NAMES: [&str; NUM_OPS] = [
     "im2col",

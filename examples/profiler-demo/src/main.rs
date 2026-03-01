@@ -42,7 +42,7 @@ fn app_main() {
     dprintln!("internal:       {:>10}", regs.internal);
     dprintln!("memory stalls:  {:>10}", regs.memory);
     dprintln!("cop0 stalls:    {:>10}", regs.copz);
-    dprintln!("vfpu stalls:    {:>10}", regs.vfpu);
+    dprintln!("vfpu stalls:    {:>10}", regs.vfpu_stalls);
     dprintln!("sleep:          {:>10}", regs.sleep);
     dprintln!("bus access:     {:>10}", regs.bus_access);
     dprintln!("uncached load:  {:>10}", regs.uncached_load);

@@ -8,6 +8,7 @@
 ///
 /// Each field is a 32-bit counter. The layout matches the kernel plugin's
 /// `ProfileRegs` struct and the hardware register order.
+#[derive(Clone, Copy)]
 #[repr(C)]
 pub struct ProfileRegs {
     pub enable: u32,
@@ -16,7 +17,7 @@ pub struct ProfileRegs {
     pub internal: u32,
     pub memory: u32,
     pub copz: u32,
-    pub vfpu: u32,
+    pub vfpu_stalls: u32,
     pub sleep: u32,
     pub bus_access: u32,
     pub uncached_load: u32,
@@ -30,6 +31,70 @@ pub struct ProfileRegs {
     pub fpu_inst: u32,
     pub vfpu_inst: u32,
     pub local_bus: u32,
+}
+
+/// Per-op hardware profiling accumulators.
+///
+/// Each counter is widened to u64 to avoid u32 wrapping across multiple
+/// inference invocations. Use `zero()` to initialize and `accumulate()`
+/// to add a `ProfileRegs` snapshot (taken after clear → enable → kernel → disable → read).
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct OpProfileStats {
+    pub systemck: u64,
+    pub cpuck: u64,
+    pub internal: u64,
+    pub memory: u64,
+    pub copz: u64,
+    pub vfpu_stalls: u64,
+    pub sleep: u64,
+    pub bus_access: u64,
+    pub uncached_load: u64,
+    pub uncached_store: u64,
+    pub cached_load: u64,
+    pub cached_store: u64,
+    pub i_miss: u64,
+    pub d_miss: u64,
+    pub d_writeback: u64,
+    pub cop0_inst: u64,
+    pub fpu_inst: u64,
+    pub vfpu_inst: u64,
+    pub local_bus: u64,
+}
+
+impl OpProfileStats {
+    pub const fn zero() -> Self {
+        Self {
+            systemck: 0, cpuck: 0, internal: 0, memory: 0, copz: 0,
+            vfpu_stalls: 0, sleep: 0, bus_access: 0, uncached_load: 0,
+            uncached_store: 0, cached_load: 0, cached_store: 0,
+            i_miss: 0, d_miss: 0, d_writeback: 0, cop0_inst: 0,
+            fpu_inst: 0, vfpu_inst: 0, local_bus: 0,
+        }
+    }
+
+    /// Accumulate a hardware counter snapshot into this accumulator.
+    pub fn accumulate(&mut self, regs: &ProfileRegs) {
+        self.systemck += regs.systemck as u64;
+        self.cpuck += regs.cpuck as u64;
+        self.internal += regs.internal as u64;
+        self.memory += regs.memory as u64;
+        self.copz += regs.copz as u64;
+        self.vfpu_stalls += regs.vfpu_stalls as u64;
+        self.sleep += regs.sleep as u64;
+        self.bus_access += regs.bus_access as u64;
+        self.uncached_load += regs.uncached_load as u64;
+        self.uncached_store += regs.uncached_store as u64;
+        self.cached_load += regs.cached_load as u64;
+        self.cached_store += regs.cached_store as u64;
+        self.i_miss += regs.i_miss as u64;
+        self.d_miss += regs.d_miss as u64;
+        self.d_writeback += regs.d_writeback as u64;
+        self.cop0_inst += regs.cop0_inst as u64;
+        self.fpu_inst += regs.fpu_inst as u64;
+        self.vfpu_inst += regs.vfpu_inst as u64;
+        self.local_bus += regs.local_bus as u64;
+    }
 }
 
 // --- Pure-Rust import stubs for psp_ml_kernel PRX ---

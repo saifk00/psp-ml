@@ -369,7 +369,9 @@ fn lower_ops(
                 }
             }
 
-            PspOp::Reshape { input, output, .. } => OpPlan {
+            PspOp::Reshape { input, output, .. }
+            | PspOp::Squeeze { input, output, .. }
+            | PspOp::ExpandDims { input, output, .. } => OpPlan {
                 scratch: vec![],
                 sub_ops: vec![SubOpPlan {
                     name: "reshape".into(),

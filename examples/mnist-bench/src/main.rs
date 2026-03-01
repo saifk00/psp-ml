@@ -41,6 +41,7 @@ struct BenchResult {
     correct: u32,
     total: u32,
     op_ticks: [u64; generated::NUM_OPS],
+    op_profile: [psp_ml::profiler::OpProfileStats; generated::NUM_OPS],
 }
 
 /// Run the timed benchmark and return results.
@@ -88,6 +89,56 @@ fn run_benchmark(get_tick: fn() -> u64, tick_res: u64) -> BenchResult {
         correct,
         total: NUM_IMAGES as u32,
         op_ticks,
+        op_profile: [psp_ml::profiler::OpProfileStats::zero(); generated::NUM_OPS],
+    }
+}
+
+/// Run benchmark with hardware profiling counters per sub-op.
+#[cfg(feature = "profile")]
+fn run_profiled_benchmark(get_tick: fn() -> u64, tick_res: u64) -> BenchResult {
+    let images = &IMAGES_RAW[16..];
+    let labels = &LABELS_RAW[8..];
+
+    let mut predictions = [0u8; NUM_IMAGES];
+    let mut op_ticks = [0u64; generated::NUM_OPS];
+    let mut op_profile = [psp_ml::profiler::OpProfileStats::zero(); generated::NUM_OPS];
+
+    let start = get_tick();
+
+    for i in 0..NUM_IMAGES {
+        let img = get_image(i, images);
+        let output = generated::forward_profiled(&img, &mut op_ticks, &mut op_profile, get_tick);
+
+        let mut max_idx = 0u8;
+        let mut max_val = output[0];
+        for j in 1..10 {
+            if output[j] > max_val {
+                max_val = output[j];
+                max_idx = j as u8;
+            }
+        }
+        predictions[i] = max_idx;
+    }
+
+    let elapsed_ticks = get_tick() - start;
+
+    let mut correct = 0u32;
+    for i in 0..NUM_IMAGES {
+        if predictions[i] == labels[i] {
+            correct += 1;
+        }
+    }
+
+    let total_us = (elapsed_ticks * 1_000_000) / tick_res;
+    let per_image_us = total_us / NUM_IMAGES as u64;
+
+    BenchResult {
+        total_us,
+        per_image_us,
+        correct,
+        total: NUM_IMAGES as u32,
+        op_ticks,
+        op_profile,
     }
 }
 
@@ -97,14 +148,14 @@ fn run_benchmark(get_tick: fn() -> u64, tick_res: u64) -> BenchResult {
 
 /// Minimal JSON formatter that writes into a fixed-size byte buffer.
 struct JsonBuf {
-    buf: [u8; 4096],
+    buf: [u8; 16384],
     pos: usize,
 }
 
 impl JsonBuf {
     fn new() -> Self {
         JsonBuf {
-            buf: [0u8; 4096],
+            buf: [0u8; 16384],
             pos: 0,
         }
     }
@@ -194,6 +245,30 @@ fn format_json(result: &BenchResult, tick_res: u64) -> JsonBuf {
         j.push_u64(op_us);
         j.push_str(", \"calls\": ");
         j.push_u32(result.total);
+
+        let p = &result.op_profile[idx];
+        j.push_str(", \"profile\": { ");
+        j.push_str("\"systemck\": "); j.push_u64(p.systemck);
+        j.push_str(", \"cpuck\": "); j.push_u64(p.cpuck);
+        j.push_str(", \"internal\": "); j.push_u64(p.internal);
+        j.push_str(", \"memory\": "); j.push_u64(p.memory);
+        j.push_str(", \"copz\": "); j.push_u64(p.copz);
+        j.push_str(", \"vfpu_stalls\": "); j.push_u64(p.vfpu_stalls);
+        j.push_str(", \"sleep\": "); j.push_u64(p.sleep);
+        j.push_str(", \"bus_access\": "); j.push_u64(p.bus_access);
+        j.push_str(", \"uncached_load\": "); j.push_u64(p.uncached_load);
+        j.push_str(", \"uncached_store\": "); j.push_u64(p.uncached_store);
+        j.push_str(", \"cached_load\": "); j.push_u64(p.cached_load);
+        j.push_str(", \"cached_store\": "); j.push_u64(p.cached_store);
+        j.push_str(", \"i_miss\": "); j.push_u64(p.i_miss);
+        j.push_str(", \"d_miss\": "); j.push_u64(p.d_miss);
+        j.push_str(", \"d_writeback\": "); j.push_u64(p.d_writeback);
+        j.push_str(", \"cop0_inst\": "); j.push_u64(p.cop0_inst);
+        j.push_str(", \"fpu_inst\": "); j.push_u64(p.fpu_inst);
+        j.push_str(", \"vfpu_inst\": "); j.push_u64(p.vfpu_inst);
+        j.push_str(", \"local_bus\": "); j.push_u64(p.local_bus);
+        j.push_str(" }");
+
         j.push_str(" }");
         if idx + 1 < generated::NUM_OPS {
             j.push_byte(b',');
@@ -229,7 +304,14 @@ fn app_main() {
 
     generated::init();
 
+    #[cfg(feature = "profile")]
+    psp_ml::dprintln!("Running PROFILED inference on {} images...", NUM_IMAGES);
+    #[cfg(not(feature = "profile"))]
     psp_ml::dprintln!("Running inference on {} images...", NUM_IMAGES);
+
+    #[cfg(feature = "profile")]
+    let result = run_profiled_benchmark(get_tick, tick_res);
+    #[cfg(not(feature = "profile"))]
     let result = run_benchmark(get_tick, tick_res);
 
     psp_ml::dprintln!("");
@@ -247,7 +329,11 @@ fn app_main() {
     psp_ml::dprintln!("Per-op breakdown:");
     for (idx, name) in generated::OP_NAMES.iter().enumerate() {
         let op_us = (result.op_ticks[idx] * 1_000_000) / tick_res;
-        psp_ml::dprintln!("  [{}] {}: {} us", idx, name, op_us);
+        let p = &result.op_profile[idx];
+        psp_ml::dprintln!(
+            "  [{}] {}: {} us | cpuck={} d_miss={} vfpu_inst={} mem_stall={}",
+            idx, name, op_us, p.cpuck, p.d_miss, p.vfpu_inst, p.memory
+        );
     }
 
     // Write JSON to host0:/benchmarks.json
@@ -324,7 +410,11 @@ fn main() {
         } else {
             0
         };
-        println!("  [{idx}] {name}: {op_us} us ({pct}%)");
+        let p = &result.op_profile[idx];
+        println!(
+            "  [{idx}] {name}: {op_us} us ({pct}%) | cpuck={} d_miss={} vfpu_inst={} mem_stall={}",
+            p.cpuck, p.d_miss, p.vfpu_inst, p.memory
+        );
     }
 
     // Write JSON to benchmarks.json in the example directory

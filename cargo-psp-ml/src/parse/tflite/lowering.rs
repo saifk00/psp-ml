@@ -91,8 +91,10 @@ pub fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
             BuiltinOperator::MAX_POOL_2D | BuiltinOperator::AVERAGE_POOL_2D => {
                 Some(lower_pool2d(&op, &tensor_map, &graph_tensors, builtin_code)?)
             }
-            BuiltinOperator::RESHAPE | BuiltinOperator::SQUEEZE | BuiltinOperator::EXPAND_DIMS => {
-                Some(lower_reshape(&op, &tensor_map)?)
+            BuiltinOperator::RESHAPE => Some(lower_reshape(&op, &tensor_map)?),
+            BuiltinOperator::SQUEEZE => Some(lower_squeeze(&op, &tensor_map, &graph_tensors)?),
+            BuiltinOperator::EXPAND_DIMS => {
+                Some(lower_expand_dims(&op, &tensor_map, &graph_tensors)?)
             }
             BuiltinOperator::ADD
             | BuiltinOperator::MUL
@@ -437,7 +439,68 @@ fn lower_reshape(op: &Operator, tensor_map: &[TensorId]) -> Result<PspOp, String
         None
     };
 
-    Ok(PspOp::Reshape { input, output, shape_tensor })
+    let builtin_shape = op.builtin_options_as_reshape_options()
+        .and_then(|opts| opts.new_shape())
+        .map(|v| v.iter().collect::<Vec<i32>>());
+
+    Ok(PspOp::Reshape { input, output, shape_tensor, builtin_shape })
+}
+
+/// Lower TFLite SQUEEZE to PspOp::Squeeze.
+///
+/// Infers the removed axis by comparing input and output shapes from TFLite.
+/// Only supports single-axis squeeze (rank decreases by 1).
+fn lower_squeeze(
+    op: &Operator,
+    tensor_map: &[TensorId],
+    graph_tensors: &[Tensor],
+) -> Result<PspOp, String> {
+    let inputs = op.inputs().ok_or("SQUEEZE: no inputs")?;
+    let outputs = op.outputs().ok_or("SQUEEZE: no outputs")?;
+    let input = tensor_map[inputs.get(0) as usize];
+    let output = tensor_map[outputs.get(0) as usize];
+    let in_s = &graph_tensors[input].shape;
+    let out_s = &graph_tensors[output].shape;
+    if in_s.len() != out_s.len() + 1 {
+        return Err(format!(
+            "SQUEEZE: multi-axis squeeze not supported (rank {} → {})",
+            in_s.len(), out_s.len()
+        ));
+    }
+    // Find the removed axis: first position where input and output shapes diverge
+    let axis = in_s.iter().zip(out_s.iter())
+        .position(|(a, b)| a != b)
+        .unwrap_or(in_s.len() - 1); // if all match, last dim was squeezed
+    Ok(PspOp::Squeeze { input, output, axis })
+}
+
+/// Lower TFLite EXPAND_DIMS to PspOp::ExpandDims.
+///
+/// Infers the inserted axis by comparing input and output shapes from TFLite.
+fn lower_expand_dims(
+    op: &Operator,
+    tensor_map: &[TensorId],
+    graph_tensors: &[Tensor],
+) -> Result<PspOp, String> {
+    let inputs = op.inputs().ok_or("EXPAND_DIMS: no inputs")?;
+    let outputs = op.outputs().ok_or("EXPAND_DIMS: no outputs")?;
+    let input = tensor_map[inputs.get(0) as usize];
+    let output = tensor_map[outputs.get(0) as usize];
+    let in_s = &graph_tensors[input].shape;
+    let out_s = &graph_tensors[output].shape;
+    // Find the axis that was inserted: walk output and find where a new dim=1 appears
+    let mut axis = out_s.len() - 1; // default: last dim
+    let mut in_idx = 0;
+    for (out_idx, &d) in out_s.iter().enumerate() {
+        if in_idx < in_s.len() && d == in_s[in_idx] {
+            in_idx += 1;
+        } else {
+            // This is the inserted dim
+            axis = out_idx;
+            break;
+        }
+    }
+    Ok(PspOp::ExpandDims { input, output, axis })
 }
 
 /// Lower TFLite SOFTMAX to PspOp::Softmax

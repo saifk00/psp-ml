@@ -30,6 +30,7 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
     let plain_calls = quote!(#(#op_tokens)*);
 
     let timed_calls = render_timed_calls(plan, &writer, arena);
+    let profiled_calls = render_profiled_calls(plan, &writer, arena);
     let op_metadata = render_op_metadata(plan);
 
     let input_size = plan.input_size;
@@ -67,6 +68,29 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
             #weight_views
 
             #timed_calls
+
+            #output_ident
+        }
+
+        /// Instrumented inference with per-op hardware profiling counters.
+        ///
+        /// On PSP (with kernel plugin loaded): collects cache misses, VFPU stalls,
+        /// memory stalls, instruction counts, etc. per sub-op. Adds 4 syscalls per
+        /// sub-op (clear, enable, disable, read) so use `forward_timed` for
+        /// lightweight timing only.
+        ///
+        /// On host: `op_profile` entries stay zeroed; `op_ticks` still works.
+        pub fn forward_profiled(
+            input: &[f32; #input_size],
+            op_ticks: &mut [u64; NUM_OPS],
+            #[allow(unused)] op_profile: &mut [psp_ml::profiler::OpProfileStats; NUM_OPS],
+            get_tick: fn() -> u64,
+        ) -> [f32; #output_size] {
+            #tensor_allocs
+
+            #weight_views
+
+            #profiled_calls
 
             #output_ident
         }
@@ -890,6 +914,53 @@ fn render_timed_calls(
                 let __t0 = get_tick();
                 #(#calls)*
                 op_ticks[#i] += get_tick() - __t0;
+            });
+        }
+    }
+
+    quote!(#(#entries)*)
+}
+
+// ---------------------------------------------------------------------------
+// Profiled op rendering (timed + hardware counters)
+// ---------------------------------------------------------------------------
+
+fn render_profiled_calls(
+    plan: &CodegenPlan,
+    writer: &TensorExprWriter,
+    arena: Option<&ArenaLayout>,
+) -> TokenStream {
+    let mut sub_op_idx: usize = 0;
+    let mut entries = Vec::new();
+
+    for (op_idx, op) in plan.ops.iter().enumerate() {
+        let scratch = render_scratch(op, op_idx, writer, arena);
+        entries.push(scratch);
+
+        for sub in &op.sub_ops {
+            let calls: Vec<TokenStream> = sub
+                .kernels
+                .iter()
+                .map(|k| render_kernel_call(k, &op.scratch, op_idx, writer))
+                .collect();
+            let i = sub_op_idx;
+            sub_op_idx += 1;
+            entries.push(quote! {
+                #[cfg(target_os = "psp")]
+                unsafe {
+                    psp_ml::profiler::ProfileClear();
+                    psp_ml::profiler::ProfileEnable();
+                }
+                let __t0 = get_tick();
+                #(#calls)*
+                op_ticks[#i] += get_tick() - __t0;
+                #[cfg(target_os = "psp")]
+                unsafe {
+                    psp_ml::profiler::ProfileDisable();
+                    let mut __regs = core::mem::MaybeUninit::<psp_ml::profiler::ProfileRegs>::zeroed();
+                    psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+                    op_profile[#i].accumulate(__regs.assume_init_ref());
+                }
             });
         }
     }

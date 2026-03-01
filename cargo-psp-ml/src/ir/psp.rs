@@ -75,6 +75,22 @@ pub enum PspOp {
         output: TensorId,
         /// Optional shape tensor (from TFLite RESHAPE). Used for dynamic shape inference.
         shape_tensor: Option<TensorId>,
+        /// TFLite builtin new_shape (may contain -1 for dynamic dim).
+        builtin_shape: Option<Vec<i32>>,
+    },
+
+    /// Remove a size-1 dimension (zero-cost pointer reinterpret)
+    Squeeze {
+        input: TensorId,
+        output: TensorId,
+        axis: usize,
+    },
+
+    /// Insert a size-1 dimension (zero-cost pointer reinterpret)
+    ExpandDims {
+        input: TensorId,
+        output: TensorId,
+        axis: usize,
     },
 
     /// Softmax over last dimension
@@ -281,6 +297,8 @@ impl std::fmt::Display for PspOp {
                     input, output, pool_type, filter[0], filter[1], stride[0], stride[1])
             }
             PspOp::Reshape { input, output, .. } => write!(f, "Reshape(t{} → t{})", input, output),
+            PspOp::Squeeze { input, output, axis } => write!(f, "Squeeze(t{} → t{}; axis={})", input, output, axis),
+            PspOp::ExpandDims { input, output, axis } => write!(f, "ExpandDims(t{} → t{}; axis={})", input, output, axis),
             PspOp::Softmax { input, output } => write!(f, "Softmax(t{} → t{})", input, output),
             PspOp::ElementWise { op, input_a, input_b, output } => {
                 write!(f, "ElementWise(t{}, t{} → t{}; {})", input_a, input_b, output, op)
@@ -427,6 +445,8 @@ impl PspOp {
             }
             PspOp::Pool2d { input, .. }
             | PspOp::Reshape { input, .. }
+            | PspOp::Squeeze { input, .. }
+            | PspOp::ExpandDims { input, .. }
             | PspOp::Softmax { input, .. }
             | PspOp::Shape { input, .. }
             | PspOp::Cast { input, .. }
@@ -473,6 +493,8 @@ impl PspOp {
             | PspOp::FullyConnected { output, .. }
             | PspOp::Pool2d { output, .. }
             | PspOp::Reshape { output, .. }
+            | PspOp::Squeeze { output, .. }
+            | PspOp::ExpandDims { output, .. }
             | PspOp::Softmax { output, .. }
             | PspOp::ElementWise { output, .. }
             | PspOp::UnaryElementWise { output, .. }

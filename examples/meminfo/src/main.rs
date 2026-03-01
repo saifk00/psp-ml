@@ -43,28 +43,32 @@ fn app_main() {
         }
     }
 
-    // Try large allocations from partition 2 to find contiguous limit
+    // Binary search for exact max allocation size
     dprintln!("");
-    dprintln!("=== Max Contiguous Alloc (Partition 2) ===");
-    for size_mb in [48u32, 40, 32, 28, 24, 20, 16] {
-        let size = size_mb * 1024 * 1024;
+    dprintln!("=== Binary Search: Max Alloc (Partition 2) ===");
+    let mut lo: u32 = 0;
+    let mut hi: u32 = 60 * 1024 * 1024; // 60MB upper bound
+    while hi - lo > 1 {
+        let mid = lo + (hi - lo) / 2;
         let uid = unsafe {
             sceKernelAllocPartitionMemory(
                 core::mem::transmute(2i32),
                 b"test\0".as_ptr(),
                 SceSysMemBlockTypes::Low,
-                size,
+                mid,
                 core::ptr::null_mut(),
             )
         };
         if uid.0 >= 0 {
-            let addr = unsafe { sceKernelGetBlockHeadAddr(uid) };
-            dprintln!("  {}MB: OK at 0x{:08X}", size_mb, addr as usize);
+            dprintln!("  {} bytes ({} KB): OK", mid, mid / 1024);
             unsafe { sceKernelFreePartitionMemory(uid) };
+            lo = mid;
         } else {
-            dprintln!("  {}MB: FAILED", size_mb);
+            dprintln!("  {} bytes ({} KB): FAILED", mid, mid / 1024);
+            hi = mid;
         }
     }
+    dprintln!("  => Max alloc: {} bytes ({} KB, {} MB)", lo, lo / 1024, lo / (1024 * 1024));
 
     // Write all results to host file
     let mut buf = [0u8; 2048];
@@ -101,29 +105,31 @@ fn app_main() {
         }
     }
 
-    push(&mut buf, &mut pos, b"\n--- Max Contiguous Alloc (Partition 2) ---\n");
-    for size_mb in [48u32, 40, 32, 28, 24, 20, 16] {
-        let size = size_mb * 1024 * 1024;
-        let uid = unsafe {
-            sceKernelAllocPartitionMemory(
-                core::mem::transmute(2i32),
-                b"test\0".as_ptr(),
-                SceSysMemBlockTypes::Low,
-                size,
-                core::ptr::null_mut(),
-            )
-        };
-        push_usize(&mut buf, &mut pos, size_mb as usize);
-        push(&mut buf, &mut pos, b"MB: ");
-        if uid.0 >= 0 {
-            let addr = unsafe { sceKernelGetBlockHeadAddr(uid) } as usize;
-            push(&mut buf, &mut pos, b"OK at 0x");
-            push_hex(&mut buf, &mut pos, addr);
-            push(&mut buf, &mut pos, b"\n");
-            unsafe { sceKernelFreePartitionMemory(uid) };
-        } else {
-            push(&mut buf, &mut pos, b"FAILED\n");
+    push(&mut buf, &mut pos, b"\n--- Binary Search: Max Alloc (Partition 2) ---\n");
+    {
+        let mut lo: u32 = 0;
+        let mut hi: u32 = 60 * 1024 * 1024;
+        while hi - lo > 1 {
+            let mid = lo + (hi - lo) / 2;
+            let uid = unsafe {
+                sceKernelAllocPartitionMemory(
+                    core::mem::transmute(2i32),
+                    b"test\0".as_ptr(),
+                    SceSysMemBlockTypes::Low,
+                    mid,
+                    core::ptr::null_mut(),
+                )
+            };
+            if uid.0 >= 0 {
+                unsafe { sceKernelFreePartitionMemory(uid) };
+                lo = mid;
+            } else {
+                hi = mid;
+            }
         }
+        push(&mut buf, &mut pos, b"max_alloc_bytes: ");
+        push_usize(&mut buf, &mut pos, lo as usize);
+        push(&mut buf, &mut pos, b"\n");
     }
 
     let fd = unsafe {

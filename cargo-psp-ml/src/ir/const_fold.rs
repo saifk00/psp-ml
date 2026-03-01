@@ -178,7 +178,9 @@ pub fn fold(model: &mut PspModel) {
                 store_i32(&mut model.model_data, &mut model.graph, *output, &result);
                 to_remove.push(op_idx);
             }
-            PspOp::Reshape { input, output, .. } => {
+            PspOp::Reshape { input, output, .. }
+            | PspOp::Squeeze { input, output, .. }
+            | PspOp::ExpandDims { input, output, .. } => {
                 if model.graph.tensor(*input).dtype != DType::I32 {
                     continue;
                 }
@@ -207,7 +209,7 @@ pub fn fold(model: &mut PspModel) {
     }
 }
 
-fn store_i32(data: &mut Vec<u8>, graph: &mut Graph<PspOp>, id: usize, vals: &[i32]) {
+pub fn store_i32(data: &mut Vec<u8>, graph: &mut Graph<PspOp>, id: usize, vals: &[i32]) {
     let bytes: Vec<u8> = vals.iter().flat_map(|v| v.to_le_bytes()).collect();
     store_bytes(data, graph, id, &bytes);
     // Set shape for the folded constant (the op producing it is removed, so
@@ -215,7 +217,14 @@ fn store_i32(data: &mut Vec<u8>, graph: &mut Graph<PspOp>, id: usize, vals: &[i3
     graph.tensor_mut(id).shape = vec![vals.len()];
 }
 
-fn store_bytes(data: &mut Vec<u8>, graph: &mut Graph<PspOp>, id: usize, bytes: &[u8]) {
+/// Like `store_i32` but preserves a caller-specified shape instead of flattening to [n].
+pub fn store_i32_shaped(data: &mut Vec<u8>, graph: &mut Graph<PspOp>, id: usize, vals: &[i32], shape: Vec<usize>) {
+    let bytes: Vec<u8> = vals.iter().flat_map(|v| v.to_le_bytes()).collect();
+    store_bytes(data, graph, id, &bytes);
+    graph.tensor_mut(id).shape = shape;
+}
+
+pub fn store_bytes(data: &mut Vec<u8>, graph: &mut Graph<PspOp>, id: usize, bytes: &[u8]) {
     // 4-byte align
     while data.len() % 4 != 0 {
         data.push(0);
@@ -228,7 +237,7 @@ fn store_bytes(data: &mut Vec<u8>, graph: &mut Graph<PspOp>, id: usize, bytes: &
     };
 }
 
-fn eval_binary_i32(a: &[i32], b: &[i32], op: BinaryOp) -> Vec<i32> {
+pub fn eval_binary_i32(a: &[i32], b: &[i32], op: BinaryOp) -> Vec<i32> {
     let op_fn: fn(i32, i32) -> i32 = match op {
         BinaryOp::Add => |a, b| a + b,
         BinaryOp::Mul => |a, b| a * b,
@@ -251,7 +260,7 @@ fn eval_binary_i32(a: &[i32], b: &[i32], op: BinaryOp) -> Vec<i32> {
     }
 }
 
-fn eval_strided_slice(
+pub fn eval_strided_slice(
     data: &[i32],
     begins: &[i32],
     ends: &[i32],

@@ -2,6 +2,7 @@ pub mod const_fold;
 pub mod dump;
 pub mod fuse;
 pub mod graph;
+pub mod infer_shapes;
 pub mod psp;
 
 pub use graph::{DType, Graph, Tensor, TensorId, TensorKind};
