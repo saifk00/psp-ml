@@ -8,25 +8,28 @@ use crate::ir::psp::{PoolType, PspOp};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 
+use super::arena::{ArenaLayout, ArenaSlot};
 use super::plan::*;
 use super::tensor_expr::TensorExprWriter;
 
 pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
     let writer = TensorExprWriter::new(graph);
+    let arena = plan.arena.as_ref();
 
     let weight_statics = render_weight_statics(plan);
     let weight_views = render_weight_views(plan, &writer);
-    let tensor_allocs = render_tensor_allocs(plan, &writer);
+    let arena_static = render_arena_static(arena);
+    let tensor_allocs = render_tensor_allocs(plan, &writer, arena);
 
     let op_tokens: Vec<TokenStream> = plan
         .ops
         .iter()
         .enumerate()
-        .map(|(i, op)| render_op_plain(op, i, &writer))
+        .map(|(i, op)| render_op_plain(op, i, &writer, arena))
         .collect();
     let plain_calls = quote!(#(#op_tokens)*);
 
-    let timed_calls = render_timed_calls(plan, &writer);
+    let timed_calls = render_timed_calls(plan, &writer, arena);
     let op_metadata = render_op_metadata(plan);
 
     let input_size = plan.input_size;
@@ -40,6 +43,8 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
         use psp_ml::kernels::naive::*;
         #[allow(unused_imports)]
         use psp_ml::kernels::*;
+
+        #arena_static
 
         pub fn forward(input: &[f32; #input_size]) -> [f32; #output_size] {
             #tensor_allocs
@@ -264,25 +269,57 @@ fn render_weight_views(plan: &CodegenPlan, writer: &TensorExprWriter) -> TokenSt
 }
 
 // ---------------------------------------------------------------------------
+// Arena static (module-level, shared between forward and forward_timed)
+// ---------------------------------------------------------------------------
+
+fn render_arena_static(arena: Option<&ArenaLayout>) -> TokenStream {
+    match arena {
+        Some(layout) => {
+            let size = layout.arena_size_floats;
+            quote! {
+                static mut ARENA: Aligned16<#size> = Aligned16([0.0f32; #size]);
+            }
+        }
+        None => quote! {},
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Tensor allocations (intermediates + output)
 // ---------------------------------------------------------------------------
 
-fn render_tensor_allocs(plan: &CodegenPlan, writer: &TensorExprWriter) -> TokenStream {
+fn render_tensor_allocs(
+    plan: &CodegenPlan,
+    writer: &TensorExprWriter,
+    arena: Option<&ArenaLayout>,
+) -> TokenStream {
     let mut entries = Vec::new();
     for alloc in &plan.allocs {
         match alloc {
             TensorAlloc::Intermediate { id, size } => {
-                let buf_static = writer.buf_static(*id);
                 let ident = writer.ident(*id);
-                entries.push(quote! {
-                    static mut #buf_static: Aligned16<#size> = Aligned16([0.0f32; #size]);
-                    let #ident = unsafe {
-                        core::slice::from_raw_parts_mut(
-                            core::ptr::addr_of_mut!(#buf_static) as *mut f32,
-                            #size,
-                        )
-                    };
-                });
+                if let Some(layout) = arena {
+                    let offset = layout.offsets[&ArenaSlot::Tensor(*id)];
+                    entries.push(quote! {
+                        let #ident = unsafe {
+                            core::slice::from_raw_parts_mut(
+                                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(#offset),
+                                #size,
+                            )
+                        };
+                    });
+                } else {
+                    let buf_static = writer.buf_static(*id);
+                    entries.push(quote! {
+                        static mut #buf_static: Aligned16<#size> = Aligned16([0.0f32; #size]);
+                        let #ident = unsafe {
+                            core::slice::from_raw_parts_mut(
+                                core::ptr::addr_of_mut!(#buf_static) as *mut f32,
+                                #size,
+                            )
+                        };
+                    });
+                }
             }
             TensorAlloc::Output { id, size } => {
                 let ident = writer.ident(*id);
@@ -300,29 +337,43 @@ fn render_tensor_allocs(plan: &CodegenPlan, writer: &TensorExprWriter) -> TokenS
 // Scratch buffer rendering
 // ---------------------------------------------------------------------------
 
-fn render_scratch(op: &OpPlan, op_idx: usize, writer: &TensorExprWriter) -> TokenStream {
+fn render_scratch(
+    op: &OpPlan,
+    op_idx: usize,
+    writer: &TensorExprWriter,
+    arena: Option<&ArenaLayout>,
+) -> TokenStream {
     let mut entries = Vec::new();
 
     for (s_idx, scratch) in op.scratch.iter().enumerate() {
         let size = scratch.size;
-
-        let (static_name, local_name) = (
-            format!("SCRATCH_{op_idx}_{s_idx}"),
-            format!("scratch_{op_idx}_{s_idx}"),
-        );
-
-        let static_ident = Ident::new(&static_name, Span::call_site());
+        let local_name = format!("scratch_{op_idx}_{s_idx}");
         let local_ident = Ident::new(&local_name, Span::call_site());
 
-        entries.push(quote! {
-            static mut #static_ident: Aligned16<#size> = Aligned16([0.0f32; #size]);
-            let #local_ident = unsafe {
-                core::slice::from_raw_parts_mut(
-                    core::ptr::addr_of_mut!(#static_ident) as *mut f32,
-                    #size,
-                )
-            };
-        });
+        if let Some(layout) = arena {
+            let slot = ArenaSlot::Scratch { op_idx, scratch_idx: s_idx };
+            let offset = layout.offsets[&slot];
+            entries.push(quote! {
+                let #local_ident = unsafe {
+                    core::slice::from_raw_parts_mut(
+                        (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(#offset),
+                        #size,
+                    )
+                };
+            });
+        } else {
+            let static_name = format!("SCRATCH_{op_idx}_{s_idx}");
+            let static_ident = Ident::new(&static_name, Span::call_site());
+            entries.push(quote! {
+                static mut #static_ident: Aligned16<#size> = Aligned16([0.0f32; #size]);
+                let #local_ident = unsafe {
+                    core::slice::from_raw_parts_mut(
+                        core::ptr::addr_of_mut!(#static_ident) as *mut f32,
+                        #size,
+                    )
+                };
+            });
+        }
 
         // Load data if needed
         if let Some(load) = &scratch.load_from {
@@ -788,8 +839,13 @@ fn render_kernel_call(
 // Plain (untimed) op rendering
 // ---------------------------------------------------------------------------
 
-fn render_op_plain(op: &OpPlan, op_idx: usize, writer: &TensorExprWriter) -> TokenStream {
-    let scratch = render_scratch(op, op_idx, writer);
+fn render_op_plain(
+    op: &OpPlan,
+    op_idx: usize,
+    writer: &TensorExprWriter,
+    arena: Option<&ArenaLayout>,
+) -> TokenStream {
+    let scratch = render_scratch(op, op_idx, writer, arena);
     let calls: Vec<TokenStream> = op
         .sub_ops
         .iter()
@@ -809,13 +865,17 @@ fn render_op_plain(op: &OpPlan, op_idx: usize, writer: &TensorExprWriter) -> Tok
 // Timed op rendering
 // ---------------------------------------------------------------------------
 
-fn render_timed_calls(plan: &CodegenPlan, writer: &TensorExprWriter) -> TokenStream {
+fn render_timed_calls(
+    plan: &CodegenPlan,
+    writer: &TensorExprWriter,
+    arena: Option<&ArenaLayout>,
+) -> TokenStream {
     let mut sub_op_idx: usize = 0;
     let mut entries = Vec::new();
 
     for (op_idx, op) in plan.ops.iter().enumerate() {
         // Scratch setup is untimed
-        let scratch = render_scratch(op, op_idx, writer);
+        let scratch = render_scratch(op, op_idx, writer, arena);
         entries.push(scratch);
 
         for sub in &op.sub_ops {

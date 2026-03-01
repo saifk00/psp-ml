@@ -3,1971 +3,1691 @@
 use psp_ml::kernels::naive::*;
 #[allow(unused_imports)]
 use psp_ml::kernels::*;
+static mut ARENA: Aligned16<288008usize> = Aligned16([0.0f32; 288008usize]);
 pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
-    static mut T_169_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_169 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_169_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1usize,
         )
     };
-    static mut T_170_BUF: Aligned16<144000usize> = Aligned16([0.0f32; 144000usize]);
     let t_170 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_170_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4usize),
             144000usize,
         )
     };
-    static mut T_171_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_171 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_171_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1usize,
         )
     };
-    static mut T_172_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_172 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_172_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144004usize),
             1usize,
         )
     };
-    static mut T_173_BUF: Aligned16<144000usize> = Aligned16([0.0f32; 144000usize]);
     let t_173 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_173_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144008usize),
             144000usize,
         )
     };
-    static mut T_174_BUF: Aligned16<144000usize> = Aligned16([0.0f32; 144000usize]);
     let t_174 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_174_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             144000usize,
         )
     };
-    static mut T_175_BUF: Aligned16<144000usize> = Aligned16([0.0f32; 144000usize]);
     let t_175 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_175_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144000usize),
             144000usize,
         )
     };
-    static mut T_187_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_187 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_187_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1usize,
         )
     };
-    static mut T_188_BUF: Aligned16<2usize> = Aligned16([0.0f32; 2usize]);
     let t_188 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_188_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4usize),
             2usize,
         )
     };
-    static mut T_200_BUF: Aligned16<2048usize> = Aligned16([0.0f32; 2048usize]);
     let t_200 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_200_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(8usize),
             2048usize,
         )
     };
-    static mut T_201_BUF: Aligned16<2048usize> = Aligned16([0.0f32; 2048usize]);
     let t_201 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_201_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2056usize),
             2048usize,
         )
     };
-    static mut T_202_BUF: Aligned16<2048usize> = Aligned16([0.0f32; 2048usize]);
     let t_202 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_202_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             2048usize,
         )
     };
-    static mut T_203_BUF: Aligned16<2048usize> = Aligned16([0.0f32; 2048usize]);
     let t_203 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_203_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2048usize),
             2048usize,
         )
     };
-    static mut T_206_BUF: Aligned16<1025usize> = Aligned16([0.0f32; 1025usize]);
     let t_206 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_206_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4096usize),
             1025usize,
         )
     };
-    static mut T_214_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_214 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_214_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1usize,
         )
     };
-    static mut T_215_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_215 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_215_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4usize),
             96usize,
         )
     };
-    static mut T_216_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_216 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_216_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(100usize),
             96usize,
         )
     };
-    static mut T_217_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_217 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_217_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             96usize,
         )
     };
-    static mut T_218_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_218 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_218_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             96usize,
         )
     };
-    static mut T_219_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_219 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_219_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             96usize,
         )
     };
-    static mut T_220_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_220 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_220_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             96usize,
         )
     };
-    static mut T_221_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_221 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_221_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             96usize,
         )
     };
-    static mut T_228_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_228 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_228_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             1usize,
         )
     };
-    static mut T_229_BUF: Aligned16<8usize> = Aligned16([0.0f32; 8usize]);
     let t_229 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_229_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(100usize),
             8usize,
         )
     };
-    static mut T_241_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_241 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_241_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(108usize),
             1024usize,
         )
     };
-    static mut T_242_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_242 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_242_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1132usize),
             1024usize,
         )
     };
-    static mut T_243_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_243 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_243_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             1024usize,
         )
     };
-    static mut T_244_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_244 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_244_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1120usize),
             1024usize,
         )
     };
-    static mut T_247_BUF: Aligned16<513usize> = Aligned16([0.0f32; 513usize]);
     let t_247 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_247_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2144usize),
             513usize,
         )
     };
-    static mut T_255_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_255 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_255_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             1usize,
         )
     };
-    static mut T_256_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_256 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_256_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(100usize),
             96usize,
         )
     };
-    static mut T_257_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_257 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_257_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(196usize),
             96usize,
         )
     };
-    static mut T_258_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_258 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_258_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             96usize,
         )
     };
-    static mut T_259_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_259 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_259_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(192usize),
             96usize,
         )
     };
-    static mut T_260_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_260 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_260_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             96usize,
         )
     };
-    static mut T_261_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_261 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_261_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(192usize),
             96usize,
         )
     };
-    static mut T_262_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_262 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_262_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             96usize,
         )
     };
-    static mut T_263_BUF: Aligned16<192usize> = Aligned16([0.0f32; 192usize]);
     let t_263 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_263_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(192usize),
             192usize,
         )
     };
-    static mut T_264_BUF: Aligned16<192usize> = Aligned16([0.0f32; 192usize]);
     let t_264 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_264_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             192usize,
         )
     };
-    static mut T_265_BUF: Aligned16<192usize> = Aligned16([0.0f32; 192usize]);
     let t_265 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_265_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(192usize),
             192usize,
         )
     };
-    static mut T_266_BUF: Aligned16<1152usize> = Aligned16([0.0f32; 1152usize]);
     let t_266 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_266_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4992usize),
             1152usize,
         )
     };
-    static mut T_267_BUF: Aligned16<1152usize> = Aligned16([0.0f32; 1152usize]);
     let t_267 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_267_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1152usize,
         )
     };
-    static mut T_268_BUF: Aligned16<1152usize> = Aligned16([0.0f32; 1152usize]);
     let t_268 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_268_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             1152usize,
         )
     };
-    static mut T_269_BUF: Aligned16<2304usize> = Aligned16([0.0f32; 2304usize]);
     let t_269 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_269_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2304usize),
             2304usize,
         )
     };
-    static mut T_270_BUF: Aligned16<1152usize> = Aligned16([0.0f32; 1152usize]);
     let t_270 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_270_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4608usize),
             1152usize,
         )
     };
-    static mut T_271_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_271 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_271_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             3456usize,
         )
     };
-    static mut T_272_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_272 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_272_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             3456usize,
         )
     };
-    static mut T_273_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_273 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_273_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
             3456usize,
         )
     };
-    static mut T_274_BUF: Aligned16<3600usize> = Aligned16([0.0f32; 3600usize]);
     let t_274 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_274_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             3600usize,
         )
     };
-    static mut T_275_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_275 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_275_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3600usize),
             1728usize,
         )
     };
-    static mut T_276_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_276 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_276_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1728usize,
         )
     };
-    static mut T_277_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_277 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_277_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             1728usize,
         )
     };
-    static mut T_278_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_278 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_278_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6048usize),
             864usize,
         )
     };
-    static mut T_279_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_279 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_279_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
             1728usize,
         )
     };
-    static mut T_280_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_280 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_280_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1728usize,
         )
     };
-    static mut T_281_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_281 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_281_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             1728usize,
         )
     };
-    static mut T_282_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_282 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_282_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1728usize,
         )
     };
-    static mut T_283_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_283 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_283_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             1728usize,
         )
     };
-    static mut T_284_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_284 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_284_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             1728usize,
         )
     };
-    static mut T_285_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_285 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_285_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
             864usize,
         )
     };
-    static mut T_286_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_286 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_286_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut T_287_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_287 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_287_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             1728usize,
         )
     };
-    static mut T_288_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_288 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_288_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             1728usize,
         )
     };
-    static mut T_289_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_289 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_289_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
             1728usize,
         )
     };
-    static mut T_290_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_290 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_290_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             1728usize,
         )
     };
-    static mut T_291_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_291 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_291_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
             1728usize,
         )
     };
-    static mut T_292_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_292 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_292_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             1728usize,
         )
     };
-    static mut T_293_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_293 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_293_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             864usize,
         )
     };
-    static mut T_294_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_294 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_294_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             864usize,
         )
     };
-    static mut T_295_BUF: Aligned16<6912usize> = Aligned16([0.0f32; 6912usize]);
     let t_295 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_295_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12096usize),
             6912usize,
         )
     };
-    static mut T_296_BUF: Aligned16<6912usize> = Aligned16([0.0f32; 6912usize]);
     let t_296 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_296_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             6912usize,
         )
     };
-    static mut T_297_BUF: Aligned16<6912usize> = Aligned16([0.0f32; 6912usize]);
     let t_297 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_297_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(19008usize),
             6912usize,
         )
     };
-    static mut T_298_BUF: Aligned16<7488usize> = Aligned16([0.0f32; 7488usize]);
     let t_298 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_298_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             7488usize,
         )
     };
-    static mut T_299_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_299 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_299_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7488usize),
             3456usize,
         )
     };
-    static mut T_300_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_300 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_300_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             3456usize,
         )
     };
-    static mut T_301_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_301 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_301_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             3456usize,
         )
     };
-    static mut T_302_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_302 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_302_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             288usize,
         )
     };
-    static mut T_306_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_306 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_306_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(288usize),
             288usize,
         )
     };
-    static mut T_307_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_307 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_307_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             18usize,
         )
     };
-    static mut T_308_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_308 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_308_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(20usize),
             18usize,
         )
     };
-    static mut T_309_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_309 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_309_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(40usize),
             18usize,
         )
     };
-    static mut T_310_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_310 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_310_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(60usize),
             288usize,
         )
     };
-    static mut T_311_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_311 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_311_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(348usize),
             288usize,
         )
     };
-    static mut T_312_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_312 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_312_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
             3456usize,
         )
     };
-    static mut T_313_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_313 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_313_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             864usize,
         )
     };
-    static mut T_314_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_314 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_314_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             3456usize,
         )
     };
-    static mut T_315_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_315 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_315_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             3456usize,
         )
     };
-    static mut T_316_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_316 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_316_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7776usize),
             3456usize,
         )
     };
-    static mut T_317_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_317 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_317_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             3456usize,
         )
     };
-    static mut T_318_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_318 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_318_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             3456usize,
         )
     };
-    static mut T_319_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_319 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_319_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7776usize),
             3456usize,
         )
     };
-    static mut T_320_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_320 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_320_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             288usize,
         )
     };
-    static mut T_324_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_324 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_324_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(288usize),
             288usize,
         )
     };
-    static mut T_325_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_325 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_325_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             18usize,
         )
     };
-    static mut T_326_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_326 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_326_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(20usize),
             18usize,
         )
     };
-    static mut T_327_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_327 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_327_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(40usize),
             18usize,
         )
     };
-    static mut T_328_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_328 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_328_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(60usize),
             288usize,
         )
     };
-    static mut T_329_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_329 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_329_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(348usize),
             288usize,
         )
     };
-    static mut T_330_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_330 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_330_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             3456usize,
         )
     };
-    static mut T_331_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_331 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_331_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28512usize),
             864usize,
         )
     };
-    static mut T_332_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_332 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_332_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut T_333_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_333 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_333_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(21600usize),
             3456usize,
         )
     };
-    static mut T_334_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_334 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_334_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             3456usize,
         )
     };
-    static mut T_335_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_335 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_335_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             3456usize,
         )
     };
-    static mut T_336_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_336 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_336_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             3456usize,
         )
     };
-    static mut T_337_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_337 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_337_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             3456usize,
         )
     };
-    static mut T_338_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_338 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_338_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7776usize),
             3456usize,
         )
     };
-    static mut T_339_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_339 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_339_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             288usize,
         )
     };
-    static mut T_343_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_343 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_343_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             288usize,
         )
     };
-    static mut T_344_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_344 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_344_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             18usize,
         )
     };
-    static mut T_345_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_345 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_345_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(884usize),
             18usize,
         )
     };
-    static mut T_346_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_346 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_346_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(904usize),
             18usize,
         )
     };
-    static mut T_347_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_347 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_347_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(924usize),
             288usize,
         )
     };
-    static mut T_348_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_348 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_348_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1212usize),
             288usize,
         )
     };
-    static mut T_349_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_349 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_349_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1500usize),
             3456usize,
         )
     };
-    static mut T_350_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_350 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_350_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(29148usize),
             864usize,
         )
     };
-    static mut T_351_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_351 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_351_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             864usize,
         )
     };
-    static mut T_352_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_352 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_352_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(22464usize),
             3456usize,
         )
     };
-    static mut T_353_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_353 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_353_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             3456usize,
         )
     };
-    static mut T_354_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_354 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_354_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
             3456usize,
         )
     };
-    static mut T_355_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_355 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_355_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             3456usize,
         )
     };
-    static mut T_356_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_356 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_356_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
             3456usize,
         )
     };
-    static mut T_357_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_357 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_357_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(8640usize),
             3456usize,
         )
     };
-    static mut T_358_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_358 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_358_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             288usize,
         )
     };
-    static mut T_362_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_362 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_362_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(288usize),
             288usize,
         )
     };
-    static mut T_363_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_363 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_363_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             18usize,
         )
     };
-    static mut T_364_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_364 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_364_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(20usize),
             18usize,
         )
     };
-    static mut T_365_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_365 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_365_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(40usize),
             18usize,
         )
     };
-    static mut T_366_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_366 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_366_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(60usize),
             288usize,
         )
     };
-    static mut T_367_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_367 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_367_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(348usize),
             288usize,
         )
     };
-    static mut T_368_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_368 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_368_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             3456usize,
         )
     };
-    static mut T_369_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_369 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_369_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut T_370_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_370 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_370_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             864usize,
         )
     };
-    static mut T_371_BUF: Aligned16<10368usize> = Aligned16([0.0f32; 10368usize]);
     let t_371 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_371_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(64800usize),
             10368usize,
         )
     };
-    static mut T_372_BUF: Aligned16<10368usize> = Aligned16([0.0f32; 10368usize]);
     let t_372 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_372_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             10368usize,
         )
     };
-    static mut T_373_BUF: Aligned16<10368usize> = Aligned16([0.0f32; 10368usize]);
     let t_373 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_373_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
             10368usize,
         )
     };
-    static mut T_374_BUF: Aligned16<12096usize> = Aligned16([0.0f32; 12096usize]);
     let t_374 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_374_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(20736usize),
             12096usize,
         )
     };
-    static mut T_375_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_375 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_375_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             5184usize,
         )
     };
-    static mut T_376_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_376 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_376_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
             5184usize,
         )
     };
-    static mut T_377_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_377 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_377_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
             5184usize,
         )
     };
-    static mut T_378_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_378 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_378_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut T_382_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_382 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_382_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             864usize,
         )
     };
-    static mut T_383_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_383 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_383_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             27usize,
         )
     };
-    static mut T_384_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_384 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_384_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28usize),
             27usize,
         )
     };
-    static mut T_385_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_385 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_385_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(56usize),
             27usize,
         )
     };
-    static mut T_386_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_386 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_386_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(84usize),
             864usize,
         )
     };
-    static mut T_387_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_387 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_387_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(948usize),
             864usize,
         )
     };
-    static mut T_388_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_388 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_388_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1812usize),
             5184usize,
         )
     };
-    static mut T_389_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_389 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_389_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             648usize,
         )
     };
-    static mut T_390_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_390 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_390_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
             5184usize,
         )
     };
-    static mut T_391_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_391 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_391_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5832usize),
             5184usize,
         )
     };
-    static mut T_392_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_392 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_392_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11016usize),
             5184usize,
         )
     };
-    static mut T_393_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_393 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_393_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
             5184usize,
         )
     };
-    static mut T_394_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_394 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_394_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5832usize),
             5184usize,
         )
     };
-    static mut T_395_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_395 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_395_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11016usize),
             5184usize,
         )
     };
-    static mut T_396_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_396 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_396_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
             864usize,
         )
     };
-    static mut T_400_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_400 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_400_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1512usize),
             864usize,
         )
     };
-    static mut T_401_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_401 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_401_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
             27usize,
         )
     };
-    static mut T_402_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_402 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_402_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(676usize),
             27usize,
         )
     };
-    static mut T_403_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_403 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_403_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(704usize),
             27usize,
         )
     };
-    static mut T_404_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_404 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_404_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(732usize),
             864usize,
         )
     };
-    static mut T_405_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_405 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_405_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1596usize),
             864usize,
         )
     };
-    static mut T_406_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_406 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_406_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2460usize),
             5184usize,
         )
     };
-    static mut T_407_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_407 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_407_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
             648usize,
         )
     };
-    static mut T_408_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_408 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_408_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
             648usize,
         )
     };
-    static mut T_409_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_409 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_409_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
             5184usize,
         )
     };
-    static mut T_410_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_410 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_410_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
             5184usize,
         )
     };
-    static mut T_411_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_411 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_411_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
             5184usize,
         )
     };
-    static mut T_412_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_412 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_412_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
             5184usize,
         )
     };
-    static mut T_413_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_413 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_413_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
             5184usize,
         )
     };
-    static mut T_414_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_414 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_414_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
             5184usize,
         )
     };
-    static mut T_415_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_415 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_415_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut T_419_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_419 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_419_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
             864usize,
         )
     };
-    static mut T_420_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_420 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_420_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             27usize,
         )
     };
-    static mut T_421_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_421 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_421_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28usize),
             27usize,
         )
     };
-    static mut T_422_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_422 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_422_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(56usize),
             27usize,
         )
     };
-    static mut T_423_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_423 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_423_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(84usize),
             864usize,
         )
     };
-    static mut T_424_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_424 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_424_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
             864usize,
         )
     };
-    static mut T_425_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_425 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_425_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2808usize),
             5184usize,
         )
     };
-    static mut T_426_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_426 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_426_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             648usize,
         )
     };
-    static mut T_427_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_427 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_427_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
             648usize,
         )
     };
-    static mut T_428_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_428 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_428_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
             5184usize,
         )
     };
-    static mut T_429_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_429 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_429_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6480usize),
             5184usize,
         )
     };
-    static mut T_430_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_430 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_430_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11664usize),
             5184usize,
         )
     };
-    static mut T_431_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_431 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_431_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
             5184usize,
         )
     };
-    static mut T_432_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_432 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_432_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6480usize),
             5184usize,
         )
     };
-    static mut T_433_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_433 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_433_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11664usize),
             5184usize,
         )
     };
-    static mut T_434_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_434 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_434_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
             864usize,
         )
     };
-    static mut T_438_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_438 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_438_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2160usize),
             864usize,
         )
     };
-    static mut T_439_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_439 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_439_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             27usize,
         )
     };
-    static mut T_440_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_440 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_440_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28usize),
             27usize,
         )
     };
-    static mut T_441_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_441 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_441_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(56usize),
             27usize,
         )
     };
-    static mut T_442_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_442 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_442_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
             864usize,
         )
     };
-    static mut T_443_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_443 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_443_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2160usize),
             864usize,
         )
     };
-    static mut T_444_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_444 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_444_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3024usize),
             5184usize,
         )
     };
-    static mut T_445_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_445 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_445_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             648usize,
         )
     };
-    static mut T_446_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_446 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_446_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
             648usize,
         )
     };
-    static mut T_447_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_447 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_447_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
             5184usize,
         )
     };
-    static mut T_448_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_448 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_448_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
             5184usize,
         )
     };
-    static mut T_449_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_449 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_449_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
             5184usize,
         )
     };
-    static mut T_450_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_450 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_450_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
             5184usize,
         )
     };
-    static mut T_451_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_451 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_451_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
             5184usize,
         )
     };
-    static mut T_452_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_452 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_452_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
             5184usize,
         )
     };
-    static mut T_453_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_453 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_453_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut T_457_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_457 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_457_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
             864usize,
         )
     };
-    static mut T_458_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_458 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_458_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             27usize,
         )
     };
-    static mut T_459_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_459 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_459_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28usize),
             27usize,
         )
     };
-    static mut T_460_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_460 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_460_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(56usize),
             27usize,
         )
     };
-    static mut T_461_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_461 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_461_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(84usize),
             864usize,
         )
     };
-    static mut T_462_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_462 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_462_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
             864usize,
         )
     };
-    static mut T_463_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_463 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_463_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2808usize),
             5184usize,
         )
     };
-    static mut T_464_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_464 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_464_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             648usize,
         )
     };
-    static mut T_465_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_465 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_465_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
             648usize,
         )
     };
-    static mut T_466_BUF: Aligned16<9216usize> = Aligned16([0.0f32; 9216usize]);
     let t_466 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_466_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
             9216usize,
         )
     };
-    static mut T_467_BUF: Aligned16<9216usize> = Aligned16([0.0f32; 9216usize]);
     let t_467 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_467_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10512usize),
             9216usize,
         )
     };
-    static mut T_468_BUF: Aligned16<9216usize> = Aligned16([0.0f32; 9216usize]);
     let t_468 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_468_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(19728usize),
             9216usize,
         )
     };
-    static mut T_469_BUF: Aligned16<12288usize> = Aligned16([0.0f32; 12288usize]);
     let t_469 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_469_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             12288usize,
         )
     };
-    static mut T_470_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_470 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_470_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12288usize),
             4608usize,
         )
     };
-    static mut T_471_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_471 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_471_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             4608usize,
         )
     };
-    static mut T_472_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_472 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_472_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4608usize),
             4608usize,
         )
     };
-    static mut T_473_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_473 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_473_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1536usize,
         )
     };
-    static mut T_477_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_477 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_477_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1536usize),
             1536usize,
         )
     };
-    static mut T_478_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_478 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_478_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             48usize,
         )
     };
-    static mut T_479_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_479 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_479_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(48usize),
             48usize,
         )
     };
-    static mut T_480_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_480 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_480_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             48usize,
         )
     };
-    static mut T_481_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_481 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_481_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144usize),
             1536usize,
         )
     };
-    static mut T_482_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_482 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_482_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1680usize),
             1536usize,
         )
     };
-    static mut T_483_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_483 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_483_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(9216usize),
             4608usize,
         )
     };
-    static mut T_484_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_484 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_484_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             576usize,
         )
     };
-    static mut T_485_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_485 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_485_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
             4608usize,
         )
     };
-    static mut T_486_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_486 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_486_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
             4608usize,
         )
     };
-    static mut T_487_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_487 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_487_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(9792usize),
             4608usize,
         )
     };
-    static mut T_488_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_488 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_488_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
             4608usize,
         )
     };
-    static mut T_489_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_489 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_489_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
             4608usize,
         )
     };
-    static mut T_490_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_490 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_490_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(9792usize),
             4608usize,
         )
     };
-    static mut T_491_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_491 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_491_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
             1536usize,
         )
     };
-    static mut T_495_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_495 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_495_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2112usize),
             1536usize,
         )
     };
-    static mut T_496_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_496 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_496_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
             48usize,
         )
     };
-    static mut T_497_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_497 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_497_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(624usize),
             48usize,
         )
     };
-    static mut T_498_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_498 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_498_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672usize),
             48usize,
         )
     };
-    static mut T_499_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_499 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_499_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(720usize),
             1536usize,
         )
     };
-    static mut T_500_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_500 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_500_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2256usize),
             1536usize,
         )
     };
-    static mut T_501_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_501 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_501_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3792usize),
             4608usize,
         )
     };
-    static mut T_502_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_502 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_502_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
             576usize,
         )
     };
-    static mut T_503_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_503 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_503_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             576usize,
         )
     };
-    static mut T_504_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_504 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_504_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             4608usize,
         )
     };
-    static mut T_505_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_505 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_505_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6336usize),
             4608usize,
         )
     };
-    static mut T_506_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_506 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_506_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10944usize),
             4608usize,
         )
     };
-    static mut T_507_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_507 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_507_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             4608usize,
         )
     };
-    static mut T_508_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_508 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_508_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6336usize),
             4608usize,
         )
     };
-    static mut T_509_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_509 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_509_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10944usize),
             4608usize,
         )
     };
-    static mut T_510_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_510 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_510_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             1536usize,
         )
     };
-    static mut T_514_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_514 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_514_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3264usize),
             1536usize,
         )
     };
-    static mut T_515_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_515 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_515_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             48usize,
         )
     };
-    static mut T_516_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_516 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_516_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(48usize),
             48usize,
         )
     };
-    static mut T_517_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_517 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_517_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             48usize,
         )
     };
-    static mut T_518_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_518 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_518_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             1536usize,
         )
     };
-    static mut T_519_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_519 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_519_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3264usize),
             1536usize,
         )
     };
-    static mut T_520_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_520 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_520_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4800usize),
             4608usize,
         )
     };
-    static mut T_521_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_521 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_521_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             576usize,
         )
     };
-    static mut T_522_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_522 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_522_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
             576usize,
         )
     };
-    static mut T_523_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_523 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_523_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             4608usize,
         )
     };
-    static mut T_524_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_524 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_524_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
             4608usize,
         )
     };
-    static mut T_525_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_525 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_525_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
             4608usize,
         )
     };
-    static mut T_526_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_526 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_526_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             4608usize,
         )
     };
-    static mut T_527_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_527 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_527_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
             4608usize,
         )
     };
-    static mut T_528_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_528 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_528_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
             4608usize,
         )
     };
-    static mut T_529_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_529 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_529_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             1536usize,
         )
     };
-    static mut T_533_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_533 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_533_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2688usize),
             1536usize,
         )
     };
-    static mut T_534_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_534 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_534_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             48usize,
         )
     };
-    static mut T_535_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_535 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_535_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(48usize),
             48usize,
         )
     };
-    static mut T_536_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_536 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_536_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             48usize,
         )
     };
-    static mut T_537_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_537 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_537_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             1536usize,
         )
     };
-    static mut T_538_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_538 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_538_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2688usize),
             1536usize,
         )
     };
-    static mut T_539_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_539 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_539_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4224usize),
             4608usize,
         )
     };
-    static mut T_540_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_540 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_540_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             576usize,
         )
     };
-    static mut T_541_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_541 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_541_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             576usize,
         )
     };
-    static mut T_542_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_542 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_542_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             576usize,
         )
     };
-    static mut T_543_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_543 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_543_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
             576usize,
         )
     };
-    static mut T_544_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_544 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_544_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             1024usize,
         )
     };
-    static mut T_545_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_545 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_545_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1024usize,
         )
     };
@@ -2172,10 +1892,9 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     reshape(t_200, t_201);
     binary_mul(t_201, t_129, t_202, 2048usize);
     reshape(t_202, t_203);
-    static mut SCRATCH_13_0: Aligned16<2048usize> = Aligned16([0.0f32; 2048usize]);
     let scratch_13_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_13_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             2048usize,
         )
     };
@@ -2228,10 +1947,9 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     reshape(t_241, t_242);
     binary_mul(t_242, t_126, t_243, 1024usize);
     reshape(t_243, t_244);
-    static mut SCRATCH_28_0: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let scratch_28_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_28_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             1024usize,
         )
     };
@@ -2284,17 +2002,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     }
     binary_mul(t_263, t_163, t_264, 2usize);
     binary_add(t_264, t_162, t_265, 2usize);
-    static mut SCRATCH_40_0: Aligned16<3072usize> = Aligned16([0.0f32; 3072usize]);
     let scratch_40_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_40_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(384usize),
             3072usize,
         )
     };
-    static mut SCRATCH_40_1: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let scratch_40_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_40_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             1536usize,
         )
     };
@@ -2351,17 +2067,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
             }
         }
     }
-    static mut SCRATCH_44_0: Aligned16<2304usize> = Aligned16([0.0f32; 2304usize]);
     let scratch_44_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_44_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             2304usize,
         )
     };
-    static mut SCRATCH_44_1: Aligned16<1152usize> = Aligned16([0.0f32; 1152usize]);
     let scratch_44_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_44_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
             1152usize,
         )
     };
@@ -2377,17 +2091,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     );
     matmul_bt_tiled(scratch_44_0, scratch_44_1, t_270, 12usize, 12usize, 6usize);
     bias_add(t_270, t_50, 48usize, 24usize);
-    static mut SCRATCH_45_0: Aligned16<1152usize> = Aligned16([0.0f32; 1152usize]);
     let scratch_45_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_45_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             1152usize,
         )
     };
-    static mut SCRATCH_45_1: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let scratch_45_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_45_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
             1728usize,
         )
     };
@@ -2425,17 +2137,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     );
     unary_logistic(t_275, t_276);
     binary_mul(t_275, t_276, t_277, 1728usize);
-    static mut SCRATCH_52_0: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let scratch_52_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_52_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1728usize,
         )
     };
-    static mut SCRATCH_52_1: Aligned16<2592usize> = Aligned16([0.0f32; 2592usize]);
     let scratch_52_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_52_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             2592usize,
         )
     };
@@ -2451,17 +2161,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     );
     matmul_bt_tiled(scratch_52_0, scratch_52_1, t_278, 6usize, 18usize, 9usize);
     bias_add(t_278, t_117, 24usize, 36usize);
-    static mut SCRATCH_53_0: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let scratch_53_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_53_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             864usize,
         )
     };
-    static mut SCRATCH_53_1: Aligned16<2592usize> = Aligned16([0.0f32; 2592usize]);
     let scratch_53_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_53_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             2592usize,
         )
     };
@@ -2492,17 +2200,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     );
     unary_logistic(t_282, t_283);
     binary_mul(t_282, t_283, t_284, 1728usize);
-    static mut SCRATCH_59_0: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let scratch_59_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_59_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
             1728usize,
         )
     };
-    static mut SCRATCH_59_1: Aligned16<2592usize> = Aligned16([0.0f32; 2592usize]);
     let scratch_59_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_59_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             2592usize,
         )
     };
@@ -2519,17 +2225,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     matmul_bt_tiled(scratch_59_0, scratch_59_1, t_285, 6usize, 18usize, 9usize);
     bias_add(t_285, t_117, 24usize, 36usize);
     binary_add(t_285, t_278, t_286, 864usize);
-    static mut SCRATCH_61_0: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let scratch_61_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_61_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
             864usize,
         )
     };
-    static mut SCRATCH_61_1: Aligned16<2592usize> = Aligned16([0.0f32; 2592usize]);
     let scratch_61_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_61_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             2592usize,
         )
     };
@@ -2560,17 +2264,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     );
     unary_logistic(t_290, t_291);
     binary_mul(t_290, t_291, t_292, 1728usize);
-    static mut SCRATCH_67_0: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let scratch_67_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_67_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6048usize),
             1728usize,
         )
     };
-    static mut SCRATCH_67_1: Aligned16<2592usize> = Aligned16([0.0f32; 2592usize]);
     let scratch_67_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_67_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             2592usize,
         )
     };
@@ -2587,17 +2289,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     matmul_bt_tiled(scratch_67_0, scratch_67_1, t_293, 6usize, 18usize, 9usize);
     bias_add(t_293, t_117, 24usize, 36usize);
     binary_add(t_293, t_286, t_294, 864usize);
-    static mut SCRATCH_69_0: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let scratch_69_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_69_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut SCRATCH_69_1: Aligned16<10368usize> = Aligned16([0.0f32; 10368usize]);
     let scratch_69_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_69_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             10368usize,
         )
     };
@@ -2663,17 +2363,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     );
     unary_logistic(t_310, t_311);
     binary_mul(t_301, t_311, t_312, 288usize);
-    static mut SCRATCH_84_0: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let scratch_84_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_84_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             3456usize,
         )
     };
-    static mut SCRATCH_84_1: Aligned16<20736usize> = Aligned16([0.0f32; 20736usize]);
     let scratch_84_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_84_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
             20736usize,
         )
     };
@@ -2689,17 +2387,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     );
     matmul_bt_tiled(scratch_84_0, scratch_84_1, t_313, 3usize, 72usize, 18usize);
     bias_add(t_313, t_119, 12usize, 72usize);
-    static mut SCRATCH_85_0: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let scratch_85_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_85_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25056usize),
             864usize,
         )
     };
-    static mut SCRATCH_85_1: Aligned16<20736usize> = Aligned16([0.0f32; 20736usize]);
     let scratch_85_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_85_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             20736usize,
         )
     };
@@ -2758,17 +2454,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     );
     unary_logistic(t_328, t_329);
     binary_mul(t_319, t_329, t_330, 288usize);
-    static mut SCRATCH_99_0: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let scratch_99_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_99_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             3456usize,
         )
     };
-    static mut SCRATCH_99_1: Aligned16<20736usize> = Aligned16([0.0f32; 20736usize]);
     let scratch_99_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_99_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7776usize),
             20736usize,
         )
     };
@@ -2785,17 +2479,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     matmul_bt_tiled(scratch_99_0, scratch_99_1, t_331, 3usize, 72usize, 18usize);
     bias_add(t_331, t_119, 12usize, 72usize);
     binary_add(t_331, t_313, t_332, 864usize);
-    static mut SCRATCH_101_0: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let scratch_101_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_101_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25056usize),
             864usize,
         )
     };
-    static mut SCRATCH_101_1: Aligned16<20736usize> = Aligned16([0.0f32; 20736usize]);
     let scratch_101_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_101_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             20736usize,
         )
     };
@@ -2854,17 +2546,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     );
     unary_logistic(t_347, t_348);
     binary_mul(t_338, t_348, t_349, 288usize);
-    static mut SCRATCH_115_0: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let scratch_115_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_115_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25692usize),
             3456usize,
         )
     };
-    static mut SCRATCH_115_1: Aligned16<20736usize> = Aligned16([0.0f32; 20736usize]);
     let scratch_115_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_115_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4956usize),
             20736usize,
         )
     };
@@ -2881,17 +2571,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     matmul_bt_tiled(scratch_115_0, scratch_115_1, t_350, 3usize, 72usize, 18usize);
     bias_add(t_350, t_119, 12usize, 72usize);
     binary_add(t_350, t_332, t_351, 864usize);
-    static mut SCRATCH_117_0: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let scratch_117_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_117_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut SCRATCH_117_1: Aligned16<20736usize> = Aligned16([0.0f32; 20736usize]);
     let scratch_117_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_117_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             20736usize,
         )
     };
@@ -2950,17 +2638,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     );
     unary_logistic(t_366, t_367);
     binary_mul(t_357, t_367, t_368, 288usize);
-    static mut SCRATCH_131_0: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let scratch_131_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_131_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25920usize),
             3456usize,
         )
     };
-    static mut SCRATCH_131_1: Aligned16<20736usize> = Aligned16([0.0f32; 20736usize]);
     let scratch_131_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_131_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
             20736usize,
         )
     };
@@ -2977,17 +2663,15 @@ pub fn forward(input: &[f32; 144000usize]) -> [f32; 6522usize] {
     matmul_bt_tiled(scratch_131_0, scratch_131_1, t_369, 3usize, 72usize, 18usize);
     bias_add(t_369, t_119, 12usize, 72usize);
     binary_add(t_369, t_351, t_370, 864usize);
-    static mut SCRATCH_133_0: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let scratch_133_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_133_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut SCRATCH_133_1: Aligned16<62208usize> = Aligned16([0.0f32; 62208usize]);
     let scratch_133_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_133_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
             62208usize,
         )
     };
@@ -3621,1970 +3305,1689 @@ pub fn forward_timed(
     op_ticks: &mut [u64; NUM_OPS],
     get_tick: fn() -> u64,
 ) -> [f32; 6522usize] {
-    static mut T_169_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_169 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_169_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1usize,
         )
     };
-    static mut T_170_BUF: Aligned16<144000usize> = Aligned16([0.0f32; 144000usize]);
     let t_170 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_170_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4usize),
             144000usize,
         )
     };
-    static mut T_171_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_171 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_171_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1usize,
         )
     };
-    static mut T_172_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_172 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_172_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144004usize),
             1usize,
         )
     };
-    static mut T_173_BUF: Aligned16<144000usize> = Aligned16([0.0f32; 144000usize]);
     let t_173 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_173_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144008usize),
             144000usize,
         )
     };
-    static mut T_174_BUF: Aligned16<144000usize> = Aligned16([0.0f32; 144000usize]);
     let t_174 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_174_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             144000usize,
         )
     };
-    static mut T_175_BUF: Aligned16<144000usize> = Aligned16([0.0f32; 144000usize]);
     let t_175 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_175_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144000usize),
             144000usize,
         )
     };
-    static mut T_187_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_187 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_187_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1usize,
         )
     };
-    static mut T_188_BUF: Aligned16<2usize> = Aligned16([0.0f32; 2usize]);
     let t_188 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_188_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4usize),
             2usize,
         )
     };
-    static mut T_200_BUF: Aligned16<2048usize> = Aligned16([0.0f32; 2048usize]);
     let t_200 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_200_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(8usize),
             2048usize,
         )
     };
-    static mut T_201_BUF: Aligned16<2048usize> = Aligned16([0.0f32; 2048usize]);
     let t_201 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_201_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2056usize),
             2048usize,
         )
     };
-    static mut T_202_BUF: Aligned16<2048usize> = Aligned16([0.0f32; 2048usize]);
     let t_202 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_202_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             2048usize,
         )
     };
-    static mut T_203_BUF: Aligned16<2048usize> = Aligned16([0.0f32; 2048usize]);
     let t_203 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_203_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2048usize),
             2048usize,
         )
     };
-    static mut T_206_BUF: Aligned16<1025usize> = Aligned16([0.0f32; 1025usize]);
     let t_206 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_206_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4096usize),
             1025usize,
         )
     };
-    static mut T_214_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_214 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_214_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1usize,
         )
     };
-    static mut T_215_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_215 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_215_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4usize),
             96usize,
         )
     };
-    static mut T_216_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_216 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_216_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(100usize),
             96usize,
         )
     };
-    static mut T_217_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_217 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_217_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             96usize,
         )
     };
-    static mut T_218_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_218 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_218_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             96usize,
         )
     };
-    static mut T_219_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_219 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_219_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             96usize,
         )
     };
-    static mut T_220_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_220 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_220_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             96usize,
         )
     };
-    static mut T_221_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_221 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_221_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             96usize,
         )
     };
-    static mut T_228_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_228 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_228_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             1usize,
         )
     };
-    static mut T_229_BUF: Aligned16<8usize> = Aligned16([0.0f32; 8usize]);
     let t_229 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_229_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(100usize),
             8usize,
         )
     };
-    static mut T_241_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_241 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_241_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(108usize),
             1024usize,
         )
     };
-    static mut T_242_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_242 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_242_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1132usize),
             1024usize,
         )
     };
-    static mut T_243_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_243 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_243_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             1024usize,
         )
     };
-    static mut T_244_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_244 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_244_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1120usize),
             1024usize,
         )
     };
-    static mut T_247_BUF: Aligned16<513usize> = Aligned16([0.0f32; 513usize]);
     let t_247 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_247_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2144usize),
             513usize,
         )
     };
-    static mut T_255_BUF: Aligned16<1usize> = Aligned16([0.0f32; 1usize]);
     let t_255 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_255_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             1usize,
         )
     };
-    static mut T_256_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_256 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_256_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(100usize),
             96usize,
         )
     };
-    static mut T_257_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_257 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_257_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(196usize),
             96usize,
         )
     };
-    static mut T_258_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_258 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_258_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             96usize,
         )
     };
-    static mut T_259_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_259 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_259_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(192usize),
             96usize,
         )
     };
-    static mut T_260_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_260 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_260_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             96usize,
         )
     };
-    static mut T_261_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_261 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_261_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(192usize),
             96usize,
         )
     };
-    static mut T_262_BUF: Aligned16<96usize> = Aligned16([0.0f32; 96usize]);
     let t_262 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_262_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             96usize,
         )
     };
-    static mut T_263_BUF: Aligned16<192usize> = Aligned16([0.0f32; 192usize]);
     let t_263 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_263_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(192usize),
             192usize,
         )
     };
-    static mut T_264_BUF: Aligned16<192usize> = Aligned16([0.0f32; 192usize]);
     let t_264 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_264_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             192usize,
         )
     };
-    static mut T_265_BUF: Aligned16<192usize> = Aligned16([0.0f32; 192usize]);
     let t_265 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_265_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(192usize),
             192usize,
         )
     };
-    static mut T_266_BUF: Aligned16<1152usize> = Aligned16([0.0f32; 1152usize]);
     let t_266 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_266_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4992usize),
             1152usize,
         )
     };
-    static mut T_267_BUF: Aligned16<1152usize> = Aligned16([0.0f32; 1152usize]);
     let t_267 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_267_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1152usize,
         )
     };
-    static mut T_268_BUF: Aligned16<1152usize> = Aligned16([0.0f32; 1152usize]);
     let t_268 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_268_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             1152usize,
         )
     };
-    static mut T_269_BUF: Aligned16<2304usize> = Aligned16([0.0f32; 2304usize]);
     let t_269 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_269_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2304usize),
             2304usize,
         )
     };
-    static mut T_270_BUF: Aligned16<1152usize> = Aligned16([0.0f32; 1152usize]);
     let t_270 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_270_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4608usize),
             1152usize,
         )
     };
-    static mut T_271_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_271 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_271_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             3456usize,
         )
     };
-    static mut T_272_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_272 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_272_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             3456usize,
         )
     };
-    static mut T_273_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_273 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_273_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
             3456usize,
         )
     };
-    static mut T_274_BUF: Aligned16<3600usize> = Aligned16([0.0f32; 3600usize]);
     let t_274 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_274_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             3600usize,
         )
     };
-    static mut T_275_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_275 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_275_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3600usize),
             1728usize,
         )
     };
-    static mut T_276_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_276 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_276_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1728usize,
         )
     };
-    static mut T_277_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_277 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_277_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             1728usize,
         )
     };
-    static mut T_278_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_278 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_278_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6048usize),
             864usize,
         )
     };
-    static mut T_279_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_279 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_279_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
             1728usize,
         )
     };
-    static mut T_280_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_280 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_280_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1728usize,
         )
     };
-    static mut T_281_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_281 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_281_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             1728usize,
         )
     };
-    static mut T_282_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_282 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_282_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1728usize,
         )
     };
-    static mut T_283_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_283 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_283_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             1728usize,
         )
     };
-    static mut T_284_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_284 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_284_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             1728usize,
         )
     };
-    static mut T_285_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_285 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_285_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
             864usize,
         )
     };
-    static mut T_286_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_286 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_286_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut T_287_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_287 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_287_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             1728usize,
         )
     };
-    static mut T_288_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_288 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_288_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             1728usize,
         )
     };
-    static mut T_289_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_289 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_289_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
             1728usize,
         )
     };
-    static mut T_290_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_290 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_290_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             1728usize,
         )
     };
-    static mut T_291_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_291 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_291_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
             1728usize,
         )
     };
-    static mut T_292_BUF: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let t_292 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_292_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             1728usize,
         )
     };
-    static mut T_293_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_293 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_293_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             864usize,
         )
     };
-    static mut T_294_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_294 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_294_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             864usize,
         )
     };
-    static mut T_295_BUF: Aligned16<6912usize> = Aligned16([0.0f32; 6912usize]);
     let t_295 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_295_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12096usize),
             6912usize,
         )
     };
-    static mut T_296_BUF: Aligned16<6912usize> = Aligned16([0.0f32; 6912usize]);
     let t_296 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_296_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             6912usize,
         )
     };
-    static mut T_297_BUF: Aligned16<6912usize> = Aligned16([0.0f32; 6912usize]);
     let t_297 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_297_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(19008usize),
             6912usize,
         )
     };
-    static mut T_298_BUF: Aligned16<7488usize> = Aligned16([0.0f32; 7488usize]);
     let t_298 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_298_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             7488usize,
         )
     };
-    static mut T_299_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_299 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_299_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7488usize),
             3456usize,
         )
     };
-    static mut T_300_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_300 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_300_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             3456usize,
         )
     };
-    static mut T_301_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_301 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_301_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             3456usize,
         )
     };
-    static mut T_302_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_302 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_302_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             288usize,
         )
     };
-    static mut T_306_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_306 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_306_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(288usize),
             288usize,
         )
     };
-    static mut T_307_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_307 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_307_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             18usize,
         )
     };
-    static mut T_308_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_308 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_308_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(20usize),
             18usize,
         )
     };
-    static mut T_309_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_309 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_309_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(40usize),
             18usize,
         )
     };
-    static mut T_310_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_310 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_310_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(60usize),
             288usize,
         )
     };
-    static mut T_311_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_311 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_311_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(348usize),
             288usize,
         )
     };
-    static mut T_312_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_312 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_312_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
             3456usize,
         )
     };
-    static mut T_313_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_313 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_313_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             864usize,
         )
     };
-    static mut T_314_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_314 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_314_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             3456usize,
         )
     };
-    static mut T_315_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_315 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_315_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             3456usize,
         )
     };
-    static mut T_316_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_316 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_316_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7776usize),
             3456usize,
         )
     };
-    static mut T_317_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_317 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_317_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             3456usize,
         )
     };
-    static mut T_318_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_318 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_318_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             3456usize,
         )
     };
-    static mut T_319_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_319 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_319_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7776usize),
             3456usize,
         )
     };
-    static mut T_320_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_320 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_320_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             288usize,
         )
     };
-    static mut T_324_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_324 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_324_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(288usize),
             288usize,
         )
     };
-    static mut T_325_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_325 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_325_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             18usize,
         )
     };
-    static mut T_326_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_326 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_326_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(20usize),
             18usize,
         )
     };
-    static mut T_327_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_327 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_327_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(40usize),
             18usize,
         )
     };
-    static mut T_328_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_328 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_328_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(60usize),
             288usize,
         )
     };
-    static mut T_329_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_329 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_329_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(348usize),
             288usize,
         )
     };
-    static mut T_330_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_330 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_330_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             3456usize,
         )
     };
-    static mut T_331_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_331 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_331_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28512usize),
             864usize,
         )
     };
-    static mut T_332_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_332 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_332_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut T_333_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_333 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_333_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(21600usize),
             3456usize,
         )
     };
-    static mut T_334_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_334 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_334_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             3456usize,
         )
     };
-    static mut T_335_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_335 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_335_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             3456usize,
         )
     };
-    static mut T_336_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_336 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_336_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             3456usize,
         )
     };
-    static mut T_337_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_337 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_337_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             3456usize,
         )
     };
-    static mut T_338_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_338 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_338_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7776usize),
             3456usize,
         )
     };
-    static mut T_339_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_339 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_339_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             288usize,
         )
     };
-    static mut T_343_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_343 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_343_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             288usize,
         )
     };
-    static mut T_344_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_344 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_344_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             18usize,
         )
     };
-    static mut T_345_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_345 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_345_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(884usize),
             18usize,
         )
     };
-    static mut T_346_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_346 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_346_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(904usize),
             18usize,
         )
     };
-    static mut T_347_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_347 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_347_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(924usize),
             288usize,
         )
     };
-    static mut T_348_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_348 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_348_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1212usize),
             288usize,
         )
     };
-    static mut T_349_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_349 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_349_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1500usize),
             3456usize,
         )
     };
-    static mut T_350_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_350 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_350_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(29148usize),
             864usize,
         )
     };
-    static mut T_351_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_351 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_351_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             864usize,
         )
     };
-    static mut T_352_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_352 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_352_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(22464usize),
             3456usize,
         )
     };
-    static mut T_353_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_353 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_353_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             3456usize,
         )
     };
-    static mut T_354_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_354 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_354_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
             3456usize,
         )
     };
-    static mut T_355_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_355 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_355_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             3456usize,
         )
     };
-    static mut T_356_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_356 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_356_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
             3456usize,
         )
     };
-    static mut T_357_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_357 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_357_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(8640usize),
             3456usize,
         )
     };
-    static mut T_358_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_358 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_358_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             288usize,
         )
     };
-    static mut T_362_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_362 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_362_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(288usize),
             288usize,
         )
     };
-    static mut T_363_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_363 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_363_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             18usize,
         )
     };
-    static mut T_364_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_364 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_364_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(20usize),
             18usize,
         )
     };
-    static mut T_365_BUF: Aligned16<18usize> = Aligned16([0.0f32; 18usize]);
     let t_365 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_365_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(40usize),
             18usize,
         )
     };
-    static mut T_366_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_366 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_366_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(60usize),
             288usize,
         )
     };
-    static mut T_367_BUF: Aligned16<288usize> = Aligned16([0.0f32; 288usize]);
     let t_367 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_367_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(348usize),
             288usize,
         )
     };
-    static mut T_368_BUF: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let t_368 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_368_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             3456usize,
         )
     };
-    static mut T_369_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_369 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_369_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut T_370_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_370 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_370_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             864usize,
         )
     };
-    static mut T_371_BUF: Aligned16<10368usize> = Aligned16([0.0f32; 10368usize]);
     let t_371 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_371_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(64800usize),
             10368usize,
         )
     };
-    static mut T_372_BUF: Aligned16<10368usize> = Aligned16([0.0f32; 10368usize]);
     let t_372 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_372_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             10368usize,
         )
     };
-    static mut T_373_BUF: Aligned16<10368usize> = Aligned16([0.0f32; 10368usize]);
     let t_373 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_373_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
             10368usize,
         )
     };
-    static mut T_374_BUF: Aligned16<12096usize> = Aligned16([0.0f32; 12096usize]);
     let t_374 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_374_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(20736usize),
             12096usize,
         )
     };
-    static mut T_375_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_375 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_375_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             5184usize,
         )
     };
-    static mut T_376_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_376 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_376_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
             5184usize,
         )
     };
-    static mut T_377_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_377 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_377_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
             5184usize,
         )
     };
-    static mut T_378_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_378 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_378_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut T_382_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_382 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_382_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             864usize,
         )
     };
-    static mut T_383_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_383 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_383_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             27usize,
         )
     };
-    static mut T_384_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_384 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_384_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28usize),
             27usize,
         )
     };
-    static mut T_385_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_385 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_385_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(56usize),
             27usize,
         )
     };
-    static mut T_386_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_386 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_386_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(84usize),
             864usize,
         )
     };
-    static mut T_387_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_387 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_387_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(948usize),
             864usize,
         )
     };
-    static mut T_388_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_388 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_388_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1812usize),
             5184usize,
         )
     };
-    static mut T_389_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_389 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_389_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             648usize,
         )
     };
-    static mut T_390_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_390 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_390_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
             5184usize,
         )
     };
-    static mut T_391_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_391 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_391_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5832usize),
             5184usize,
         )
     };
-    static mut T_392_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_392 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_392_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11016usize),
             5184usize,
         )
     };
-    static mut T_393_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_393 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_393_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
             5184usize,
         )
     };
-    static mut T_394_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_394 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_394_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5832usize),
             5184usize,
         )
     };
-    static mut T_395_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_395 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_395_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11016usize),
             5184usize,
         )
     };
-    static mut T_396_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_396 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_396_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
             864usize,
         )
     };
-    static mut T_400_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_400 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_400_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1512usize),
             864usize,
         )
     };
-    static mut T_401_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_401 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_401_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
             27usize,
         )
     };
-    static mut T_402_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_402 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_402_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(676usize),
             27usize,
         )
     };
-    static mut T_403_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_403 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_403_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(704usize),
             27usize,
         )
     };
-    static mut T_404_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_404 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_404_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(732usize),
             864usize,
         )
     };
-    static mut T_405_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_405 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_405_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1596usize),
             864usize,
         )
     };
-    static mut T_406_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_406 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_406_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2460usize),
             5184usize,
         )
     };
-    static mut T_407_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_407 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_407_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
             648usize,
         )
     };
-    static mut T_408_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_408 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_408_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
             648usize,
         )
     };
-    static mut T_409_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_409 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_409_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
             5184usize,
         )
     };
-    static mut T_410_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_410 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_410_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
             5184usize,
         )
     };
-    static mut T_411_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_411 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_411_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
             5184usize,
         )
     };
-    static mut T_412_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_412 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_412_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
             5184usize,
         )
     };
-    static mut T_413_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_413 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_413_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
             5184usize,
         )
     };
-    static mut T_414_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_414 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_414_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
             5184usize,
         )
     };
-    static mut T_415_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_415 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_415_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut T_419_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_419 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_419_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
             864usize,
         )
     };
-    static mut T_420_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_420 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_420_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             27usize,
         )
     };
-    static mut T_421_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_421 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_421_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28usize),
             27usize,
         )
     };
-    static mut T_422_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_422 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_422_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(56usize),
             27usize,
         )
     };
-    static mut T_423_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_423 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_423_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(84usize),
             864usize,
         )
     };
-    static mut T_424_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_424 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_424_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
             864usize,
         )
     };
-    static mut T_425_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_425 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_425_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2808usize),
             5184usize,
         )
     };
-    static mut T_426_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_426 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_426_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             648usize,
         )
     };
-    static mut T_427_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_427 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_427_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
             648usize,
         )
     };
-    static mut T_428_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_428 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_428_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
             5184usize,
         )
     };
-    static mut T_429_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_429 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_429_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6480usize),
             5184usize,
         )
     };
-    static mut T_430_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_430 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_430_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11664usize),
             5184usize,
         )
     };
-    static mut T_431_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_431 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_431_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
             5184usize,
         )
     };
-    static mut T_432_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_432 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_432_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6480usize),
             5184usize,
         )
     };
-    static mut T_433_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_433 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_433_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(11664usize),
             5184usize,
         )
     };
-    static mut T_434_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_434 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_434_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
             864usize,
         )
     };
-    static mut T_438_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_438 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_438_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2160usize),
             864usize,
         )
     };
-    static mut T_439_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_439 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_439_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             27usize,
         )
     };
-    static mut T_440_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_440 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_440_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28usize),
             27usize,
         )
     };
-    static mut T_441_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_441 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_441_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(56usize),
             27usize,
         )
     };
-    static mut T_442_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_442 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_442_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
             864usize,
         )
     };
-    static mut T_443_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_443 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_443_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2160usize),
             864usize,
         )
     };
-    static mut T_444_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_444 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_444_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3024usize),
             5184usize,
         )
     };
-    static mut T_445_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_445 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_445_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             648usize,
         )
     };
-    static mut T_446_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_446 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_446_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
             648usize,
         )
     };
-    static mut T_447_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_447 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_447_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
             5184usize,
         )
     };
-    static mut T_448_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_448 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_448_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
             5184usize,
         )
     };
-    static mut T_449_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_449 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_449_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
             5184usize,
         )
     };
-    static mut T_450_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_450 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_450_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
             5184usize,
         )
     };
-    static mut T_451_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_451 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_451_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7128usize),
             5184usize,
         )
     };
-    static mut T_452_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_452 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_452_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12312usize),
             5184usize,
         )
     };
-    static mut T_453_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_453 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_453_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut T_457_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_457 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_457_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
             864usize,
         )
     };
-    static mut T_458_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_458 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_458_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             27usize,
         )
     };
-    static mut T_459_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_459 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_459_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28usize),
             27usize,
         )
     };
-    static mut T_460_BUF: Aligned16<27usize> = Aligned16([0.0f32; 27usize]);
     let t_460 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_460_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(56usize),
             27usize,
         )
     };
-    static mut T_461_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_461 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_461_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(84usize),
             864usize,
         )
     };
-    static mut T_462_BUF: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let t_462 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_462_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1944usize),
             864usize,
         )
     };
-    static mut T_463_BUF: Aligned16<5184usize> = Aligned16([0.0f32; 5184usize]);
     let t_463 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_463_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2808usize),
             5184usize,
         )
     };
-    static mut T_464_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_464 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_464_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             648usize,
         )
     };
-    static mut T_465_BUF: Aligned16<648usize> = Aligned16([0.0f32; 648usize]);
     let t_465 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_465_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648usize),
             648usize,
         )
     };
-    static mut T_466_BUF: Aligned16<9216usize> = Aligned16([0.0f32; 9216usize]);
     let t_466 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_466_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1296usize),
             9216usize,
         )
     };
-    static mut T_467_BUF: Aligned16<9216usize> = Aligned16([0.0f32; 9216usize]);
     let t_467 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_467_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10512usize),
             9216usize,
         )
     };
-    static mut T_468_BUF: Aligned16<9216usize> = Aligned16([0.0f32; 9216usize]);
     let t_468 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_468_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(19728usize),
             9216usize,
         )
     };
-    static mut T_469_BUF: Aligned16<12288usize> = Aligned16([0.0f32; 12288usize]);
     let t_469 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_469_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             12288usize,
         )
     };
-    static mut T_470_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_470 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_470_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(12288usize),
             4608usize,
         )
     };
-    static mut T_471_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_471 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_471_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             4608usize,
         )
     };
-    static mut T_472_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_472 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_472_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4608usize),
             4608usize,
         )
     };
-    static mut T_473_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_473 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_473_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1536usize,
         )
     };
-    static mut T_477_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_477 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_477_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1536usize),
             1536usize,
         )
     };
-    static mut T_478_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_478 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_478_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             48usize,
         )
     };
-    static mut T_479_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_479 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_479_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(48usize),
             48usize,
         )
     };
-    static mut T_480_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_480 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_480_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             48usize,
         )
     };
-    static mut T_481_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_481 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_481_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144usize),
             1536usize,
         )
     };
-    static mut T_482_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_482 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_482_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1680usize),
             1536usize,
         )
     };
-    static mut T_483_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_483 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_483_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(9216usize),
             4608usize,
         )
     };
-    static mut T_484_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_484 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_484_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             576usize,
         )
     };
-    static mut T_485_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_485 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_485_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
             4608usize,
         )
     };
-    static mut T_486_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_486 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_486_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
             4608usize,
         )
     };
-    static mut T_487_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_487 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_487_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(9792usize),
             4608usize,
         )
     };
-    static mut T_488_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_488 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_488_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
             4608usize,
         )
     };
-    static mut T_489_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_489 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_489_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
             4608usize,
         )
     };
-    static mut T_490_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_490 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_490_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(9792usize),
             4608usize,
         )
     };
-    static mut T_491_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_491 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_491_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
             1536usize,
         )
     };
-    static mut T_495_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_495 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_495_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2112usize),
             1536usize,
         )
     };
-    static mut T_496_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_496 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_496_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
             48usize,
         )
     };
-    static mut T_497_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_497 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_497_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(624usize),
             48usize,
         )
     };
-    static mut T_498_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_498 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_498_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672usize),
             48usize,
         )
     };
-    static mut T_499_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_499 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_499_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(720usize),
             1536usize,
         )
     };
-    static mut T_500_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_500 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_500_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2256usize),
             1536usize,
         )
     };
-    static mut T_501_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_501 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_501_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3792usize),
             4608usize,
         )
     };
-    static mut T_502_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_502 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_502_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
             576usize,
         )
     };
-    static mut T_503_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_503 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_503_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             576usize,
         )
     };
-    static mut T_504_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_504 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_504_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             4608usize,
         )
     };
-    static mut T_505_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_505 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_505_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6336usize),
             4608usize,
         )
     };
-    static mut T_506_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_506 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_506_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10944usize),
             4608usize,
         )
     };
-    static mut T_507_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_507 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_507_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             4608usize,
         )
     };
-    static mut T_508_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_508 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_508_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6336usize),
             4608usize,
         )
     };
-    static mut T_509_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_509 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_509_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10944usize),
             4608usize,
         )
     };
-    static mut T_510_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_510 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_510_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             1536usize,
         )
     };
-    static mut T_514_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_514 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_514_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3264usize),
             1536usize,
         )
     };
-    static mut T_515_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_515 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_515_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             48usize,
         )
     };
-    static mut T_516_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_516 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_516_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(48usize),
             48usize,
         )
     };
-    static mut T_517_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_517 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_517_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             48usize,
         )
     };
-    static mut T_518_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_518 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_518_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             1536usize,
         )
     };
-    static mut T_519_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_519 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_519_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3264usize),
             1536usize,
         )
     };
-    static mut T_520_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_520 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_520_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4800usize),
             4608usize,
         )
     };
-    static mut T_521_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_521 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_521_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             576usize,
         )
     };
-    static mut T_522_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_522 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_522_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
             576usize,
         )
     };
-    static mut T_523_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_523 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_523_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             4608usize,
         )
     };
-    static mut T_524_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_524 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_524_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
             4608usize,
         )
     };
-    static mut T_525_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_525 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_525_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
             4608usize,
         )
     };
-    static mut T_526_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_526 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_526_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             4608usize,
         )
     };
-    static mut T_527_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_527 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_527_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
             4608usize,
         )
     };
-    static mut T_528_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_528 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_528_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
             4608usize,
         )
     };
-    static mut T_529_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_529 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_529_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             1536usize,
         )
     };
-    static mut T_533_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_533 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_533_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2688usize),
             1536usize,
         )
     };
-    static mut T_534_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_534 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_534_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             48usize,
         )
     };
-    static mut T_535_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_535 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_535_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(48usize),
             48usize,
         )
     };
-    static mut T_536_BUF: Aligned16<48usize> = Aligned16([0.0f32; 48usize]);
     let t_536 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_536_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             48usize,
         )
     };
-    static mut T_537_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_537 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_537_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             1536usize,
         )
     };
-    static mut T_538_BUF: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let t_538 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_538_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2688usize),
             1536usize,
         )
     };
-    static mut T_539_BUF: Aligned16<4608usize> = Aligned16([0.0f32; 4608usize]);
     let t_539 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_539_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4224usize),
             4608usize,
         )
     };
-    static mut T_540_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_540 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_540_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             576usize,
         )
     };
-    static mut T_541_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_541 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_541_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             576usize,
         )
     };
-    static mut T_542_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_542 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_542_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             576usize,
         )
     };
-    static mut T_543_BUF: Aligned16<576usize> = Aligned16([0.0f32; 576usize]);
     let t_543 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_543_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576usize),
             576usize,
         )
     };
-    static mut T_544_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_544 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_544_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1152usize),
             1024usize,
         )
     };
-    static mut T_545_BUF: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let t_545 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_545_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1024usize,
         )
     };
@@ -5815,10 +5218,9 @@ pub fn forward_timed(
     let __t0 = get_tick();
     reshape(t_202, t_203);
     op_ticks[12usize] += get_tick() - __t0;
-    static mut SCRATCH_13_0: Aligned16<2048usize> = Aligned16([0.0f32; 2048usize]);
     let scratch_13_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_13_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             2048usize,
         )
     };
@@ -5923,10 +5325,9 @@ pub fn forward_timed(
     let __t0 = get_tick();
     reshape(t_243, t_244);
     op_ticks[38usize] += get_tick() - __t0;
-    static mut SCRATCH_28_0: Aligned16<1024usize> = Aligned16([0.0f32; 1024usize]);
     let scratch_28_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_28_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(96usize),
             1024usize,
         )
     };
@@ -6023,17 +5424,15 @@ pub fn forward_timed(
     let __t0 = get_tick();
     binary_add(t_264, t_162, t_265, 2usize);
     op_ticks[60usize] += get_tick() - __t0;
-    static mut SCRATCH_40_0: Aligned16<3072usize> = Aligned16([0.0f32; 3072usize]);
     let scratch_40_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_40_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(384usize),
             3072usize,
         )
     };
-    static mut SCRATCH_40_1: Aligned16<1536usize> = Aligned16([0.0f32; 1536usize]);
     let scratch_40_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_40_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             1536usize,
         )
     };
@@ -6102,17 +5501,15 @@ pub fn forward_timed(
         }
     }
     op_ticks[66usize] += get_tick() - __t0;
-    static mut SCRATCH_44_0: Aligned16<2304usize> = Aligned16([0.0f32; 2304usize]);
     let scratch_44_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_44_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             2304usize,
         )
     };
-    static mut SCRATCH_44_1: Aligned16<1152usize> = Aligned16([0.0f32; 1152usize]);
     let scratch_44_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_44_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
             1152usize,
         )
     };
@@ -6134,17 +5531,15 @@ pub fn forward_timed(
     let __t0 = get_tick();
     bias_add(t_270, t_50, 48usize, 24usize);
     op_ticks[69usize] += get_tick() - __t0;
-    static mut SCRATCH_45_0: Aligned16<1152usize> = Aligned16([0.0f32; 1152usize]);
     let scratch_45_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_45_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             1152usize,
         )
     };
-    static mut SCRATCH_45_1: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let scratch_45_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_45_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5760usize),
             1728usize,
         )
     };
@@ -6200,17 +5595,15 @@ pub fn forward_timed(
     let __t0 = get_tick();
     binary_mul(t_275, t_276, t_277, 1728usize);
     op_ticks[78usize] += get_tick() - __t0;
-    static mut SCRATCH_52_0: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let scratch_52_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_52_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1728usize,
         )
     };
-    static mut SCRATCH_52_1: Aligned16<2592usize> = Aligned16([0.0f32; 2592usize]);
     let scratch_52_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_52_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(3456usize),
             2592usize,
         )
     };
@@ -6232,17 +5625,15 @@ pub fn forward_timed(
     let __t0 = get_tick();
     bias_add(t_278, t_117, 24usize, 36usize);
     op_ticks[81usize] += get_tick() - __t0;
-    static mut SCRATCH_53_0: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let scratch_53_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_53_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             864usize,
         )
     };
-    static mut SCRATCH_53_1: Aligned16<2592usize> = Aligned16([0.0f32; 2592usize]);
     let scratch_53_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_53_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             2592usize,
         )
     };
@@ -6289,17 +5680,15 @@ pub fn forward_timed(
     let __t0 = get_tick();
     binary_mul(t_282, t_283, t_284, 1728usize);
     op_ticks[89usize] += get_tick() - __t0;
-    static mut SCRATCH_59_0: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let scratch_59_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_59_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6912usize),
             1728usize,
         )
     };
-    static mut SCRATCH_59_1: Aligned16<2592usize> = Aligned16([0.0f32; 2592usize]);
     let scratch_59_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_59_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             2592usize,
         )
     };
@@ -6324,17 +5713,15 @@ pub fn forward_timed(
     let __t0 = get_tick();
     binary_add(t_285, t_278, t_286, 864usize);
     op_ticks[93usize] += get_tick() - __t0;
-    static mut SCRATCH_61_0: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let scratch_61_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_61_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
             864usize,
         )
     };
-    static mut SCRATCH_61_1: Aligned16<2592usize> = Aligned16([0.0f32; 2592usize]);
     let scratch_61_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_61_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             2592usize,
         )
     };
@@ -6381,17 +5768,15 @@ pub fn forward_timed(
     let __t0 = get_tick();
     binary_mul(t_290, t_291, t_292, 1728usize);
     op_ticks[101usize] += get_tick() - __t0;
-    static mut SCRATCH_67_0: Aligned16<1728usize> = Aligned16([0.0f32; 1728usize]);
     let scratch_67_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_67_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(6048usize),
             1728usize,
         )
     };
-    static mut SCRATCH_67_1: Aligned16<2592usize> = Aligned16([0.0f32; 2592usize]);
     let scratch_67_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_67_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             2592usize,
         )
     };
@@ -6416,17 +5801,15 @@ pub fn forward_timed(
     let __t0 = get_tick();
     binary_add(t_293, t_286, t_294, 864usize);
     op_ticks[105usize] += get_tick() - __t0;
-    static mut SCRATCH_69_0: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let scratch_69_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_69_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut SCRATCH_69_1: Aligned16<10368usize> = Aligned16([0.0f32; 10368usize]);
     let scratch_69_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_69_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             10368usize,
         )
     };
@@ -6526,17 +5909,15 @@ pub fn forward_timed(
     let __t0 = get_tick();
     binary_mul(t_301, t_311, t_312, 288usize);
     op_ticks[122usize] += get_tick() - __t0;
-    static mut SCRATCH_84_0: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let scratch_84_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_84_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             3456usize,
         )
     };
-    static mut SCRATCH_84_1: Aligned16<20736usize> = Aligned16([0.0f32; 20736usize]);
     let scratch_84_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_84_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(10368usize),
             20736usize,
         )
     };
@@ -6558,17 +5939,15 @@ pub fn forward_timed(
     let __t0 = get_tick();
     bias_add(t_313, t_119, 12usize, 72usize);
     op_ticks[125usize] += get_tick() - __t0;
-    static mut SCRATCH_85_0: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let scratch_85_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_85_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25056usize),
             864usize,
         )
     };
-    static mut SCRATCH_85_1: Aligned16<20736usize> = Aligned16([0.0f32; 20736usize]);
     let scratch_85_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_85_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4320usize),
             20736usize,
         )
     };
@@ -6659,17 +6038,15 @@ pub fn forward_timed(
     let __t0 = get_tick();
     binary_mul(t_319, t_329, t_330, 288usize);
     op_ticks[141usize] += get_tick() - __t0;
-    static mut SCRATCH_99_0: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let scratch_99_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_99_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             3456usize,
         )
     };
-    static mut SCRATCH_99_1: Aligned16<20736usize> = Aligned16([0.0f32; 20736usize]);
     let scratch_99_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_99_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(7776usize),
             20736usize,
         )
     };
@@ -6694,17 +6071,15 @@ pub fn forward_timed(
     let __t0 = get_tick();
     binary_add(t_331, t_313, t_332, 864usize);
     op_ticks[145usize] += get_tick() - __t0;
-    static mut SCRATCH_101_0: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let scratch_101_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_101_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25056usize),
             864usize,
         )
     };
-    static mut SCRATCH_101_1: Aligned16<20736usize> = Aligned16([0.0f32; 20736usize]);
     let scratch_101_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_101_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(864usize),
             20736usize,
         )
     };
@@ -6795,17 +6170,15 @@ pub fn forward_timed(
     let __t0 = get_tick();
     binary_mul(t_338, t_348, t_349, 288usize);
     op_ticks[161usize] += get_tick() - __t0;
-    static mut SCRATCH_115_0: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let scratch_115_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_115_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25692usize),
             3456usize,
         )
     };
-    static mut SCRATCH_115_1: Aligned16<20736usize> = Aligned16([0.0f32; 20736usize]);
     let scratch_115_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_115_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4956usize),
             20736usize,
         )
     };
@@ -6830,17 +6203,15 @@ pub fn forward_timed(
     let __t0 = get_tick();
     binary_add(t_350, t_332, t_351, 864usize);
     op_ticks[165usize] += get_tick() - __t0;
-    static mut SCRATCH_117_0: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let scratch_117_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_117_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut SCRATCH_117_1: Aligned16<20736usize> = Aligned16([0.0f32; 20736usize]);
     let scratch_117_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_117_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1728usize),
             20736usize,
         )
     };
@@ -6931,17 +6302,15 @@ pub fn forward_timed(
     let __t0 = get_tick();
     binary_mul(t_357, t_367, t_368, 288usize);
     op_ticks[181usize] += get_tick() - __t0;
-    static mut SCRATCH_131_0: Aligned16<3456usize> = Aligned16([0.0f32; 3456usize]);
     let scratch_131_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_131_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(25920usize),
             3456usize,
         )
     };
-    static mut SCRATCH_131_1: Aligned16<20736usize> = Aligned16([0.0f32; 20736usize]);
     let scratch_131_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_131_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(5184usize),
             20736usize,
         )
     };
@@ -6966,17 +6335,15 @@ pub fn forward_timed(
     let __t0 = get_tick();
     binary_add(t_369, t_351, t_370, 864usize);
     op_ticks[185usize] += get_tick() - __t0;
-    static mut SCRATCH_133_0: Aligned16<864usize> = Aligned16([0.0f32; 864usize]);
     let scratch_133_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_133_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             864usize,
         )
     };
-    static mut SCRATCH_133_1: Aligned16<62208usize> = Aligned16([0.0f32; 62208usize]);
     let scratch_133_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_133_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(2592usize),
             62208usize,
         )
     };

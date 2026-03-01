@@ -8,6 +8,8 @@
 use crate::ir::graph::TensorId;
 use crate::ir::psp::{BinaryOp, PoolType, ReduceOp, UnaryOp};
 
+use super::arena::ArenaLayout;
+
 /// Index into `OpPlan::scratch`.
 pub type ScratchId = usize;
 
@@ -29,6 +31,7 @@ pub struct CodegenPlan {
     pub blob_floats: usize,
     pub allocs: Vec<TensorAlloc>,
     pub ops: Vec<OpPlan>,
+    pub arena: Option<ArenaLayout>,
 }
 
 // ─── (1) Tensor allocations ─────────────────────────────────────

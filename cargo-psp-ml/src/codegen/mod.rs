@@ -1,3 +1,4 @@
+pub mod arena;
 mod lower;
 mod plan;
 mod render;
@@ -15,7 +16,8 @@ pub struct Generated {
 }
 
 pub fn generate_code(model: &mut PspModel) -> GenResult<Generated> {
-    let plan = lower::lower(model)?;
+    let mut plan = lower::lower(model)?;
+    plan.arena = Some(arena::compute_and_pack(&plan));
     let tokens = render::render(&plan, &model.graph);
 
     Ok(Generated {

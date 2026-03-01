@@ -3,46 +3,41 @@
 use psp_ml::kernels::naive::*;
 #[allow(unused_imports)]
 use psp_ml::kernels::*;
+static mut ARENA: Aligned16<67648usize> = Aligned16([0.0f32; 67648usize]);
 pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
-    static mut T_10_BUF: Aligned16<6272usize> = Aligned16([0.0f32; 6272usize]);
     let t_10 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_10_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(21952usize),
             6272usize,
         )
     };
-    static mut T_11_BUF: Aligned16<1568usize> = Aligned16([0.0f32; 1568usize]);
     let t_11 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_11_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1568usize,
         )
     };
-    static mut T_12_BUF: Aligned16<3136usize> = Aligned16([0.0f32; 3136usize]);
     let t_12 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_12_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4768usize),
             3136usize,
         )
     };
-    static mut T_13_BUF: Aligned16<784usize> = Aligned16([0.0f32; 784usize]);
     let t_13 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_13_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             784usize,
         )
     };
-    static mut T_14_BUF: Aligned16<784usize> = Aligned16([0.0f32; 784usize]);
     let t_14 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_14_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(784usize),
             784usize,
         )
     };
-    static mut T_15_BUF: Aligned16<64usize> = Aligned16([0.0f32; 64usize]);
     let t_15 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_15_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             64usize,
         )
     };
@@ -56,17 +51,15 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
     let t_6 = &tensor_data[T_6_OFFSET..T_6_OFFSET + T_6_LEN];
     let t_8 = &tensor_data[T_8_OFFSET..T_8_OFFSET + T_8_LEN];
     let t_9 = &tensor_data[T_9_OFFSET..T_9_OFFSET + T_9_LEN];
-    static mut SCRATCH_0_0: Aligned16<21952usize> = Aligned16([0.0f32; 21952usize]);
     let scratch_0_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_0_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             21952usize,
         )
     };
-    static mut SCRATCH_0_1: Aligned16<224usize> = Aligned16([0.0f32; 224usize]);
     let scratch_0_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_0_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28224usize),
             224usize,
         )
     };
@@ -95,17 +88,15 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
         t_11,
         [1usize, 14usize, 14usize, 8usize],
     );
-    static mut SCRATCH_2_0: Aligned16<39200usize> = Aligned16([0.0f32; 39200usize]);
     let scratch_2_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_2_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28448usize),
             39200usize,
         )
     };
-    static mut SCRATCH_2_1: Aligned16<3200usize> = Aligned16([0.0f32; 3200usize]);
     let scratch_2_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_2_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1568usize),
             3200usize,
         )
     };
@@ -142,45 +133,39 @@ pub fn forward_timed(
     op_ticks: &mut [u64; NUM_OPS],
     get_tick: fn() -> u64,
 ) -> [f32; 10usize] {
-    static mut T_10_BUF: Aligned16<6272usize> = Aligned16([0.0f32; 6272usize]);
     let t_10 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_10_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(21952usize),
             6272usize,
         )
     };
-    static mut T_11_BUF: Aligned16<1568usize> = Aligned16([0.0f32; 1568usize]);
     let t_11 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_11_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             1568usize,
         )
     };
-    static mut T_12_BUF: Aligned16<3136usize> = Aligned16([0.0f32; 3136usize]);
     let t_12 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_12_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(4768usize),
             3136usize,
         )
     };
-    static mut T_13_BUF: Aligned16<784usize> = Aligned16([0.0f32; 784usize]);
     let t_13 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_13_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             784usize,
         )
     };
-    static mut T_14_BUF: Aligned16<784usize> = Aligned16([0.0f32; 784usize]);
     let t_14 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_14_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(784usize),
             784usize,
         )
     };
-    static mut T_15_BUF: Aligned16<64usize> = Aligned16([0.0f32; 64usize]);
     let t_15 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_15_BUF) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             64usize,
         )
     };
@@ -194,17 +179,15 @@ pub fn forward_timed(
     let t_6 = &tensor_data[T_6_OFFSET..T_6_OFFSET + T_6_LEN];
     let t_8 = &tensor_data[T_8_OFFSET..T_8_OFFSET + T_8_LEN];
     let t_9 = &tensor_data[T_9_OFFSET..T_9_OFFSET + T_9_LEN];
-    static mut SCRATCH_0_0: Aligned16<21952usize> = Aligned16([0.0f32; 21952usize]);
     let scratch_0_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_0_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             21952usize,
         )
     };
-    static mut SCRATCH_0_1: Aligned16<224usize> = Aligned16([0.0f32; 224usize]);
     let scratch_0_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_0_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28224usize),
             224usize,
         )
     };
@@ -241,17 +224,15 @@ pub fn forward_timed(
         [1usize, 14usize, 14usize, 8usize],
     );
     op_ticks[3usize] += get_tick() - __t0;
-    static mut SCRATCH_2_0: Aligned16<39200usize> = Aligned16([0.0f32; 39200usize]);
     let scratch_2_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_2_0) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(28448usize),
             39200usize,
         )
     };
-    static mut SCRATCH_2_1: Aligned16<3200usize> = Aligned16([0.0f32; 3200usize]);
     let scratch_2_1 = unsafe {
         core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(SCRATCH_2_1) as *mut f32,
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(1568usize),
             3200usize,
         )
     };

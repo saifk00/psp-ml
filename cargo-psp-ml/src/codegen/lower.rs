@@ -75,6 +75,7 @@ pub fn lower(model: &mut PspModel) -> Result<CodegenPlan, String> {
         blob_floats,
         allocs,
         ops,
+        arena: None, // filled in by generate_code() after lowering
     })
 }
 
