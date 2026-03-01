@@ -10,6 +10,7 @@
 
 pub mod kernels;
 pub mod print;
+pub mod profiler;
 
 /// Declare a PSP module.
 ///

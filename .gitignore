@@ -12,3 +12,10 @@ meminfo.txt
 birdnet.txt
 results.txt
 out.log
+
+# kernel-plugin build artifacts
+kernel-plugin/*.o
+kernel-plugin/*.elf
+kernel-plugin/*.prx
+kernel-plugin/*.S
+kernel-plugin/*.a

@@ -8,6 +8,7 @@ members = [
     "examples/hello-psp",
     "examples/birdnet",
     "examples/meminfo",
+    "examples/profiler-demo",
 ]
 default-members = [
     "psp-ml",
