@@ -8,6 +8,8 @@ use crate::ir::psp::{PoolType, PspOp};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 
+use std::collections::HashSet;
+
 use super::arena::{ArenaLayout, ArenaSlot};
 use super::plan::*;
 use super::tensor_expr::TensorExprWriter;
@@ -19,18 +21,11 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
     let weight_statics = render_weight_statics(plan);
     let weight_views = render_weight_views(plan, &writer);
     let arena_static = render_arena_static(arena);
-    let tensor_allocs = render_tensor_allocs(plan, &writer, arena);
+    let tensor_allocs = render_tensor_allocs(plan, &writer, arena, plan.stream.as_ref());
 
-    let op_tokens: Vec<TokenStream> = plan
-        .ops
-        .iter()
-        .enumerate()
-        .map(|(i, op)| render_op_plain(op, i, &writer, arena))
-        .collect();
-    let plain_calls = quote!(#(#op_tokens)*);
-
-    let timed_calls = render_timed_calls(plan, &writer, arena);
-    let profiled_calls = render_profiled_calls(plan, &writer, arena);
+    let plain_calls = render_all_ops_plain(plan, &writer, arena);
+    let timed_calls = render_all_ops_timed(plan, &writer, arena);
+    let profiled_calls = render_all_ops_profiled(plan, &writer, arena);
     let op_metadata = render_op_metadata(plan);
 
     let input_size = plan.input_size;
@@ -47,57 +42,265 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
 
         #arena_static
 
-        pub fn forward(input: &[f32; #input_size]) -> [f32; #output_size] {
+        pub const OUTPUT_SIZE: usize = #output_size;
+
+        pub fn forward(input: &[f32; #input_size], output: &mut [f32; #output_size]) {
             #tensor_allocs
 
             #weight_views
 
             #plain_calls
 
-            #output_ident
+            output.copy_from_slice(&#output_ident);
         }
 
         /// Instrumented inference: accumulates per-op tick deltas into `op_ticks`.
         pub fn forward_timed(
             input: &[f32; #input_size],
+            output: &mut [f32; #output_size],
             op_ticks: &mut [u64; NUM_OPS],
             get_tick: fn() -> u64,
-        ) -> [f32; #output_size] {
+        ) {
             #tensor_allocs
 
             #weight_views
 
             #timed_calls
 
-            #output_ident
+            output.copy_from_slice(&#output_ident);
         }
 
         /// Instrumented inference with per-op hardware profiling counters.
-        ///
-        /// On PSP (with kernel plugin loaded): collects cache misses, VFPU stalls,
-        /// memory stalls, instruction counts, etc. per sub-op. Adds 4 syscalls per
-        /// sub-op (clear, enable, disable, read) so use `forward_timed` for
-        /// lightweight timing only.
-        ///
-        /// On host: `op_profile` entries stay zeroed; `op_ticks` still works.
         pub fn forward_profiled(
             input: &[f32; #input_size],
+            output: &mut [f32; #output_size],
             op_ticks: &mut [u64; NUM_OPS],
             #[allow(unused)] op_profile: &mut [psp_ml::profiler::OpProfileStats; NUM_OPS],
             get_tick: fn() -> u64,
-        ) -> [f32; #output_size] {
+        ) {
             #tensor_allocs
 
             #weight_views
 
             #profiled_calls
 
-            #output_ident
+            output.copy_from_slice(&#output_ident);
         }
 
         #op_metadata
 
         #weight_statics
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Op rendering with frame streaming support
+// ---------------------------------------------------------------------------
+
+/// Render all ops (plain mode). Wraps frame-section ops in a streaming loop
+/// when streaming is active.
+fn render_all_ops_plain(
+    plan: &CodegenPlan,
+    writer: &TensorExprWriter,
+    arena: Option<&ArenaLayout>,
+) -> TokenStream {
+    if let Some(stream) = &plan.stream {
+        render_streamed_ops(plan, stream, writer, arena, TimingMode::Plain)
+    } else {
+        let op_tokens: Vec<TokenStream> = plan
+            .ops
+            .iter()
+            .enumerate()
+            .map(|(i, op)| render_op_plain(op, i, writer, arena))
+            .collect();
+        quote!(#(#op_tokens)*)
+    }
+}
+
+/// Render all ops (timed mode).
+fn render_all_ops_timed(
+    plan: &CodegenPlan,
+    writer: &TensorExprWriter,
+    arena: Option<&ArenaLayout>,
+) -> TokenStream {
+    if let Some(stream) = &plan.stream {
+        render_streamed_ops(plan, stream, writer, arena, TimingMode::Timed)
+    } else {
+        render_timed_calls(plan, writer, arena)
+    }
+}
+
+/// Render all ops (profiled mode).
+fn render_all_ops_profiled(
+    plan: &CodegenPlan,
+    writer: &TensorExprWriter,
+    arena: Option<&ArenaLayout>,
+) -> TokenStream {
+    if let Some(stream) = &plan.stream {
+        render_streamed_ops(plan, stream, writer, arena, TimingMode::Profiled)
+    } else {
+        render_profiled_calls(plan, writer, arena)
+    }
+}
+
+#[derive(Clone, Copy)]
+enum TimingMode {
+    Plain,
+    Timed,
+    Profiled,
+}
+
+/// Render ops with frame streaming: pre-ops, frame loop, post-ops.
+fn render_streamed_ops(
+    plan: &CodegenPlan,
+    stream: &StreamPlan,
+    writer: &TensorExprWriter,
+    arena: Option<&ArenaLayout>,
+    mode: TimingMode,
+) -> TokenStream {
+    let mut sub_op_idx: usize = 0;
+
+    // Pre-ops (before frame loop)
+    let mut pre_tokens = Vec::new();
+    for op_idx in 0..stream.frame_start {
+        let op = &plan.ops[op_idx];
+        render_op_with_timing(op, op_idx, writer, arena, mode, &mut sub_op_idx, &mut pre_tokens);
+    }
+
+    // Frame input slicing: bind view tensor to a slice of the boundary tensor
+    let frame_count = stream.frame_count;
+    let mut input_slices = Vec::new();
+    for fi in &stream.frame_inputs {
+        let view_ident = writer.ident(fi.view_id);
+        let boundary_ident = writer.ident(fi.id);
+        let stride = fi.frame_stride;
+        input_slices.push(quote! {
+            let #view_ident = &#boundary_ident[_frame_idx * #stride..(_frame_idx + 1) * #stride];
+        });
+    }
+
+    // Frame output slicing: bind view tensor to a mutable slice of the boundary tensor
+    let mut output_slices = Vec::new();
+    for fo in &stream.frame_outputs {
+        let view_ident = writer.ident(fo.view_id);
+        let boundary_ident = writer.ident(fo.id);
+        let stride = fo.frame_stride;
+        output_slices.push(quote! {
+            let #view_ident = &mut #boundary_ident[_frame_idx * #stride..(_frame_idx + 1) * #stride];
+        });
+    }
+
+    // Frame-section arena tensor rebindings (inside loop body).
+    // Exclude boundary tensors and view tensors (views are bound by slicing above).
+    let skip_ids: HashSet<usize> = stream.frame_inputs.iter()
+        .flat_map(|fi| [fi.id, fi.view_id])
+        .chain(stream.frame_outputs.iter().flat_map(|fo| [fo.id, fo.view_id]))
+        .collect();
+    let frame_ids: HashSet<usize> = stream.rewritten_tensor_ids.iter()
+        .copied()
+        .filter(|id| !skip_ids.contains(id))
+        .collect();
+    let mut frame_arena_bindings = Vec::new();
+    if let Some(layout) = arena {
+        for alloc in &plan.allocs {
+            if let TensorAlloc::Intermediate { id, size } = alloc {
+                if frame_ids.contains(id) {
+                    let ident = writer.ident(*id);
+                    let offset = layout.offsets[&ArenaSlot::Tensor(*id)];
+                    frame_arena_bindings.push(quote! {
+                        let #ident = unsafe {
+                            core::slice::from_raw_parts_mut(
+                                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(#offset),
+                                #size,
+                            )
+                        };
+                    });
+                }
+            }
+        }
+    }
+
+    // Frame-section ops (inside loop)
+    let mut frame_tokens = Vec::new();
+    for op_idx in stream.frame_start..=stream.frame_end {
+        let op = &plan.ops[op_idx];
+        render_op_with_timing(op, op_idx, writer, arena, mode, &mut sub_op_idx, &mut frame_tokens);
+    }
+
+    // Post-ops (after frame loop)
+    let mut post_tokens = Vec::new();
+    for op_idx in (stream.frame_end + 1)..plan.ops.len() {
+        let op = &plan.ops[op_idx];
+        render_op_with_timing(op, op_idx, writer, arena, mode, &mut sub_op_idx, &mut post_tokens);
+    }
+
+    quote! {
+        #(#pre_tokens)*
+
+        for _frame_idx in 0..#frame_count {
+            #(#frame_arena_bindings)*
+            #(#input_slices)*
+            #(#output_slices)*
+            #(#frame_tokens)*
+        }
+
+        #(#post_tokens)*
+    }
+}
+
+/// Render a single op with the appropriate timing wrapper.
+fn render_op_with_timing(
+    op: &OpPlan,
+    op_idx: usize,
+    writer: &TensorExprWriter,
+    arena: Option<&ArenaLayout>,
+    mode: TimingMode,
+    sub_op_idx: &mut usize,
+    out: &mut Vec<TokenStream>,
+) {
+    let scratch = render_scratch(op, op_idx, writer, arena);
+    out.push(scratch);
+
+    for sub in &op.sub_ops {
+        let calls: Vec<TokenStream> = sub
+            .kernels
+            .iter()
+            .map(|k| render_kernel_call(k, &op.scratch, op_idx, writer))
+            .collect();
+        let i = *sub_op_idx;
+        *sub_op_idx += 1;
+
+        match mode {
+            TimingMode::Plain => {
+                out.push(quote!(#(#calls)*));
+            }
+            TimingMode::Timed => {
+                out.push(quote! {
+                    let __t0 = get_tick();
+                    #(#calls)*
+                    op_ticks[#i] += get_tick() - __t0;
+                });
+            }
+            TimingMode::Profiled => {
+                out.push(quote! {
+                    #[cfg(target_os = "psp")]
+                    unsafe {
+                        psp_ml::profiler::ProfileClear();
+                        psp_ml::profiler::ProfileEnable();
+                    }
+                    let __t0 = get_tick();
+                    #(#calls)*
+                    op_ticks[#i] += get_tick() - __t0;
+                    #[cfg(target_os = "psp")]
+                    unsafe {
+                        psp_ml::profiler::ProfileDisable();
+                        let mut __regs = core::mem::MaybeUninit::<psp_ml::profiler::ProfileRegs>::zeroed();
+                        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+                        op_profile[#i].accumulate(__regs.assume_init_ref());
+                    }
+                });
+            }
+        }
     }
 }
 
@@ -316,13 +519,67 @@ fn render_tensor_allocs(
     plan: &CodegenPlan,
     writer: &TensorExprWriter,
     arena: Option<&ArenaLayout>,
+    stream: Option<&StreamPlan>,
 ) -> TokenStream {
+    // Frame boundary tensors get static mut allocation; view tensors get no allocation
+    // (they're bound as slices of boundary tensors inside the frame loop)
+    let frame_boundary_ids: HashSet<usize> = stream
+        .map(|s| {
+            s.frame_outputs.iter().map(|fo| fo.id)
+                .chain(s.frame_inputs.iter().map(|fi| fi.id))
+                .collect()
+        })
+        .unwrap_or_default();
+    let view_ids: HashSet<usize> = stream
+        .map(|s| {
+            s.frame_inputs.iter().map(|fi| fi.view_id)
+                .chain(s.frame_outputs.iter().map(|fo| fo.view_id))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    // Frame-section intermediates (rewritten by stream::rewrite): skip here,
+    // they'll be rebound inside the loop. Exclude boundary tensors and views.
+    let frame_section_ids: HashSet<usize> = stream
+        .map(|s| {
+            s.rewritten_tensor_ids.iter()
+                .copied()
+                .filter(|id| !frame_boundary_ids.contains(id) && !view_ids.contains(id))
+                .collect()
+        })
+        .unwrap_or_default();
+
     let mut entries = Vec::new();
     for alloc in &plan.allocs {
         match alloc {
             TensorAlloc::Intermediate { id, size } => {
+                if frame_section_ids.contains(id) || view_ids.contains(id) {
+                    continue; // bound inside frame loop (arena) or as slice (view)
+                }
                 let ident = writer.ident(*id);
-                if let Some(layout) = arena {
+                if frame_boundary_ids.contains(id) {
+                    // Frame boundary tensor: full-batch static allocation (not in arena).
+                    // Use total_size from FrameBoundaryTensor (pre-rewrite full-batch size),
+                    // not the alloc's size (which is now batch=1 after stream rewrite).
+                    let full_size = stream
+                        .and_then(|s| {
+                            s.frame_inputs.iter()
+                                .chain(s.frame_outputs.iter())
+                                .find(|bt| bt.id == *id)
+                                .map(|bt| bt.total_size)
+                        })
+                        .unwrap_or(*size);
+                    let buf_static = writer.buf_static(*id);
+                    entries.push(quote! {
+                        static mut #buf_static: Aligned16<#full_size> = Aligned16([0.0f32; #full_size]);
+                        let #ident = unsafe {
+                            core::slice::from_raw_parts_mut(
+                                core::ptr::addr_of_mut!(#buf_static) as *mut f32,
+                                #full_size,
+                            )
+                        };
+                    });
+                } else if let Some(layout) = arena {
                     let offset = layout.offsets[&ArenaSlot::Tensor(*id)];
                     entries.push(quote! {
                         let #ident = unsafe {
@@ -347,8 +604,15 @@ fn render_tensor_allocs(
             }
             TensorAlloc::Output { id, size } => {
                 let ident = writer.ident(*id);
+                let buf_static = writer.buf_static(*id);
                 entries.push(quote! {
-                    let mut #ident = [0.0f32; #size];
+                    static mut #buf_static: Aligned16<#size> = Aligned16([0.0f32; #size]);
+                    let #ident = unsafe {
+                        core::slice::from_raw_parts_mut(
+                            core::ptr::addr_of_mut!(#buf_static) as *mut f32,
+                            #size,
+                        )
+                    };
                 });
             }
             TensorAlloc::Constant { .. } => {}
@@ -654,11 +918,27 @@ fn render_kernel_call(
             quote! { #fn_ident(#in_expr, #out_expr); }
         }
 
-        KernelCall::Reduce { op, input, output } => {
+        KernelCall::Reduce { op, input, output, batch_size, frame_in_size, frame_out_size } => {
             let fn_ident = Ident::new(op.name(), Span::call_site());
             let in_expr = writer.read(*input);
             let out_expr = writer.write(*output);
-            quote! { #fn_ident(#in_expr, #out_expr); }
+            if *batch_size > 1 {
+                let batch = *batch_size;
+                let fin = *frame_in_size;
+                let fout = *frame_out_size;
+                quote! {
+                    for _batch_idx in 0..#batch {
+                        let _in_off = _batch_idx * #fin;
+                        let _out_off = _batch_idx * #fout;
+                        #fn_ident(
+                            &#in_expr[_in_off.._in_off + #fin],
+                            &mut #out_expr[_out_off.._out_off + #fout]
+                        );
+                    }
+                }
+            } else {
+                quote! { #fn_ident(#in_expr, #out_expr); }
+            }
         }
 
         KernelCall::Pad {

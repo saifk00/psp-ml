@@ -186,13 +186,25 @@ pub fn infer(model: &mut PspModel) {
                     let in_s = &model.graph.tensor(*input).shape;
                     match reduce_op {
                         ReduceOp::Mean => {
-                            let out_s = &model.graph.tensor(*output).shape;
-                            if out_s.len() == in_s.len() {
-                                if let Some(ax) = model.read_i32_const(*axes) {
+                            if let Some(ax) = model.read_i32_const(*axes) {
+                                let out_s = &model.graph.tensor(*output).shape;
+                                let axes_norm: Vec<usize> = ax.iter()
+                                    .map(|&a| if a < 0 { (a + in_s.len() as i32) as usize } else { a as usize })
+                                    .collect();
+                                if out_s.len() == in_s.len() {
+                                    // keepDims=true: set reduced axes to 1
                                     let mut shape = in_s.clone();
-                                    for &a in &ax {
-                                        let a = if a < 0 { a + in_s.len() as i32 } else { a } as usize;
+                                    for &a in &axes_norm {
                                         if a < shape.len() { shape[a] = 1; }
+                                    }
+                                    shape_changes += set_shape(model, *output, shape);
+                                } else {
+                                    // keepDims=false: remove reduced axes
+                                    let mut shape = Vec::new();
+                                    for (i, &d) in in_s.iter().enumerate() {
+                                        if !axes_norm.contains(&i) {
+                                            shape.push(d);
+                                        }
                                     }
                                     shape_changes += set_shape(model, *output, shape);
                                 }

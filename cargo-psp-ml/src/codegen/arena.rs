@@ -6,7 +6,7 @@
 //! 2. **Arena packing** — greedy first-fit allocator that packs intermediate tensors
 //!    and scratch buffers into a single contiguous arena.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::ir::graph::TensorId;
 
@@ -207,7 +207,11 @@ fn align_up(val: usize, align: usize) -> usize {
 
 /// Build the list of items that need arena slots from intermediate tensors
 /// and scratch buffers.
-fn build_pack_items(plan: &CodegenPlan, liveness: &[LiveRange]) -> Vec<PackItem> {
+fn build_pack_items(
+    plan: &CodegenPlan,
+    liveness: &[LiveRange],
+    excluded: &HashSet<TensorId>,
+) -> Vec<PackItem> {
     let live_map: HashMap<TensorId, &LiveRange> =
         liveness.iter().map(|lr| (lr.tensor_id, lr)).collect();
 
@@ -216,6 +220,9 @@ fn build_pack_items(plan: &CodegenPlan, liveness: &[LiveRange]) -> Vec<PackItem>
     // Intermediate tensors
     for alloc in &plan.allocs {
         if let TensorAlloc::Intermediate { id, size } = alloc {
+            if excluded.contains(id) {
+                continue; // frame output: use static mut, not arena
+            }
             if let Some(lr) = live_map.get(id) {
                 items.push(PackItem {
                     slot: ArenaSlot::Tensor(*id),
@@ -351,8 +358,36 @@ fn insert_and_coalesce(free_list: &mut Vec<(usize, usize)>, offset: usize, size:
 }
 
 /// Compute liveness and pack all intermediate + scratch buffers into a shared arena.
+///
+/// When streaming:
+/// - Frame output tensor IDs are excluded (they need full-batch static allocation).
+/// - Frame input tensor IDs are excluded (they're full-batch, allocated as statics).
+/// - Any tensor consumed inside the frame loop has its liveness extended to `frame_end`,
+///   since the loop runs N times and the tensor is read every iteration.
 pub fn compute_and_pack(plan: &CodegenPlan) -> ArenaLayout {
-    let liveness = compute_liveness(plan);
-    let mut items = build_pack_items(plan, &liveness);
+    let mut excluded: HashSet<TensorId> = HashSet::new();
+    if let Some(stream) = &plan.stream {
+        for bt in stream.frame_inputs.iter().chain(stream.frame_outputs.iter()) {
+            excluded.insert(bt.id);      // boundary tensor: static mut alloc
+            excluded.insert(bt.view_id); // view tensor: slice of boundary, no alloc
+        }
+    }
+    let mut liveness = compute_liveness(plan);
+    // Extend liveness for tensors consumed inside the frame loop
+    if let Some(stream) = &plan.stream {
+        for lr in &mut liveness {
+            // If this tensor is read inside the frame section, it must survive
+            // the entire loop (since the loop iterates N times)
+            if lr.last_op >= stream.frame_start && lr.last_op <= stream.frame_end {
+                lr.last_op = stream.frame_end;
+            }
+            // Similarly for first_op: if it's written inside the frame section
+            if lr.first_op >= stream.frame_start && lr.first_op <= stream.frame_end {
+                lr.first_op = stream.frame_start;
+            }
+        }
+    }
+    let mut items = build_pack_items(plan, &liveness, &excluded);
+
     pack_arena(&mut items)
 }

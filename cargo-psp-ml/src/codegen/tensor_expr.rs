@@ -25,30 +25,21 @@ impl<'a> TensorExprWriter<'a> {
     /// Read-reference expression for a tensor in a kernel call.
     ///
     /// - Input tensor → `input` (the function parameter)
-    /// - Constant tensor → `t_{id}` (already a `&[f32]` slice)
-    /// - Intermediate → `t_{id}` (already `&mut [f32]` from aligned static; auto-reborrows)
-    /// - Output → `&t_{id}` (borrow local array)
+    /// - All others → `t_{id}` (slice from static or arena)
     pub fn read(&self, id: TensorId) -> TokenStream {
         if id == self.input_id {
             return quote!(input);
         }
         let ident = self.ident(id);
-        match &self.graph.tensor(id).kind {
-            TensorKind::Constant { .. } | TensorKind::Intermediate => quote!(#ident),
-            _ => quote!(&#ident),
-        }
+        quote!(#ident)
     }
 
     /// Write-reference expression for a tensor in a kernel call.
     ///
-    /// - Intermediate → `t_{id}` (already `&mut [f32]` from aligned static)
-    /// - Output → `&mut t_{id}` (borrow local array)
+    /// All tensors are `&mut [f32]` slices from static or arena allocations.
     pub fn write(&self, id: TensorId) -> TokenStream {
         let ident = self.ident(id);
-        match &self.graph.tensor(id).kind {
-            TensorKind::Intermediate => quote!(#ident),
-            _ => quote!(&mut #ident),
-        }
+        quote!(#ident)
     }
 
     /// Static buffer identifier for an intermediate tensor: `T_{id}_BUF`.

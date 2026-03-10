@@ -16,6 +16,8 @@ mod generated;
 
 const INPUT_SAMPLES: usize = 144000;
 const OUTPUT_CLASSES: usize = 6522;
+const OUTPUT_FRAMES: usize = 511;
+const OUTPUT_TOTAL: usize = OUTPUT_FRAMES * OUTPUT_CLASSES;
 
 // Audio pre-converted to f32 by build.rs (avoids 562KB stack allocation)
 #[repr(C, align(16))]
@@ -35,27 +37,26 @@ struct BenchResult {
     total_us: u64,
     per_image_us: u64,
     op_ticks: [u64; generated::NUM_OPS],
-    output: [f32; OUTPUT_CLASSES],
 }
 
 /// Run timed inference and return results.
 ///
 /// `get_tick` returns a monotonic tick value; `tick_res` is ticks per second.
-fn run_benchmark(get_tick: fn() -> u64, tick_res: u64) -> BenchResult {
+/// Output is written into the `output` buffer.
+fn run_benchmark(get_tick: fn() -> u64, tick_res: u64, output: &mut [f32; OUTPUT_TOTAL]) -> BenchResult {
     let input = audio_input();
     let mut op_ticks = [0u64; generated::NUM_OPS];
 
     let start = get_tick();
-    let output = generated::forward_timed(input, &mut op_ticks, get_tick);
+    generated::forward_timed(input, output, &mut op_ticks, get_tick);
     let elapsed_ticks = get_tick() - start;
 
     let total_us = (elapsed_ticks * 1_000_000) / tick_res;
 
     BenchResult {
         total_us,
-        per_image_us: total_us, // single inference
+        per_image_us: total_us,
         op_ticks,
-        output,
     }
 }
 
@@ -163,7 +164,16 @@ fn format_json(result: &BenchResult, tick_res: u64) -> JsonBuf {
 
 /// Write output scores as text, one per line. Uses a static buffer since
 /// 6522 floats × ~15 chars ≈ 100KB.
-fn write_results_to_buf(output: &[f32; OUTPUT_CLASSES], buf: &mut [u8]) -> usize {
+fn write_results_to_buf_avg(output: &[f32; OUTPUT_CLASSES], buf: &mut [u8]) -> usize {
+    write_results_to_buf_slice(output, buf)
+}
+
+fn write_results_to_buf(output: &[f32; OUTPUT_TOTAL], buf: &mut [u8]) -> usize {
+    // Only used by PSP path — writes first frame for debugging
+    write_results_to_buf_slice(&output[..OUTPUT_CLASSES], buf)
+}
+
+fn write_results_to_buf_slice(output: &[f32], buf: &mut [u8]) -> usize {
     let mut pos = 0;
 
     for &val in output.iter() {
@@ -277,7 +287,9 @@ fn app_main() {
     psp_ml::dprintln!("Running BirdNET...");
 
     let tick_res = unsafe { sceRtcGetTickResolution() } as u64;
-    let result = run_benchmark(get_tick, tick_res);
+    static mut OUTPUT_BUF: [f32; OUTPUT_TOTAL] = [0.0f32; OUTPUT_TOTAL];
+    let output = unsafe { &mut OUTPUT_BUF };
+    let result = run_benchmark(get_tick, tick_res, output);
 
     psp_ml::dprintln!("");
     psp_ml::dprintln!("Results:");
@@ -295,12 +307,6 @@ fn app_main() {
     write_file(b"host0:/benchmarks.json\0", json.as_bytes());
     psp_ml::dprintln!("");
     psp_ml::dprintln!("Wrote benchmarks.json");
-
-    // Write results.txt (raw scores)
-    static mut RESULT_BUF: [u8; 131072] = [0u8; 131072]; // 128KB
-    let len = write_results_to_buf(&result.output, unsafe { &mut RESULT_BUF });
-    write_file(b"host0:/results.txt\0", unsafe { &RESULT_BUF[..len] });
-    psp_ml::dprintln!("Wrote results.txt ({} bytes)", len);
 }
 
 // ============================================================================
@@ -331,7 +337,9 @@ fn main() {
     generated::init();
 
     println!("Running inference...");
-    let result = run_benchmark(local_get_tick, tick_res);
+    let mut output = vec![0.0f32; OUTPUT_TOTAL];
+    let output_arr: &mut [f32; OUTPUT_TOTAL] = output.as_mut_slice().try_into().unwrap();
+    let result = run_benchmark(local_get_tick, tick_res, output_arr);
 
     println!();
     println!("Results:");
@@ -357,9 +365,20 @@ fn main() {
     println!();
     println!("Wrote {}", json_path);
 
-    // Write results.txt (raw scores)
+    // Aggregate per-frame predictions by averaging across frames
+    let mut avg_output = [0.0f32; OUTPUT_CLASSES];
+    for frame in 0..OUTPUT_FRAMES {
+        for c in 0..OUTPUT_CLASSES {
+            avg_output[c] += output[frame * OUTPUT_CLASSES + c];
+        }
+    }
+    for c in 0..OUTPUT_CLASSES {
+        avg_output[c] /= OUTPUT_FRAMES as f32;
+    }
+
+    // Write averaged results.txt
     let mut result_buf = vec![0u8; 131072];
-    let len = write_results_to_buf(&result.output, &mut result_buf);
+    let len = write_results_to_buf_avg(&avg_output, &mut result_buf);
     let results_path = format!("{}/results.txt", out_dir);
     std::fs::write(&results_path, &result_buf[..len]).expect("failed to write results.txt");
     println!("Wrote {}", results_path);

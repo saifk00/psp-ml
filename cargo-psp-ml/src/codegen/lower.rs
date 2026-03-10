@@ -31,6 +31,9 @@ impl Conv2dKernelParams {
 
 /**
  * Lower a PspModel into a CodegenPlan.
+ *
+ * If the graph was rewritten by `ir::stream::rewrite()`, the lowerer sees
+ * a clean batch=1 graph — no streaming logic needed here.
  */
 pub fn lower(model: &mut PspModel) -> Result<CodegenPlan, String> {
     if model.graph.inputs.len() != 1 {
@@ -56,10 +59,10 @@ pub fn lower(model: &mut PspModel) -> Result<CodegenPlan, String> {
         .iter()
         .product::<usize>();
 
-    let mut allocs = lower_allocs(model)?;
-
     // TODO: expose as compiler flag
     let use_vfpu_conv2d = true;
+
+    let mut allocs = lower_allocs(model)?;
     let ops = lower_ops(model, use_vfpu_conv2d, &mut allocs)?;
 
     // Compute blob size AFTER lower_ops, which may append twiddle constants
@@ -76,6 +79,7 @@ pub fn lower(model: &mut PspModel) -> Result<CodegenPlan, String> {
         allocs,
         ops,
         arena: None, // filled in by generate_code() after lowering
+        stream: None, // filled in by generate_code() from stream rewrite
     })
 }
 
@@ -155,9 +159,8 @@ fn lower_ops(
     allocs: &mut Vec<TensorAlloc>,
 ) -> Result<Vec<OpPlan>, String> {
     let mut ops = Vec::new();
-    let num_ops = model.graph.ops.len();
 
-    for i in 0..num_ops {
+    for i in 0..model.graph.ops.len() {
         let op = model.graph.ops[i].clone();
 
         // Handle RFFT separately: it needs &mut model to append twiddle constants
@@ -429,12 +432,27 @@ fn lower_ops(
                 axes: _,
                 output,
             } => {
-                // Validate Mean: output must keep only the last dim (all others size 1)
+                let in_shape = &graph.tensor(*input).shape;
+                let out_shape = &graph.tensor(*output).shape;
+
+                // Compute batch size: leading dim that matches between in/out
+                let batch_size: usize = if out_shape.len() >= 2
+                    && in_shape.first() == out_shape.first()
+                    && *in_shape.first().unwrap_or(&1) > 1
+                {
+                    *out_shape.first().unwrap_or(&1)
+                } else {
+                    1
+                };
+                let in_total: usize = in_shape.iter().product();
+                let out_total: usize = out_shape.iter().product();
+                let frame_in_size = in_total / batch_size.max(1);
+                let frame_out_size = out_total / batch_size.max(1);
+
                 if *op == ReduceOp::Mean {
-                    let in_shape = &graph.tensor(*input).shape;
-                    let out_shape = &graph.tensor(*output).shape;
                     let last_matches = out_shape.last() == in_shape.last();
-                    let others_are_one = out_shape.iter().rev().skip(1).all(|&d| d == 1);
+                    let others_are_one = out_shape.iter().rev().skip(1)
+                        .all(|&d| d == 1 || d == batch_size);
                     if !last_matches || !others_are_one {
                         return Err(format!(
                             "Op {i}: reduce_mean_hw requires output to keep only the last dim \
@@ -451,6 +469,9 @@ fn lower_ops(
                             op: *op,
                             input: *input,
                             output: *output,
+                            batch_size,
+                            frame_in_size,
+                            frame_out_size,
                         }],
                     }],
                 }
@@ -992,6 +1013,7 @@ fn lower_rfft(
 
     Ok(OpPlan { scratch, sub_ops })
 }
+
 
 #[cfg(test)]
 mod tests {

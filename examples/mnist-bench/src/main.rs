@@ -58,7 +58,8 @@ fn run_benchmark(get_tick: fn() -> u64, tick_res: u64) -> BenchResult {
 
     for i in 0..NUM_IMAGES {
         let img = get_image(i, images);
-        let output = generated::forward_timed(&img, &mut op_ticks, get_tick);
+        let mut output = [0.0f32; generated::OUTPUT_SIZE];
+        generated::forward_timed(&img, &mut output, &mut op_ticks, get_tick);
 
         let mut max_idx = 0u8;
         let mut max_val = output[0];
@@ -107,7 +108,8 @@ fn run_profiled_benchmark(get_tick: fn() -> u64, tick_res: u64) -> BenchResult {
 
     for i in 0..NUM_IMAGES {
         let img = get_image(i, images);
-        let output = generated::forward_profiled(&img, &mut op_ticks, &mut op_profile, get_tick);
+        let mut output = [0.0f32; generated::OUTPUT_SIZE];
+        generated::forward_profiled(&img, &mut output, &mut op_ticks, &mut op_profile, get_tick);
 
         let mut max_idx = 0u8;
         let mut max_val = output[0];

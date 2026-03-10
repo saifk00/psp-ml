@@ -5,6 +5,8 @@
 //! 2. **ScratchBuffer** — op-level aligned buffers, optionally pre-loaded from a tensor
 //! 3. **KernelCall** — actual kernel invocations, referencing tensors and scratch buffers
 
+use std::collections::HashSet;
+
 use crate::ir::graph::TensorId;
 use crate::ir::psp::{BinaryOp, PoolType, ReduceOp, UnaryOp};
 
@@ -32,6 +34,40 @@ pub struct CodegenPlan {
     pub allocs: Vec<TensorAlloc>,
     pub ops: Vec<OpPlan>,
     pub arena: Option<ArenaLayout>,
+    pub stream: Option<StreamPlan>,
+}
+
+// ─── (4) Frame streaming ────────────────────────────────────────
+
+/// Frame streaming plan: process N frames one at a time through a batch-
+/// independent section of the graph, reducing arena from N× to 1× frame size.
+#[derive(Debug, Clone, PartialEq)]
+pub struct StreamPlan {
+    /// Number of frames (batch dimension, e.g. 511).
+    pub frame_count: usize,
+    /// Index of first frame-section op in `CodegenPlan::ops`.
+    pub frame_start: usize,
+    /// Index of last frame-section op (inclusive) in `CodegenPlan::ops`.
+    pub frame_end: usize,
+    /// Tensors produced before the frame loop but consumed inside it.
+    pub frame_inputs: Vec<FrameBoundaryTensor>,
+    /// Tensors produced inside the frame loop but consumed after it.
+    pub frame_outputs: Vec<FrameBoundaryTensor>,
+    /// Tensor IDs rewritten from [N,...] to [1,...] by the stream rewrite.
+    /// Used by arena packing and render to identify frame-scoped tensors.
+    pub rewritten_tensor_ids: HashSet<TensorId>,
+}
+
+/// A tensor that crosses the frame loop boundary.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FrameBoundaryTensor {
+    pub id: TensorId,
+    /// View tensor (batch=1 alias) used by ops inside the frame loop.
+    pub view_id: TensorId,
+    /// Total size in floats (full N×... size).
+    pub total_size: usize,
+    /// Floats per frame (stride for slicing).
+    pub frame_stride: usize,
 }
 
 // ─── (1) Tensor allocations ─────────────────────────────────────
@@ -175,6 +211,9 @@ pub enum KernelCall {
         op: ReduceOp,
         input: TensorId,
         output: TensorId,
+        batch_size: usize,
+        frame_in_size: usize,
+        frame_out_size: usize,
     },
     Pad {
         input: Tensor4d,

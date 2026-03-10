@@ -521,4 +521,70 @@ impl PspOp {
             other => vec![other.output()],
         }
     }
+
+    /// Replace all occurrences of `old` with `new` in input and output fields.
+    pub fn replace_tensor_id(&mut self, old: TensorId, new: TensorId) {
+        let r = |id: &mut TensorId| {
+            if *id == old { *id = new; }
+        };
+        let r_opt = |id: &mut Option<TensorId>| {
+            if *id == Some(old) { *id = Some(new); }
+        };
+        match self {
+            PspOp::Conv2d { input, weights, bias, output, .. }
+            | PspOp::DepthwiseConv2d { input, weights, bias, output, .. }
+            | PspOp::FullyConnected { input, weights, bias, output, .. } => {
+                r(input); r(weights); r_opt(bias); r(output);
+            }
+            PspOp::Reshape { input, output, shape_tensor, .. } => {
+                r(input); r(output); r_opt(shape_tensor);
+            }
+            PspOp::Pool2d { input, output, .. }
+            | PspOp::Squeeze { input, output, .. }
+            | PspOp::ExpandDims { input, output, .. }
+            | PspOp::Softmax { input, output }
+            | PspOp::UnaryElementWise { input, output, .. }
+            | PspOp::Shape { input, output }
+            | PspOp::Cast { input, output }
+            | PspOp::Rfft { input, output, .. } => {
+                r(input); r(output);
+            }
+            PspOp::ElementWise { input_a, input_b, output, .. } => {
+                r(input_a); r(input_b); r(output);
+            }
+            PspOp::Pad { input, paddings, output } => {
+                r(input); r(paddings); r(output);
+            }
+            PspOp::Transpose { input, perm, output } => {
+                r(input); r(perm); r(output);
+            }
+            PspOp::ReverseV2 { input, axis, output } => {
+                r(input); r(axis); r(output);
+            }
+            PspOp::Rfft2d { input, fft_length, output } => {
+                r(input); r(fft_length); r(output);
+            }
+            PspOp::StridedSlice { input, begin, end, strides, output, .. } => {
+                r(input); r(begin); r(end); r(strides); r(output);
+            }
+            PspOp::Gather { input, indices, output, .. } => {
+                r(input); r(indices); r(output);
+            }
+            PspOp::Reduce { input, axes, output, .. } => {
+                r(input); r(axes); r(output);
+            }
+            PspOp::Range { start, limit, delta, output } => {
+                r(start); r(limit); r(delta); r(output);
+            }
+            PspOp::SplitV { input, size_splits, axis, outputs } => {
+                r(input); r(size_splits); r(axis);
+                for o in outputs { r(o); }
+            }
+            PspOp::Pack { inputs, output, .. }
+            | PspOp::Concatenation { inputs, output, .. } => {
+                for i in inputs { r(i); }
+                r(output);
+            }
+        }
+    }
 }

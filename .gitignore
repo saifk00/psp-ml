@@ -13,6 +13,8 @@ birdnet.txt
 results.txt
 out.log
 
+examples/birdnet/results.txt
+
 # kernel-plugin build artifacts
 kernel-plugin/*.o
 kernel-plugin/*.elf

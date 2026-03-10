@@ -57,6 +57,7 @@ fn cmd_compile(args: &[String]) {
     let mut model_path: Option<String> = None;
     let mut out_dir: Option<PathBuf> = None;
     let mut dump_ir = false;
+    let mut stream_batch: Option<(usize, usize)> = None;
 
     let mut i = 0;
     while i < args.len() {
@@ -69,14 +70,36 @@ fn cmd_compile(args: &[String]) {
                 })));
             }
             "--dump-ir" => dump_ir = true,
+            "--stream-batch" => {
+                i += 1;
+                let val = args.get(i).unwrap_or_else(|| {
+                    eprintln!("--stream-batch requires START:END argument");
+                    process::exit(1);
+                });
+                let parts: Vec<&str> = val.split(':').collect();
+                if parts.len() != 2 {
+                    eprintln!("--stream-batch format: START:END (e.g. 38:278)");
+                    process::exit(1);
+                }
+                let start: usize = parts[0].parse().unwrap_or_else(|_| {
+                    eprintln!("--stream-batch START must be a number");
+                    process::exit(1);
+                });
+                let end: usize = parts[1].parse().unwrap_or_else(|_| {
+                    eprintln!("--stream-batch END must be a number");
+                    process::exit(1);
+                });
+                stream_batch = Some((start, end));
+            }
             "--help" | "-h" => {
                 eprintln!("Usage: cargo psp-ml compile <model.tflite> [-o <dir>] [--dump-ir]");
                 eprintln!();
                 eprintln!("Compile a TFLite model into Rust code targeting the psp-ml runtime.");
                 eprintln!();
                 eprintln!("Options:");
-                eprintln!("  -o, --out <DIR>  Output directory (default: current directory)");
-                eprintln!("  --dump-ir        Print IR graph after each pipeline stage");
+                eprintln!("  -o, --out <DIR>           Output directory (default: current directory)");
+                eprintln!("  --dump-ir                 Print IR graph after each pipeline stage");
+                eprintln!("  --stream-batch START:END  Process batch frames one at a time (op indices)");
                 process::exit(0);
             }
             _ => {
@@ -105,7 +128,7 @@ fn cmd_compile(args: &[String]) {
         process::exit(1);
     });
 
-    let generated = generate_code(&mut psp_model).unwrap_or_else(|err| {
+    let generated = generate_code(&mut psp_model, stream_batch).unwrap_or_else(|err| {
         eprintln!("Error: {err}");
         process::exit(1);
     });

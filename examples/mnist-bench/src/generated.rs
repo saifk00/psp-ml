@@ -4,7 +4,8 @@ use psp_ml::kernels::naive::*;
 #[allow(unused_imports)]
 use psp_ml::kernels::*;
 static mut ARENA: Aligned16<67648usize> = Aligned16([0.0f32; 67648usize]);
-pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
+pub const OUTPUT_SIZE: usize = 10usize;
+pub fn forward(input: &[f32; 784usize], output: &mut [f32; 10usize]) {
     let t_10 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(21952usize),
@@ -41,7 +42,13 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
             64usize,
         )
     };
-    let mut t_16 = [0.0f32; 10usize];
+    static mut T_16_BUF: Aligned16<10usize> = Aligned16([0.0f32; 10usize]);
+    let t_16 = unsafe {
+        core::slice::from_raw_parts_mut(
+            core::ptr::addr_of_mut!(T_16_BUF) as *mut f32,
+            10usize,
+        )
+    };
     let tensor_data = tensor_data_f32();
     let t_1 = &tensor_data[T_1_OFFSET..T_1_OFFSET + T_1_LEN];
     let t_2 = &tensor_data[T_2_OFFSET..T_2_OFFSET + T_2_LEN];
@@ -124,15 +131,16 @@ pub fn forward(input: &[f32; 784usize]) -> [f32; 10usize] {
     );
     reshape(t_13, t_14);
     fully_connected_relu(t_14, 784usize, t_6, Some(t_1), t_15, 64usize);
-    fully_connected(t_15, 64usize, t_5, Some(t_3), &mut t_16, 10usize);
-    t_16
+    fully_connected(t_15, 64usize, t_5, Some(t_3), t_16, 10usize);
+    output.copy_from_slice(&t_16);
 }
 /// Instrumented inference: accumulates per-op tick deltas into `op_ticks`.
 pub fn forward_timed(
     input: &[f32; 784usize],
+    output: &mut [f32; 10usize],
     op_ticks: &mut [u64; NUM_OPS],
     get_tick: fn() -> u64,
-) -> [f32; 10usize] {
+) {
     let t_10 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(21952usize),
@@ -169,7 +177,13 @@ pub fn forward_timed(
             64usize,
         )
     };
-    let mut t_16 = [0.0f32; 10usize];
+    static mut T_16_BUF: Aligned16<10usize> = Aligned16([0.0f32; 10usize]);
+    let t_16 = unsafe {
+        core::slice::from_raw_parts_mut(
+            core::ptr::addr_of_mut!(T_16_BUF) as *mut f32,
+            10usize,
+        )
+    };
     let tensor_data = tensor_data_f32();
     let t_1 = &tensor_data[T_1_OFFSET..T_1_OFFSET + T_1_LEN];
     let t_2 = &tensor_data[T_2_OFFSET..T_2_OFFSET + T_2_LEN];
@@ -273,25 +287,19 @@ pub fn forward_timed(
     fully_connected_relu(t_14, 784usize, t_6, Some(t_1), t_15, 64usize);
     op_ticks[9usize] += get_tick() - __t0;
     let __t0 = get_tick();
-    fully_connected(t_15, 64usize, t_5, Some(t_3), &mut t_16, 10usize);
+    fully_connected(t_15, 64usize, t_5, Some(t_3), t_16, 10usize);
     op_ticks[10usize] += get_tick() - __t0;
-    t_16
+    output.copy_from_slice(&t_16);
 }
 /// Instrumented inference with per-op hardware profiling counters.
-///
-/// On PSP (with kernel plugin loaded): collects cache misses, VFPU stalls,
-/// memory stalls, instruction counts, etc. per sub-op. Adds 4 syscalls per
-/// sub-op (clear, enable, disable, read) so use `forward_timed` for
-/// lightweight timing only.
-///
-/// On host: `op_profile` entries stay zeroed; `op_ticks` still works.
 pub fn forward_profiled(
     input: &[f32; 784usize],
+    output: &mut [f32; 10usize],
     op_ticks: &mut [u64; NUM_OPS],
     #[allow(unused)]
     op_profile: &mut [psp_ml::profiler::OpProfileStats; NUM_OPS],
     get_tick: fn() -> u64,
-) -> [f32; 10usize] {
+) {
     let t_10 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(21952usize),
@@ -328,7 +336,13 @@ pub fn forward_profiled(
             64usize,
         )
     };
-    let mut t_16 = [0.0f32; 10usize];
+    static mut T_16_BUF: Aligned16<10usize> = Aligned16([0.0f32; 10usize]);
+    let t_16 = unsafe {
+        core::slice::from_raw_parts_mut(
+            core::ptr::addr_of_mut!(T_16_BUF) as *mut f32,
+            10usize,
+        )
+    };
     let tensor_data = tensor_data_f32();
     let t_1 = &tensor_data[T_1_OFFSET..T_1_OFFSET + T_1_LEN];
     let t_2 = &tensor_data[T_2_OFFSET..T_2_OFFSET + T_2_LEN];
@@ -577,7 +591,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileEnable();
     }
     let __t0 = get_tick();
-    fully_connected(t_15, 64usize, t_5, Some(t_3), &mut t_16, 10usize);
+    fully_connected(t_15, 64usize, t_5, Some(t_3), t_16, 10usize);
     op_ticks[10usize] += get_tick() - __t0;
     #[cfg(target_os = "psp")]
     unsafe {
@@ -588,7 +602,7 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
         op_profile[10usize].accumulate(__regs.assume_init_ref());
     }
-    t_16
+    output.copy_from_slice(&t_16);
 }
 pub const NUM_OPS: usize = 11usize;
 pub const OP_NAMES: [&str; NUM_OPS] = [
@@ -610,25 +624,25 @@ struct AlignedBytes<const N: usize>([u8; N]);
 /// 16-byte aligned f32 array for VFPU `lv.q`/`sv.q`.
 #[repr(C, align(16))]
 struct Aligned16<const N: usize>([f32; N]);
-static TENSOR_DATA_BYTES: AlignedBytes<220240usize> = AlignedBytes(
+static TENSOR_DATA_BYTES: AlignedBytes<217264usize> = AlignedBytes(
     *include_bytes!("weights.bin"),
 );
-const TENSOR_DATA_FLOATS: usize = 55060usize;
-const T_1_OFFSET: usize = 54410usize;
+const TENSOR_DATA_FLOATS: usize = 54316usize;
+const T_1_OFFSET: usize = 0usize;
 const T_1_LEN: usize = 64usize;
-const T_2_OFFSET: usize = 54389usize;
+const T_2_OFFSET: usize = 64usize;
 const T_2_LEN: usize = 16usize;
-const T_3_OFFSET: usize = 54376usize;
+const T_3_OFFSET: usize = 80usize;
 const T_3_LEN: usize = 10usize;
-const T_4_OFFSET: usize = 51173usize;
+const T_4_OFFSET: usize = 92usize;
 const T_4_LEN: usize = 3200usize;
-const T_5_OFFSET: usize = 50530usize;
+const T_5_OFFSET: usize = 3292usize;
 const T_5_LEN: usize = 640usize;
-const T_6_OFFSET: usize = 351usize;
+const T_6_OFFSET: usize = 3932usize;
 const T_6_LEN: usize = 50176usize;
-const T_8_OFFSET: usize = 143usize;
+const T_8_OFFSET: usize = 54108usize;
 const T_8_LEN: usize = 200usize;
-const T_9_OFFSET: usize = 132usize;
+const T_9_OFFSET: usize = 54308usize;
 const T_9_LEN: usize = 8usize;
 fn tensor_data_f32() -> &'static [f32] {
     unsafe {
