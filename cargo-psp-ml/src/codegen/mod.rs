@@ -4,16 +4,81 @@ pub mod plan;
 mod render;
 mod tensor_expr;
 
+use std::fmt;
+
 use crate::ir::stream;
 use crate::ir::PspModel;
 use proc_macro2::TokenStream;
 
 pub type GenResult<T> = Result<T, String>;
 
+/// Compilation statistics for the generated model.
+pub struct ModelStats {
+    pub num_ops: usize,
+    pub num_sub_ops: usize,
+    pub blob_bytes: usize,
+    pub arena_size_floats: usize,
+    pub input_size_floats: usize,
+    pub output_size_floats: usize,
+    pub frame_boundary_bytes: usize,
+}
+
+impl ModelStats {
+    fn peak_memory_bytes(&self) -> usize {
+        self.blob_bytes
+            + self.arena_size_floats * 4
+            + self.output_size_floats * 4
+            + self.frame_boundary_bytes
+    }
+}
+
+fn fmt_bytes(bytes: usize) -> String {
+    if bytes >= 1_048_576 {
+        format!("{:.1} MiB", bytes as f64 / 1_048_576.0)
+    } else if bytes >= 1_024 {
+        format!("{:.1} KiB", bytes as f64 / 1_024.0)
+    } else {
+        format!("{} B", bytes)
+    }
+}
+
+impl fmt::Display for ModelStats {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let arena_bytes = self.arena_size_floats * 4;
+        writeln!(f, "Model Statistics:")?;
+        writeln!(
+            f,
+            "  Ops:          {} ({} sub-ops)",
+            self.num_ops, self.num_sub_ops
+        )?;
+        writeln!(f, "  Weights:      {}", fmt_bytes(self.blob_bytes))?;
+        writeln!(
+            f,
+            "  Arena:        {} ({} floats)",
+            fmt_bytes(arena_bytes),
+            self.arena_size_floats
+        )?;
+        writeln!(f, "  Peak memory:  {}", fmt_bytes(self.peak_memory_bytes()))?;
+        writeln!(
+            f,
+            "  Input:        {} floats ({})",
+            self.input_size_floats,
+            fmt_bytes(self.input_size_floats * 4)
+        )?;
+        write!(
+            f,
+            "  Output:       {} floats ({})",
+            self.output_size_floats,
+            fmt_bytes(self.output_size_floats * 4)
+        )
+    }
+}
+
 pub struct Generated {
     pub tokens: TokenStream,
     pub data_bytes: Vec<u8>,
     pub data_path: String,
+    pub stats: ModelStats,
 }
 
 pub fn generate_code(
@@ -43,10 +108,16 @@ pub fn generate_code(
             region.frame_outputs.len(),
         );
         for fi in &region.frame_inputs {
-            eprintln!("  input: t{} ({}×{} floats)", fi.id, region.frame_count, fi.frame_stride);
+            eprintln!(
+                "  input: t{} ({}×{} floats)",
+                fi.id, region.frame_count, fi.frame_stride
+            );
         }
         for fo in &region.frame_outputs {
-            eprintln!("  output: t{} ({}×{} floats)", fo.id, region.frame_count, fo.frame_stride);
+            eprintln!(
+                "  output: t{} ({}×{} floats)",
+                fo.id, region.frame_count, fo.frame_stride
+            );
         }
         Some(stream::rewrite(model, &region))
     } else {
@@ -62,12 +133,36 @@ pub fn generate_code(
     // Compact the weight blob: pack only referenced constant byte ranges
     let data_bytes = compact_blob(&mut plan, &model.model_data);
 
+    // Collect statistics before rendering
+    let frame_boundary_bytes = plan
+        .stream
+        .as_ref()
+        .map(|s| {
+            s.frame_inputs
+                .iter()
+                .chain(s.frame_outputs.iter())
+                .map(|t| t.total_size * 4)
+                .sum()
+        })
+        .unwrap_or(0);
+
+    let stats = ModelStats {
+        num_ops: plan.ops.len(),
+        num_sub_ops: plan.ops.iter().map(|op| op.sub_ops.len()).sum(),
+        blob_bytes: plan.blob_bytes,
+        arena_size_floats: plan.arena.as_ref().map_or(0, |a| a.arena_size_floats),
+        input_size_floats: plan.input_size,
+        output_size_floats: plan.output_size,
+        frame_boundary_bytes,
+    };
+
     let tokens = render::render(&plan, &model.graph);
 
     Ok(Generated {
         tokens,
         data_bytes,
         data_path: "weights.bin".to_string(),
+        stats,
     })
 }
 

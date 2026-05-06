@@ -10,12 +10,29 @@ pub struct Tensor {
     pub kind: TensorKind,
 }
 
+impl Tensor {
+    pub fn size_bytes(&self) -> usize {
+        self.shape.iter().product::<usize>() * self.dtype.size()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DType {
     F32,
     I32,
     I8,
     U8,
+}
+
+impl DType {
+    pub fn size(&self) -> usize {
+        match self {
+            DType::F32 => 4,
+            DType::I32 => 4,
+            DType::I8 => 1,
+            DType::U8 => 1,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -26,9 +26,13 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Step 1: Generate inference code from TFLite model
+# --stream-batch 27:279 processes 511 frames one-at-a-time through the main conv
+# block, reducing arena from ~161 MiB to ~9.6 MiB.
 echo "==> Generating inference code..."
 cd "$ROOT_DIR"
-cargo psp-ml compile "$ROOT_DIR/models/BirdNET_v2.4_tflite/audio-model.tflite" -o "$SCRIPT_DIR/src/"
+cargo psp-ml compile "$ROOT_DIR/models/BirdNET_v2.4_tflite/audio-model.tflite" \
+    --stream-batch 27:279 \
+    -o "$SCRIPT_DIR/src/"
 
 if [ "$MODE" = "local" ]; then
     # -------------------------------------------------------------------------

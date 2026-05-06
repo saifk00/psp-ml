@@ -154,6 +154,8 @@ fn cmd_compile(args: &[String]) {
         generated_path.display(),
         weights_path.display()
     );
+    eprintln!();
+    eprintln!("{}", generated.stats);
 }
 
 // ---------------------------------------------------------------------------

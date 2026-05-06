@@ -2,5 +2,6 @@
 
 pub mod codegen;
 pub mod ir;
+pub mod memory_planner;
 pub mod parse;
 

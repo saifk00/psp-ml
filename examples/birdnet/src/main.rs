@@ -5,8 +5,7 @@
 use core::ffi::c_void;
 #[cfg(not(feature = "local"))]
 use psp::sys::{
-    sceIoClose, sceIoOpen, sceIoWrite, sceRtcGetCurrentTick, sceRtcGetTickResolution,
-    IoOpenFlags,
+    sceIoClose, sceIoOpen, sceIoWrite, sceRtcGetCurrentTick, sceRtcGetTickResolution, IoOpenFlags,
 };
 
 #[cfg(not(feature = "local"))]
@@ -17,7 +16,6 @@ mod generated;
 const INPUT_SAMPLES: usize = 144000;
 const OUTPUT_CLASSES: usize = 6522;
 const OUTPUT_FRAMES: usize = 511;
-const OUTPUT_TOTAL: usize = OUTPUT_FRAMES * OUTPUT_CLASSES;
 
 // Audio pre-converted to f32 by build.rs (avoids 562KB stack allocation)
 #[repr(C, align(16))]
@@ -43,7 +41,11 @@ struct BenchResult {
 ///
 /// `get_tick` returns a monotonic tick value; `tick_res` is ticks per second.
 /// Output is written into the `output` buffer.
-fn run_benchmark(get_tick: fn() -> u64, tick_res: u64, output: &mut [f32; OUTPUT_TOTAL]) -> BenchResult {
+fn run_benchmark(
+    get_tick: fn() -> u64,
+    tick_res: u64,
+    output: &mut [f32; OUTPUT_CLASSES],
+) -> BenchResult {
     let input = audio_input();
     let mut op_ticks = [0u64; generated::NUM_OPS];
 
@@ -168,7 +170,7 @@ fn write_results_to_buf_avg(output: &[f32; OUTPUT_CLASSES], buf: &mut [u8]) -> u
     write_results_to_buf_slice(output, buf)
 }
 
-fn write_results_to_buf(output: &[f32; OUTPUT_TOTAL], buf: &mut [u8]) -> usize {
+fn write_results_to_buf(output: &[f32; OUTPUT_CLASSES], buf: &mut [u8]) -> usize {
     // Only used by PSP path — writes first frame for debugging
     write_results_to_buf_slice(&output[..OUTPUT_CLASSES], buf)
 }
@@ -287,7 +289,7 @@ fn app_main() {
     psp_ml::dprintln!("Running BirdNET...");
 
     let tick_res = unsafe { sceRtcGetTickResolution() } as u64;
-    static mut OUTPUT_BUF: [f32; OUTPUT_TOTAL] = [0.0f32; OUTPUT_TOTAL];
+    static mut OUTPUT_BUF: [f32; OUTPUT_CLASSES] = [0.0f32; OUTPUT_CLASSES];
     let output = unsafe { &mut OUTPUT_BUF };
     let result = run_benchmark(get_tick, tick_res, output);
 
@@ -318,11 +320,7 @@ static EPOCH: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new
 
 #[cfg(feature = "local")]
 fn local_get_tick() -> u64 {
-    EPOCH
-        .get()
-        .expect("epoch not set")
-        .elapsed()
-        .as_nanos() as u64
+    EPOCH.get().expect("epoch not set").elapsed().as_nanos() as u64
 }
 
 #[cfg(feature = "local")]

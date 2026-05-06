@@ -4,8 +4,8 @@ use psp_ml::kernels::naive::*;
 #[allow(unused_imports)]
 use psp_ml::kernels::*;
 static mut ARENA: Aligned16<2525064usize> = Aligned16([0.0f32; 2525064usize]);
-pub const OUTPUT_SIZE: usize = 3332742usize;
-pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
+pub const OUTPUT_SIZE: usize = 6522usize;
+pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 6522usize]) {
     let t_169 = unsafe {
         core::slice::from_raw_parts_mut(
             (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
@@ -126,133 +126,55 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
             49056usize,
         )
     };
+    static mut T_221_BUF: Aligned16<49056usize> = Aligned16([0.0f32; 49056usize]);
     let t_221 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            core::ptr::addr_of_mut!(T_221_BUF) as *mut f32,
             49056usize,
         )
     };
     let t_228 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(288000usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             144000usize,
         )
     };
     let t_229 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144000usize),
             144000usize,
         )
     };
     let t_241 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(193056usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(288000usize),
             523264usize,
         )
     };
     let t_242 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(716320usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(811264usize),
             523264usize,
         )
     };
     let t_243 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             523264usize,
         )
     };
+    static mut T_247_BUF: Aligned16<262143usize> = Aligned16([0.0f32; 262143usize]);
     let t_247 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(572320usize),
+            core::ptr::addr_of_mut!(T_247_BUF) as *mut f32,
             262143usize,
         )
     };
-    let t_255 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
-            262143usize,
-        )
-    };
-    let t_256 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(311200usize),
-            49056usize,
-        )
-    };
-    let t_257 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
-            49056usize,
-        )
-    };
-    let t_258 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(98112usize),
-            49056usize,
-        )
-    };
-    let t_259 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
-            49056usize,
-        )
-    };
-    let t_260 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(98112usize),
-            49056usize,
-        )
-    };
-    let t_261 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
-            49056usize,
-        )
-    };
-    let t_262 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(98112usize),
-            49056usize,
-        )
-    };
-    let t_263 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(147168usize),
-            98112usize,
-        )
-    };
-    let t_264 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            98112usize,
-        )
-    };
-    static mut T_265_BUF: Aligned16<98112usize> = Aligned16([0.0f32; 98112usize]);
-    let t_265 = unsafe {
-        core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_265_BUF) as *mut f32,
-            98112usize,
-        )
-    };
-    static mut T_544_BUF: Aligned16<523264usize> = Aligned16([0.0f32; 523264usize]);
-    let t_544 = unsafe {
-        core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_544_BUF) as *mut f32,
-            523264usize,
-        )
-    };
-    let t_545 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            523264usize,
-        )
-    };
-    static mut T_546_BUF: Aligned16<3332742usize> = Aligned16([0.0f32; 3332742usize]);
+    static mut T_546_BUF: Aligned16<6522usize> = Aligned16([0.0f32; 6522usize]);
     let t_546 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_546_BUF) as *mut f32,
-            3332742usize,
+            6522usize,
         )
     };
     let tensor_data = tensor_data_f32();
@@ -521,7 +443,7 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
     binary_mul(t_242, t_126, t_243, 1024usize);
     let scratch_26_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(834464usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(523264usize),
             1024usize,
         )
     };
@@ -536,83 +458,100 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
     fft_butterfly_stage(scratch_26_0, t_567, 512usize, 128usize);
     fft_butterfly_stage(scratch_26_0, t_568, 512usize, 256usize);
     rfft_unpack(scratch_26_0, t_569, t_247, 1024usize);
-    reshape(t_247, t_255);
-    for _batch_idx in 0..511usize {
-        let _in_off = _batch_idx * 513usize;
-        let _out_off = _batch_idx * 96usize;
-        fully_connected(
-            &t_255[_in_off.._in_off + 513usize],
-            513usize,
-            t_168,
-            None,
-            &mut t_256[_out_off.._out_off + 96usize],
-            96usize,
-        );
-    }
-    reshape(t_256, t_257);
-    binary_mul(t_257, t_257, t_258, 49056usize);
-    binary_pow(t_258, t_167, t_259, 1usize);
-    reverse_v2(t_259, &[511usize, 1usize, 96usize], t_260, 2usize);
-    transpose(
-        t_260,
-        &[511usize, 1usize, 96usize],
-        t_261,
-        &[511usize, 96usize, 1usize],
-        &[0usize, 2usize, 1usize],
-    );
-    reshape(t_261, t_262);
-    {
-        let src = t_221;
-        for p in 0..49056usize {
-            for a in 0..1usize {
-                let src_off = p * (1usize * 1usize) + a * 1usize;
-                let dst_off = p * (2usize * 1usize) + (0usize + a) * 1usize;
-                t_263[dst_off..dst_off + 1usize]
-                    .copy_from_slice(&src[src_off..src_off + 1usize]);
-            }
-        }
-    }
-    {
-        let src = t_262;
-        for p in 0..49056usize {
-            for a in 0..1usize {
-                let src_off = p * (1usize * 1usize) + a * 1usize;
-                let dst_off = p * (2usize * 1usize) + (1usize + a) * 1usize;
-                t_263[dst_off..dst_off + 1usize]
-                    .copy_from_slice(&src[src_off..src_off + 1usize]);
-            }
-        }
-    }
-    binary_mul(t_263, t_163, t_264, 2usize);
-    binary_add(t_264, t_162, t_265, 2usize);
     for _frame_idx in 0..511usize {
+        let t_255 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(661880usize),
+                513usize,
+            )
+        };
+        let t_256 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667580usize),
+                96usize,
+            )
+        };
+        let t_257 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667676usize),
+                96usize,
+            )
+        };
+        let t_258 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667772usize),
+                96usize,
+            )
+        };
+        let t_259 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667868usize),
+                96usize,
+            )
+        };
+        let t_260 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667964usize),
+                96usize,
+            )
+        };
+        let t_261 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668060usize),
+                96usize,
+            )
+        };
+        let t_262 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668156usize),
+                96usize,
+            )
+        };
+        let t_263 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667004usize),
+                192usize,
+            )
+        };
+        let t_264 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667196usize),
+                192usize,
+            )
+        };
+        let t_265 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667388usize),
+                192usize,
+            )
+        };
         let t_266 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(621168usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(616560usize),
                 1152usize,
             )
         };
         let t_267 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(622320usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(617712usize),
                 1152usize,
             )
         };
         let t_268 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(623472usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(618864usize),
                 1152usize,
             )
         };
         let t_269 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(566832usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
                 2304usize,
             )
         };
         let t_270 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(624624usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(620016usize),
                 1152usize,
             )
         };
@@ -642,121 +581,121 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_275 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(569136usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(566064usize),
                 1728usize,
             )
         };
         let t_276 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(570864usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(567792usize),
                 1728usize,
             )
         };
         let t_277 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(572592usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(569520usize),
                 1728usize,
             )
         };
         let t_278 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(625776usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(623216usize),
                 864usize,
             )
         };
         let t_279 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(574320usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(571248usize),
                 1728usize,
             )
         };
         let t_280 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576048usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(572976usize),
                 1728usize,
             )
         };
         let t_281 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(577776usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(574704usize),
                 1728usize,
             )
         };
         let t_282 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(579504usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576432usize),
                 1728usize,
             )
         };
         let t_283 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(581232usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(578160usize),
                 1728usize,
             )
         };
         let t_284 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(582960usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(579888usize),
                 1728usize,
             )
         };
         let t_285 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(626640usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(624080usize),
                 864usize,
             )
         };
         let t_286 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(627504usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(624944usize),
                 864usize,
             )
         };
         let t_287 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(584688usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(581616usize),
                 1728usize,
             )
         };
         let t_288 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(586416usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(583344usize),
                 1728usize,
             )
         };
         let t_289 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588144usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(585072usize),
                 1728usize,
             )
         };
         let t_290 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(589872usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(586800usize),
                 1728usize,
             )
         };
         let t_291 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(591600usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588528usize),
                 1728usize,
             )
         };
         let t_292 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(593328usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(590256usize),
                 1728usize,
             )
         };
         let t_293 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(628368usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(625808usize),
                 864usize,
             )
         };
         let t_294 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(629232usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(626672usize),
                 864usize,
             )
         };
@@ -804,43 +743,43 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_302 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664440usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662396usize),
                 288usize,
             )
         };
         let t_306 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664728usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662684usize),
                 288usize,
             )
         };
         let t_307 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670044usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669248usize),
                 18usize,
             )
         };
         let t_308 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670064usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669268usize),
                 18usize,
             )
         };
         let t_309 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670084usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669288usize),
                 18usize,
             )
         };
         let t_310 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665016usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662972usize),
                 288usize,
             )
         };
         let t_311 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665304usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(663260usize),
                 288usize,
             )
         };
@@ -852,7 +791,7 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_313 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(630096usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(627536usize),
                 864usize,
             )
         };
@@ -894,43 +833,43 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_320 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665592usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(663548usize),
                 288usize,
             )
         };
         let t_324 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665880usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(663836usize),
                 288usize,
             )
         };
         let t_325 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670104usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669308usize),
                 18usize,
             )
         };
         let t_326 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670124usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669328usize),
                 18usize,
             )
         };
         let t_327 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670144usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669348usize),
                 18usize,
             )
         };
         let t_328 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666168usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664124usize),
                 288usize,
             )
         };
         let t_329 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666456usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664412usize),
                 288usize,
             )
         };
@@ -942,13 +881,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_331 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(630960usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(628400usize),
                 864usize,
             )
         };
         let t_332 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(631824usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(629264usize),
                 864usize,
             )
         };
@@ -990,43 +929,43 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_339 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666744usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664700usize),
                 288usize,
             )
         };
         let t_343 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667032usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664988usize),
                 288usize,
             )
         };
         let t_344 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670164usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669368usize),
                 18usize,
             )
         };
         let t_345 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670184usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669388usize),
                 18usize,
             )
         };
         let t_346 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670204usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669408usize),
                 18usize,
             )
         };
         let t_347 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667320usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665276usize),
                 288usize,
             )
         };
         let t_348 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667608usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665564usize),
                 288usize,
             )
         };
@@ -1038,13 +977,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_350 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(632688usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(630128usize),
                 864usize,
             )
         };
         let t_351 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(633552usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(630992usize),
                 864usize,
             )
         };
@@ -1086,43 +1025,43 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_358 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667896usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665852usize),
                 288usize,
             )
         };
         let t_362 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668184usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666140usize),
                 288usize,
             )
         };
         let t_363 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670224usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669428usize),
                 18usize,
             )
         };
         let t_364 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670244usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669448usize),
                 18usize,
             )
         };
         let t_365 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670264usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669468usize),
                 18usize,
             )
         };
         let t_366 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668472usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666428usize),
                 288usize,
             )
         };
         let t_367 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666716usize),
                 288usize,
             )
         };
@@ -1134,13 +1073,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_369 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(634416usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(631856usize),
                 864usize,
             )
         };
         let t_370 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(635280usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(632720usize),
                 864usize,
             )
         };
@@ -1188,43 +1127,43 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_378 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(636144usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(633584usize),
                 864usize,
             )
         };
         let t_382 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(637008usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(634448usize),
                 864usize,
             )
         };
         let t_383 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669624usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668828usize),
                 27usize,
             )
         };
         let t_384 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669652usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668856usize),
                 27usize,
             )
         };
         let t_385 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669680usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668884usize),
                 27usize,
             )
         };
         let t_386 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(637872usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(635312usize),
                 864usize,
             )
         };
         let t_387 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(638736usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(636176usize),
                 864usize,
             )
         };
@@ -1236,7 +1175,7 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_389 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(653424usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(650864usize),
                 648usize,
             )
         };
@@ -1278,43 +1217,43 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_396 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(639600usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(637040usize),
                 864usize,
             )
         };
         let t_400 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(640464usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(637904usize),
                 864usize,
             )
         };
         let t_401 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669708usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668912usize),
                 27usize,
             )
         };
         let t_402 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669736usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668940usize),
                 27usize,
             )
         };
         let t_403 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669764usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668968usize),
                 27usize,
             )
         };
         let t_404 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(641328usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(638768usize),
                 864usize,
             )
         };
         let t_405 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(642192usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(639632usize),
                 864usize,
             )
         };
@@ -1326,13 +1265,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_407 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(654072usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(651512usize),
                 648usize,
             )
         };
         let t_408 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(654720usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(652160usize),
                 648usize,
             )
         };
@@ -1374,43 +1313,43 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_415 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(643056usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(640496usize),
                 864usize,
             )
         };
         let t_419 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(643920usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(641360usize),
                 864usize,
             )
         };
         let t_420 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669792usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668996usize),
                 27usize,
             )
         };
         let t_421 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669820usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669024usize),
                 27usize,
             )
         };
         let t_422 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669848usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669052usize),
                 27usize,
             )
         };
         let t_423 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(644784usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(642224usize),
                 864usize,
             )
         };
         let t_424 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(645648usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(643088usize),
                 864usize,
             )
         };
@@ -1422,13 +1361,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_426 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(655368usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(652808usize),
                 648usize,
             )
         };
         let t_427 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(656016usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(653456usize),
                 648usize,
             )
         };
@@ -1470,43 +1409,43 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_434 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(646512usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(643952usize),
                 864usize,
             )
         };
         let t_438 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(647376usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(644816usize),
                 864usize,
             )
         };
         let t_439 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669876usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669080usize),
                 27usize,
             )
         };
         let t_440 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669904usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669108usize),
                 27usize,
             )
         };
         let t_441 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669932usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669136usize),
                 27usize,
             )
         };
         let t_442 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648240usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(645680usize),
                 864usize,
             )
         };
         let t_443 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(649104usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(646544usize),
                 864usize,
             )
         };
@@ -1518,13 +1457,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_445 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(656664usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(654104usize),
                 648usize,
             )
         };
         let t_446 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(657312usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(654752usize),
                 648usize,
             )
         };
@@ -1566,43 +1505,43 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_453 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(649968usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(647408usize),
                 864usize,
             )
         };
         let t_457 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(650832usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648272usize),
                 864usize,
             )
         };
         let t_458 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669960usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669164usize),
                 27usize,
             )
         };
         let t_459 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669988usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669192usize),
                 27usize,
             )
         };
         let t_460 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670016usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669220usize),
                 27usize,
             )
         };
         let t_461 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(651696usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(649136usize),
                 864usize,
             )
         };
         let t_462 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(652560usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(650000usize),
                 864usize,
             )
         };
@@ -1614,13 +1553,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_464 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(657960usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(655400usize),
                 648usize,
             )
         };
         let t_465 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(658608usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(656048usize),
                 648usize,
             )
         };
@@ -1668,43 +1607,43 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_473 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(595056usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(591984usize),
                 1536usize,
             )
         };
         let t_477 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(596592usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(593520usize),
                 1536usize,
             )
         };
         let t_478 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669048usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668252usize),
                 48usize,
             )
         };
         let t_479 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669096usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668300usize),
                 48usize,
             )
         };
         let t_480 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669144usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668348usize),
                 48usize,
             )
         };
         let t_481 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(598128usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(595056usize),
                 1536usize,
             )
         };
         let t_482 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(599664usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(596592usize),
                 1536usize,
             )
         };
@@ -1716,7 +1655,7 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_484 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(659256usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(656696usize),
                 576usize,
             )
         };
@@ -1758,43 +1697,43 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_491 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(601200usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(598128usize),
                 1536usize,
             )
         };
         let t_495 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(602736usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(599664usize),
                 1536usize,
             )
         };
         let t_496 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669192usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668396usize),
                 48usize,
             )
         };
         let t_497 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669240usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668444usize),
                 48usize,
             )
         };
         let t_498 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669288usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668492usize),
                 48usize,
             )
         };
         let t_499 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(604272usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(601200usize),
                 1536usize,
             )
         };
         let t_500 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(605808usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(602736usize),
                 1536usize,
             )
         };
@@ -1806,13 +1745,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_502 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(659832usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(657272usize),
                 576usize,
             )
         };
         let t_503 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(660408usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(657848usize),
                 576usize,
             )
         };
@@ -1854,43 +1793,43 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_510 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(607344usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(604272usize),
                 1536usize,
             )
         };
         let t_514 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(608880usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(605808usize),
                 1536usize,
             )
         };
         let t_515 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669336usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668540usize),
                 48usize,
             )
         };
         let t_516 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669384usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668588usize),
                 48usize,
             )
         };
         let t_517 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669432usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668636usize),
                 48usize,
             )
         };
         let t_518 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(610416usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(607344usize),
                 1536usize,
             )
         };
         let t_519 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(611952usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(608880usize),
                 1536usize,
             )
         };
@@ -1902,13 +1841,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_521 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(660984usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(658424usize),
                 576usize,
             )
         };
         let t_522 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(661560usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(659000usize),
                 576usize,
             )
         };
@@ -1950,43 +1889,43 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_529 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(613488usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(610416usize),
                 1536usize,
             )
         };
         let t_533 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(615024usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(611952usize),
                 1536usize,
             )
         };
         let t_534 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669480usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668684usize),
                 48usize,
             )
         };
         let t_535 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669528usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668732usize),
                 48usize,
             )
         };
         let t_536 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669576usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668780usize),
                 48usize,
             )
         };
         let t_537 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(616560usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(613488usize),
                 1536usize,
             )
         };
         let t_538 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(618096usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(615024usize),
                 1536usize,
             )
         };
@@ -1998,45 +1937,95 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         };
         let t_540 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662136usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(659576usize),
                 576usize,
             )
         };
         let t_541 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662712usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(660152usize),
                 576usize,
             )
         };
         let t_542 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(663288usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(660728usize),
                 576usize,
             )
         };
         let t_543 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(663864usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(661304usize),
                 576usize,
             )
         };
-        let t_547 = &t_265[_frame_idx * 192usize..(_frame_idx + 1) * 192usize];
-        let t_548 = &mut t_544[_frame_idx * 1024usize..(_frame_idx + 1) * 1024usize];
+        let t_544 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(621168usize),
+                1024usize,
+            )
+        };
+        let t_545 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(622192usize),
+                1024usize,
+            )
+        };
+        let t_547 = &t_247[_frame_idx * 513usize..(_frame_idx + 1) * 513usize];
+        let t_548 = &t_221[_frame_idx * 96usize..(_frame_idx + 1) * 96usize];
+        reshape(t_547, t_255);
+        fully_connected(t_255, 513usize, t_168, None, t_256, 96usize);
+        reshape(t_256, t_257);
+        binary_mul(t_257, t_257, t_258, 96usize);
+        binary_pow(t_258, t_167, t_259, 1usize);
+        reverse_v2(t_259, &[1usize, 1usize, 96usize], t_260, 2usize);
+        transpose(
+            t_260,
+            &[1usize, 1usize, 96usize],
+            t_261,
+            &[1usize, 96usize, 1usize],
+            &[0usize, 2usize, 1usize],
+        );
+        reshape(t_261, t_262);
+        {
+            let src = t_548;
+            for p in 0..96usize {
+                for a in 0..1usize {
+                    let src_off = p * (1usize * 1usize) + a * 1usize;
+                    let dst_off = p * (2usize * 1usize) + (0usize + a) * 1usize;
+                    t_263[dst_off..dst_off + 1usize]
+                        .copy_from_slice(&src[src_off..src_off + 1usize]);
+                }
+            }
+        }
+        {
+            let src = t_262;
+            for p in 0..96usize {
+                for a in 0..1usize {
+                    let src_off = p * (1usize * 1usize) + a * 1usize;
+                    let dst_off = p * (2usize * 1usize) + (1usize + a) * 1usize;
+                    t_263[dst_off..dst_off + 1usize]
+                        .copy_from_slice(&src[src_off..src_off + 1usize]);
+                }
+            }
+        }
+        binary_mul(t_263, t_163, t_264, 2usize);
+        binary_add(t_264, t_162, t_265, 2usize);
         let scratch_38_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 3072usize,
             )
         };
         let scratch_38_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(619632usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672560usize),
                 1536usize,
             )
         };
         scratch_38_1.copy_from_slice(t_122);
         im2col_padded(
-            t_547,
+            t_265,
             [1usize, 96usize, 1usize, 2usize],
             [4usize, 8usize],
             [2usize, 2usize],
@@ -2089,13 +2078,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         }
         let scratch_42_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2304usize,
             )
         };
         let scratch_42_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(619632usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(671792usize),
                 1152usize,
             )
         };
@@ -2113,13 +2102,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         bias_add(t_270, t_50, 48usize, 24usize);
         let scratch_43_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(565488usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(671216usize),
                 1152usize,
             )
         };
         let scratch_43_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 1728usize,
             )
         };
@@ -2159,13 +2148,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         binary_mul(t_275, t_276, t_277, 1728usize);
         let scratch_50_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672080usize),
                 1728usize,
             )
         };
         let scratch_50_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2592usize,
             )
         };
@@ -2183,13 +2172,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         bias_add(t_278, t_117, 24usize, 36usize);
         let scratch_51_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(619632usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672080usize),
                 864usize,
             )
         };
         let scratch_51_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2592usize,
             )
         };
@@ -2222,13 +2211,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         binary_mul(t_282, t_283, t_284, 1728usize);
         let scratch_57_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672080usize),
                 1728usize,
             )
         };
         let scratch_57_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2592usize,
             )
         };
@@ -2247,13 +2236,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         binary_add(t_285, t_278, t_286, 864usize);
         let scratch_59_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(619632usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672080usize),
                 864usize,
             )
         };
         let scratch_59_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2592usize,
             )
         };
@@ -2286,13 +2275,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         binary_mul(t_290, t_291, t_292, 1728usize);
         let scratch_65_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672080usize),
                 1728usize,
             )
         };
         let scratch_65_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2592usize,
             )
         };
@@ -2311,13 +2300,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         binary_add(t_293, t_286, t_294, 864usize);
         let scratch_67_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(679856usize),
                 864usize,
             )
         };
         let scratch_67_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 10368usize,
             )
         };
@@ -2385,13 +2374,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         binary_mul(t_301, t_311, t_312, 288usize);
         let scratch_82_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(691020usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 3456usize,
             )
         };
         let scratch_82_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -2409,13 +2398,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         bias_add(t_313, t_119, 12usize, 72usize);
         let scratch_83_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 864usize,
             )
         };
         let scratch_83_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -2476,13 +2465,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         binary_mul(t_319, t_329, t_330, 288usize);
         let scratch_97_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(691020usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 3456usize,
             )
         };
         let scratch_97_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -2501,13 +2490,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         binary_add(t_331, t_313, t_332, 864usize);
         let scratch_99_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 864usize,
             )
         };
         let scratch_99_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -2568,13 +2557,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         binary_mul(t_338, t_348, t_349, 288usize);
         let scratch_113_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(691020usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 3456usize,
             )
         };
         let scratch_113_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -2593,13 +2582,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         binary_add(t_350, t_332, t_351, 864usize);
         let scratch_115_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 864usize,
             )
         };
         let scratch_115_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -2660,13 +2649,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         binary_mul(t_357, t_367, t_368, 288usize);
         let scratch_129_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(691020usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 3456usize,
             )
         };
         let scratch_129_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -2685,13 +2674,13 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
         binary_add(t_369, t_351, t_370, 864usize);
         let scratch_131_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(731696usize),
                 864usize,
             )
         };
         let scratch_131_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 62208usize,
             )
         };
@@ -3312,36 +3301,18 @@ pub fn forward(input: &[f32; 144000usize], output: &mut [f32; 3332742usize]) {
             Some(t_1),
             [1usize, 1usize],
             [0usize, 0usize, 0usize, 0usize],
-            t_548,
+            t_544,
             [1usize, 1usize, 1usize, 1024usize],
         );
-    }
-    for _batch_idx in 0..511usize {
-        let _in_off = _batch_idx * 1024usize;
-        let _out_off = _batch_idx * 1024usize;
-        reduce_mean_hw(
-            &t_544[_in_off.._in_off + 1024usize],
-            &mut t_545[_out_off.._out_off + 1024usize],
-        );
-    }
-    for _batch_idx in 0..511usize {
-        let _in_off = _batch_idx * 1024usize;
-        let _out_off = _batch_idx * 6522usize;
-        fully_connected(
-            &t_545[_in_off.._in_off + 1024usize],
-            1024usize,
-            t_164,
-            Some(t_142),
-            &mut t_546[_out_off.._out_off + 6522usize],
-            6522usize,
-        );
+        reduce_mean_hw(t_544, t_545);
+        fully_connected(t_545, 1024usize, t_164, Some(t_142), t_546, 6522usize);
     }
     output.copy_from_slice(&t_546);
 }
 /// Instrumented inference: accumulates per-op tick deltas into `op_ticks`.
 pub fn forward_timed(
     input: &[f32; 144000usize],
-    output: &mut [f32; 3332742usize],
+    output: &mut [f32; 6522usize],
     op_ticks: &mut [u64; NUM_OPS],
     get_tick: fn() -> u64,
 ) {
@@ -3465,133 +3436,55 @@ pub fn forward_timed(
             49056usize,
         )
     };
+    static mut T_221_BUF: Aligned16<49056usize> = Aligned16([0.0f32; 49056usize]);
     let t_221 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            core::ptr::addr_of_mut!(T_221_BUF) as *mut f32,
             49056usize,
         )
     };
     let t_228 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(288000usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             144000usize,
         )
     };
     let t_229 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144000usize),
             144000usize,
         )
     };
     let t_241 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(193056usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(288000usize),
             523264usize,
         )
     };
     let t_242 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(716320usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(811264usize),
             523264usize,
         )
     };
     let t_243 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             523264usize,
         )
     };
+    static mut T_247_BUF: Aligned16<262143usize> = Aligned16([0.0f32; 262143usize]);
     let t_247 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(572320usize),
+            core::ptr::addr_of_mut!(T_247_BUF) as *mut f32,
             262143usize,
         )
     };
-    let t_255 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
-            262143usize,
-        )
-    };
-    let t_256 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(311200usize),
-            49056usize,
-        )
-    };
-    let t_257 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
-            49056usize,
-        )
-    };
-    let t_258 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(98112usize),
-            49056usize,
-        )
-    };
-    let t_259 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
-            49056usize,
-        )
-    };
-    let t_260 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(98112usize),
-            49056usize,
-        )
-    };
-    let t_261 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
-            49056usize,
-        )
-    };
-    let t_262 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(98112usize),
-            49056usize,
-        )
-    };
-    let t_263 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(147168usize),
-            98112usize,
-        )
-    };
-    let t_264 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            98112usize,
-        )
-    };
-    static mut T_265_BUF: Aligned16<98112usize> = Aligned16([0.0f32; 98112usize]);
-    let t_265 = unsafe {
-        core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_265_BUF) as *mut f32,
-            98112usize,
-        )
-    };
-    static mut T_544_BUF: Aligned16<523264usize> = Aligned16([0.0f32; 523264usize]);
-    let t_544 = unsafe {
-        core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_544_BUF) as *mut f32,
-            523264usize,
-        )
-    };
-    let t_545 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            523264usize,
-        )
-    };
-    static mut T_546_BUF: Aligned16<3332742usize> = Aligned16([0.0f32; 3332742usize]);
+    static mut T_546_BUF: Aligned16<6522usize> = Aligned16([0.0f32; 6522usize]);
     let t_546 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_546_BUF) as *mut f32,
-            3332742usize,
+            6522usize,
         )
     };
     let tensor_data = tensor_data_f32();
@@ -3934,7 +3827,7 @@ pub fn forward_timed(
     op_ticks[36usize] += get_tick() - __t0;
     let scratch_26_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(834464usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(523264usize),
             1024usize,
         )
     };
@@ -3971,105 +3864,100 @@ pub fn forward_timed(
     let __t0 = get_tick();
     rfft_unpack(scratch_26_0, t_569, t_247, 1024usize);
     op_ticks[47usize] += get_tick() - __t0;
-    let __t0 = get_tick();
-    reshape(t_247, t_255);
-    op_ticks[48usize] += get_tick() - __t0;
-    let __t0 = get_tick();
-    for _batch_idx in 0..511usize {
-        let _in_off = _batch_idx * 513usize;
-        let _out_off = _batch_idx * 96usize;
-        fully_connected(
-            &t_255[_in_off.._in_off + 513usize],
-            513usize,
-            t_168,
-            None,
-            &mut t_256[_out_off.._out_off + 96usize],
-            96usize,
-        );
-    }
-    op_ticks[49usize] += get_tick() - __t0;
-    let __t0 = get_tick();
-    reshape(t_256, t_257);
-    op_ticks[50usize] += get_tick() - __t0;
-    let __t0 = get_tick();
-    binary_mul(t_257, t_257, t_258, 49056usize);
-    op_ticks[51usize] += get_tick() - __t0;
-    let __t0 = get_tick();
-    binary_pow(t_258, t_167, t_259, 1usize);
-    op_ticks[52usize] += get_tick() - __t0;
-    let __t0 = get_tick();
-    reverse_v2(t_259, &[511usize, 1usize, 96usize], t_260, 2usize);
-    op_ticks[53usize] += get_tick() - __t0;
-    let __t0 = get_tick();
-    transpose(
-        t_260,
-        &[511usize, 1usize, 96usize],
-        t_261,
-        &[511usize, 96usize, 1usize],
-        &[0usize, 2usize, 1usize],
-    );
-    op_ticks[54usize] += get_tick() - __t0;
-    let __t0 = get_tick();
-    reshape(t_261, t_262);
-    op_ticks[55usize] += get_tick() - __t0;
-    let __t0 = get_tick();
-    {
-        let src = t_221;
-        for p in 0..49056usize {
-            for a in 0..1usize {
-                let src_off = p * (1usize * 1usize) + a * 1usize;
-                let dst_off = p * (2usize * 1usize) + (0usize + a) * 1usize;
-                t_263[dst_off..dst_off + 1usize]
-                    .copy_from_slice(&src[src_off..src_off + 1usize]);
-            }
-        }
-    }
-    {
-        let src = t_262;
-        for p in 0..49056usize {
-            for a in 0..1usize {
-                let src_off = p * (1usize * 1usize) + a * 1usize;
-                let dst_off = p * (2usize * 1usize) + (1usize + a) * 1usize;
-                t_263[dst_off..dst_off + 1usize]
-                    .copy_from_slice(&src[src_off..src_off + 1usize]);
-            }
-        }
-    }
-    op_ticks[56usize] += get_tick() - __t0;
-    let __t0 = get_tick();
-    binary_mul(t_263, t_163, t_264, 2usize);
-    op_ticks[57usize] += get_tick() - __t0;
-    let __t0 = get_tick();
-    binary_add(t_264, t_162, t_265, 2usize);
-    op_ticks[58usize] += get_tick() - __t0;
     for _frame_idx in 0..511usize {
+        let t_255 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(661880usize),
+                513usize,
+            )
+        };
+        let t_256 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667580usize),
+                96usize,
+            )
+        };
+        let t_257 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667676usize),
+                96usize,
+            )
+        };
+        let t_258 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667772usize),
+                96usize,
+            )
+        };
+        let t_259 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667868usize),
+                96usize,
+            )
+        };
+        let t_260 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667964usize),
+                96usize,
+            )
+        };
+        let t_261 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668060usize),
+                96usize,
+            )
+        };
+        let t_262 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668156usize),
+                96usize,
+            )
+        };
+        let t_263 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667004usize),
+                192usize,
+            )
+        };
+        let t_264 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667196usize),
+                192usize,
+            )
+        };
+        let t_265 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667388usize),
+                192usize,
+            )
+        };
         let t_266 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(621168usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(616560usize),
                 1152usize,
             )
         };
         let t_267 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(622320usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(617712usize),
                 1152usize,
             )
         };
         let t_268 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(623472usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(618864usize),
                 1152usize,
             )
         };
         let t_269 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(566832usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
                 2304usize,
             )
         };
         let t_270 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(624624usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(620016usize),
                 1152usize,
             )
         };
@@ -4099,121 +3987,121 @@ pub fn forward_timed(
         };
         let t_275 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(569136usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(566064usize),
                 1728usize,
             )
         };
         let t_276 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(570864usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(567792usize),
                 1728usize,
             )
         };
         let t_277 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(572592usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(569520usize),
                 1728usize,
             )
         };
         let t_278 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(625776usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(623216usize),
                 864usize,
             )
         };
         let t_279 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(574320usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(571248usize),
                 1728usize,
             )
         };
         let t_280 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576048usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(572976usize),
                 1728usize,
             )
         };
         let t_281 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(577776usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(574704usize),
                 1728usize,
             )
         };
         let t_282 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(579504usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576432usize),
                 1728usize,
             )
         };
         let t_283 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(581232usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(578160usize),
                 1728usize,
             )
         };
         let t_284 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(582960usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(579888usize),
                 1728usize,
             )
         };
         let t_285 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(626640usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(624080usize),
                 864usize,
             )
         };
         let t_286 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(627504usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(624944usize),
                 864usize,
             )
         };
         let t_287 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(584688usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(581616usize),
                 1728usize,
             )
         };
         let t_288 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(586416usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(583344usize),
                 1728usize,
             )
         };
         let t_289 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588144usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(585072usize),
                 1728usize,
             )
         };
         let t_290 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(589872usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(586800usize),
                 1728usize,
             )
         };
         let t_291 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(591600usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588528usize),
                 1728usize,
             )
         };
         let t_292 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(593328usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(590256usize),
                 1728usize,
             )
         };
         let t_293 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(628368usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(625808usize),
                 864usize,
             )
         };
         let t_294 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(629232usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(626672usize),
                 864usize,
             )
         };
@@ -4261,43 +4149,43 @@ pub fn forward_timed(
         };
         let t_302 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664440usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662396usize),
                 288usize,
             )
         };
         let t_306 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664728usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662684usize),
                 288usize,
             )
         };
         let t_307 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670044usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669248usize),
                 18usize,
             )
         };
         let t_308 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670064usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669268usize),
                 18usize,
             )
         };
         let t_309 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670084usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669288usize),
                 18usize,
             )
         };
         let t_310 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665016usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662972usize),
                 288usize,
             )
         };
         let t_311 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665304usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(663260usize),
                 288usize,
             )
         };
@@ -4309,7 +4197,7 @@ pub fn forward_timed(
         };
         let t_313 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(630096usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(627536usize),
                 864usize,
             )
         };
@@ -4351,43 +4239,43 @@ pub fn forward_timed(
         };
         let t_320 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665592usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(663548usize),
                 288usize,
             )
         };
         let t_324 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665880usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(663836usize),
                 288usize,
             )
         };
         let t_325 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670104usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669308usize),
                 18usize,
             )
         };
         let t_326 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670124usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669328usize),
                 18usize,
             )
         };
         let t_327 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670144usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669348usize),
                 18usize,
             )
         };
         let t_328 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666168usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664124usize),
                 288usize,
             )
         };
         let t_329 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666456usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664412usize),
                 288usize,
             )
         };
@@ -4399,13 +4287,13 @@ pub fn forward_timed(
         };
         let t_331 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(630960usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(628400usize),
                 864usize,
             )
         };
         let t_332 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(631824usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(629264usize),
                 864usize,
             )
         };
@@ -4447,43 +4335,43 @@ pub fn forward_timed(
         };
         let t_339 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666744usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664700usize),
                 288usize,
             )
         };
         let t_343 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667032usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664988usize),
                 288usize,
             )
         };
         let t_344 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670164usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669368usize),
                 18usize,
             )
         };
         let t_345 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670184usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669388usize),
                 18usize,
             )
         };
         let t_346 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670204usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669408usize),
                 18usize,
             )
         };
         let t_347 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667320usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665276usize),
                 288usize,
             )
         };
         let t_348 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667608usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665564usize),
                 288usize,
             )
         };
@@ -4495,13 +4383,13 @@ pub fn forward_timed(
         };
         let t_350 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(632688usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(630128usize),
                 864usize,
             )
         };
         let t_351 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(633552usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(630992usize),
                 864usize,
             )
         };
@@ -4543,43 +4431,43 @@ pub fn forward_timed(
         };
         let t_358 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667896usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665852usize),
                 288usize,
             )
         };
         let t_362 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668184usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666140usize),
                 288usize,
             )
         };
         let t_363 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670224usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669428usize),
                 18usize,
             )
         };
         let t_364 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670244usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669448usize),
                 18usize,
             )
         };
         let t_365 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670264usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669468usize),
                 18usize,
             )
         };
         let t_366 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668472usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666428usize),
                 288usize,
             )
         };
         let t_367 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666716usize),
                 288usize,
             )
         };
@@ -4591,13 +4479,13 @@ pub fn forward_timed(
         };
         let t_369 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(634416usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(631856usize),
                 864usize,
             )
         };
         let t_370 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(635280usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(632720usize),
                 864usize,
             )
         };
@@ -4645,43 +4533,43 @@ pub fn forward_timed(
         };
         let t_378 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(636144usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(633584usize),
                 864usize,
             )
         };
         let t_382 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(637008usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(634448usize),
                 864usize,
             )
         };
         let t_383 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669624usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668828usize),
                 27usize,
             )
         };
         let t_384 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669652usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668856usize),
                 27usize,
             )
         };
         let t_385 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669680usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668884usize),
                 27usize,
             )
         };
         let t_386 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(637872usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(635312usize),
                 864usize,
             )
         };
         let t_387 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(638736usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(636176usize),
                 864usize,
             )
         };
@@ -4693,7 +4581,7 @@ pub fn forward_timed(
         };
         let t_389 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(653424usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(650864usize),
                 648usize,
             )
         };
@@ -4735,43 +4623,43 @@ pub fn forward_timed(
         };
         let t_396 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(639600usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(637040usize),
                 864usize,
             )
         };
         let t_400 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(640464usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(637904usize),
                 864usize,
             )
         };
         let t_401 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669708usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668912usize),
                 27usize,
             )
         };
         let t_402 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669736usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668940usize),
                 27usize,
             )
         };
         let t_403 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669764usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668968usize),
                 27usize,
             )
         };
         let t_404 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(641328usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(638768usize),
                 864usize,
             )
         };
         let t_405 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(642192usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(639632usize),
                 864usize,
             )
         };
@@ -4783,13 +4671,13 @@ pub fn forward_timed(
         };
         let t_407 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(654072usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(651512usize),
                 648usize,
             )
         };
         let t_408 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(654720usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(652160usize),
                 648usize,
             )
         };
@@ -4831,43 +4719,43 @@ pub fn forward_timed(
         };
         let t_415 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(643056usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(640496usize),
                 864usize,
             )
         };
         let t_419 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(643920usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(641360usize),
                 864usize,
             )
         };
         let t_420 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669792usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668996usize),
                 27usize,
             )
         };
         let t_421 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669820usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669024usize),
                 27usize,
             )
         };
         let t_422 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669848usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669052usize),
                 27usize,
             )
         };
         let t_423 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(644784usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(642224usize),
                 864usize,
             )
         };
         let t_424 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(645648usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(643088usize),
                 864usize,
             )
         };
@@ -4879,13 +4767,13 @@ pub fn forward_timed(
         };
         let t_426 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(655368usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(652808usize),
                 648usize,
             )
         };
         let t_427 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(656016usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(653456usize),
                 648usize,
             )
         };
@@ -4927,43 +4815,43 @@ pub fn forward_timed(
         };
         let t_434 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(646512usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(643952usize),
                 864usize,
             )
         };
         let t_438 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(647376usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(644816usize),
                 864usize,
             )
         };
         let t_439 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669876usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669080usize),
                 27usize,
             )
         };
         let t_440 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669904usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669108usize),
                 27usize,
             )
         };
         let t_441 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669932usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669136usize),
                 27usize,
             )
         };
         let t_442 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648240usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(645680usize),
                 864usize,
             )
         };
         let t_443 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(649104usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(646544usize),
                 864usize,
             )
         };
@@ -4975,13 +4863,13 @@ pub fn forward_timed(
         };
         let t_445 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(656664usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(654104usize),
                 648usize,
             )
         };
         let t_446 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(657312usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(654752usize),
                 648usize,
             )
         };
@@ -5023,43 +4911,43 @@ pub fn forward_timed(
         };
         let t_453 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(649968usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(647408usize),
                 864usize,
             )
         };
         let t_457 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(650832usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648272usize),
                 864usize,
             )
         };
         let t_458 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669960usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669164usize),
                 27usize,
             )
         };
         let t_459 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669988usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669192usize),
                 27usize,
             )
         };
         let t_460 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670016usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669220usize),
                 27usize,
             )
         };
         let t_461 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(651696usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(649136usize),
                 864usize,
             )
         };
         let t_462 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(652560usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(650000usize),
                 864usize,
             )
         };
@@ -5071,13 +4959,13 @@ pub fn forward_timed(
         };
         let t_464 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(657960usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(655400usize),
                 648usize,
             )
         };
         let t_465 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(658608usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(656048usize),
                 648usize,
             )
         };
@@ -5125,43 +5013,43 @@ pub fn forward_timed(
         };
         let t_473 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(595056usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(591984usize),
                 1536usize,
             )
         };
         let t_477 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(596592usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(593520usize),
                 1536usize,
             )
         };
         let t_478 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669048usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668252usize),
                 48usize,
             )
         };
         let t_479 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669096usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668300usize),
                 48usize,
             )
         };
         let t_480 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669144usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668348usize),
                 48usize,
             )
         };
         let t_481 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(598128usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(595056usize),
                 1536usize,
             )
         };
         let t_482 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(599664usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(596592usize),
                 1536usize,
             )
         };
@@ -5173,7 +5061,7 @@ pub fn forward_timed(
         };
         let t_484 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(659256usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(656696usize),
                 576usize,
             )
         };
@@ -5215,43 +5103,43 @@ pub fn forward_timed(
         };
         let t_491 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(601200usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(598128usize),
                 1536usize,
             )
         };
         let t_495 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(602736usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(599664usize),
                 1536usize,
             )
         };
         let t_496 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669192usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668396usize),
                 48usize,
             )
         };
         let t_497 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669240usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668444usize),
                 48usize,
             )
         };
         let t_498 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669288usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668492usize),
                 48usize,
             )
         };
         let t_499 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(604272usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(601200usize),
                 1536usize,
             )
         };
         let t_500 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(605808usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(602736usize),
                 1536usize,
             )
         };
@@ -5263,13 +5151,13 @@ pub fn forward_timed(
         };
         let t_502 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(659832usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(657272usize),
                 576usize,
             )
         };
         let t_503 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(660408usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(657848usize),
                 576usize,
             )
         };
@@ -5311,43 +5199,43 @@ pub fn forward_timed(
         };
         let t_510 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(607344usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(604272usize),
                 1536usize,
             )
         };
         let t_514 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(608880usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(605808usize),
                 1536usize,
             )
         };
         let t_515 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669336usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668540usize),
                 48usize,
             )
         };
         let t_516 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669384usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668588usize),
                 48usize,
             )
         };
         let t_517 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669432usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668636usize),
                 48usize,
             )
         };
         let t_518 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(610416usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(607344usize),
                 1536usize,
             )
         };
         let t_519 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(611952usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(608880usize),
                 1536usize,
             )
         };
@@ -5359,13 +5247,13 @@ pub fn forward_timed(
         };
         let t_521 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(660984usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(658424usize),
                 576usize,
             )
         };
         let t_522 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(661560usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(659000usize),
                 576usize,
             )
         };
@@ -5407,43 +5295,43 @@ pub fn forward_timed(
         };
         let t_529 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(613488usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(610416usize),
                 1536usize,
             )
         };
         let t_533 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(615024usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(611952usize),
                 1536usize,
             )
         };
         let t_534 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669480usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668684usize),
                 48usize,
             )
         };
         let t_535 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669528usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668732usize),
                 48usize,
             )
         };
         let t_536 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669576usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668780usize),
                 48usize,
             )
         };
         let t_537 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(616560usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(613488usize),
                 1536usize,
             )
         };
         let t_538 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(618096usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(615024usize),
                 1536usize,
             )
         };
@@ -5455,46 +5343,118 @@ pub fn forward_timed(
         };
         let t_540 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662136usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(659576usize),
                 576usize,
             )
         };
         let t_541 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662712usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(660152usize),
                 576usize,
             )
         };
         let t_542 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(663288usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(660728usize),
                 576usize,
             )
         };
         let t_543 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(663864usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(661304usize),
                 576usize,
             )
         };
-        let t_547 = &t_265[_frame_idx * 192usize..(_frame_idx + 1) * 192usize];
-        let t_548 = &mut t_544[_frame_idx * 1024usize..(_frame_idx + 1) * 1024usize];
+        let t_544 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(621168usize),
+                1024usize,
+            )
+        };
+        let t_545 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(622192usize),
+                1024usize,
+            )
+        };
+        let t_547 = &t_247[_frame_idx * 513usize..(_frame_idx + 1) * 513usize];
+        let t_548 = &t_221[_frame_idx * 96usize..(_frame_idx + 1) * 96usize];
+        let __t0 = get_tick();
+        reshape(t_547, t_255);
+        op_ticks[48usize] += get_tick() - __t0;
+        let __t0 = get_tick();
+        fully_connected(t_255, 513usize, t_168, None, t_256, 96usize);
+        op_ticks[49usize] += get_tick() - __t0;
+        let __t0 = get_tick();
+        reshape(t_256, t_257);
+        op_ticks[50usize] += get_tick() - __t0;
+        let __t0 = get_tick();
+        binary_mul(t_257, t_257, t_258, 96usize);
+        op_ticks[51usize] += get_tick() - __t0;
+        let __t0 = get_tick();
+        binary_pow(t_258, t_167, t_259, 1usize);
+        op_ticks[52usize] += get_tick() - __t0;
+        let __t0 = get_tick();
+        reverse_v2(t_259, &[1usize, 1usize, 96usize], t_260, 2usize);
+        op_ticks[53usize] += get_tick() - __t0;
+        let __t0 = get_tick();
+        transpose(
+            t_260,
+            &[1usize, 1usize, 96usize],
+            t_261,
+            &[1usize, 96usize, 1usize],
+            &[0usize, 2usize, 1usize],
+        );
+        op_ticks[54usize] += get_tick() - __t0;
+        let __t0 = get_tick();
+        reshape(t_261, t_262);
+        op_ticks[55usize] += get_tick() - __t0;
+        let __t0 = get_tick();
+        {
+            let src = t_548;
+            for p in 0..96usize {
+                for a in 0..1usize {
+                    let src_off = p * (1usize * 1usize) + a * 1usize;
+                    let dst_off = p * (2usize * 1usize) + (0usize + a) * 1usize;
+                    t_263[dst_off..dst_off + 1usize]
+                        .copy_from_slice(&src[src_off..src_off + 1usize]);
+                }
+            }
+        }
+        {
+            let src = t_262;
+            for p in 0..96usize {
+                for a in 0..1usize {
+                    let src_off = p * (1usize * 1usize) + a * 1usize;
+                    let dst_off = p * (2usize * 1usize) + (1usize + a) * 1usize;
+                    t_263[dst_off..dst_off + 1usize]
+                        .copy_from_slice(&src[src_off..src_off + 1usize]);
+                }
+            }
+        }
+        op_ticks[56usize] += get_tick() - __t0;
+        let __t0 = get_tick();
+        binary_mul(t_263, t_163, t_264, 2usize);
+        op_ticks[57usize] += get_tick() - __t0;
+        let __t0 = get_tick();
+        binary_add(t_264, t_162, t_265, 2usize);
+        op_ticks[58usize] += get_tick() - __t0;
         let scratch_38_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 3072usize,
             )
         };
         let scratch_38_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(619632usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672560usize),
                 1536usize,
             )
         };
         scratch_38_1.copy_from_slice(t_122);
         let __t0 = get_tick();
         im2col_padded(
-            t_547,
+            t_265,
             [1usize, 96usize, 1usize, 2usize],
             [4usize, 8usize],
             [2usize, 2usize],
@@ -5558,13 +5518,13 @@ pub fn forward_timed(
         op_ticks[64usize] += get_tick() - __t0;
         let scratch_42_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2304usize,
             )
         };
         let scratch_42_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(619632usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(671792usize),
                 1152usize,
             )
         };
@@ -5588,13 +5548,13 @@ pub fn forward_timed(
         op_ticks[67usize] += get_tick() - __t0;
         let scratch_43_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(565488usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(671216usize),
                 1152usize,
             )
         };
         let scratch_43_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 1728usize,
             )
         };
@@ -5652,13 +5612,13 @@ pub fn forward_timed(
         op_ticks[76usize] += get_tick() - __t0;
         let scratch_50_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672080usize),
                 1728usize,
             )
         };
         let scratch_50_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2592usize,
             )
         };
@@ -5682,13 +5642,13 @@ pub fn forward_timed(
         op_ticks[79usize] += get_tick() - __t0;
         let scratch_51_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(619632usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672080usize),
                 864usize,
             )
         };
         let scratch_51_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2592usize,
             )
         };
@@ -5737,13 +5697,13 @@ pub fn forward_timed(
         op_ticks[87usize] += get_tick() - __t0;
         let scratch_57_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672080usize),
                 1728usize,
             )
         };
         let scratch_57_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2592usize,
             )
         };
@@ -5770,13 +5730,13 @@ pub fn forward_timed(
         op_ticks[91usize] += get_tick() - __t0;
         let scratch_59_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(619632usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672080usize),
                 864usize,
             )
         };
         let scratch_59_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2592usize,
             )
         };
@@ -5825,13 +5785,13 @@ pub fn forward_timed(
         op_ticks[99usize] += get_tick() - __t0;
         let scratch_65_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672080usize),
                 1728usize,
             )
         };
         let scratch_65_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2592usize,
             )
         };
@@ -5858,13 +5818,13 @@ pub fn forward_timed(
         op_ticks[103usize] += get_tick() - __t0;
         let scratch_67_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(679856usize),
                 864usize,
             )
         };
         let scratch_67_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 10368usize,
             )
         };
@@ -5966,13 +5926,13 @@ pub fn forward_timed(
         op_ticks[120usize] += get_tick() - __t0;
         let scratch_82_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(691020usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 3456usize,
             )
         };
         let scratch_82_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -5996,13 +5956,13 @@ pub fn forward_timed(
         op_ticks[123usize] += get_tick() - __t0;
         let scratch_83_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 864usize,
             )
         };
         let scratch_83_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -6095,13 +6055,13 @@ pub fn forward_timed(
         op_ticks[139usize] += get_tick() - __t0;
         let scratch_97_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(691020usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 3456usize,
             )
         };
         let scratch_97_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -6128,13 +6088,13 @@ pub fn forward_timed(
         op_ticks[143usize] += get_tick() - __t0;
         let scratch_99_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 864usize,
             )
         };
         let scratch_99_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -6227,13 +6187,13 @@ pub fn forward_timed(
         op_ticks[159usize] += get_tick() - __t0;
         let scratch_113_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(691020usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 3456usize,
             )
         };
         let scratch_113_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -6260,13 +6220,13 @@ pub fn forward_timed(
         op_ticks[163usize] += get_tick() - __t0;
         let scratch_115_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 864usize,
             )
         };
         let scratch_115_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -6359,13 +6319,13 @@ pub fn forward_timed(
         op_ticks[179usize] += get_tick() - __t0;
         let scratch_129_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(691020usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 3456usize,
             )
         };
         let scratch_129_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -6392,13 +6352,13 @@ pub fn forward_timed(
         op_ticks[183usize] += get_tick() - __t0;
         let scratch_131_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(731696usize),
                 864usize,
             )
         };
         let scratch_131_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 62208usize,
             )
         };
@@ -7316,41 +7276,23 @@ pub fn forward_timed(
             Some(t_1),
             [1usize, 1usize],
             [0usize, 0usize, 0usize, 0usize],
-            t_548,
+            t_544,
             [1usize, 1usize, 1usize, 1024usize],
         );
         op_ticks[332usize] += get_tick() - __t0;
+        let __t0 = get_tick();
+        reduce_mean_hw(t_544, t_545);
+        op_ticks[333usize] += get_tick() - __t0;
+        let __t0 = get_tick();
+        fully_connected(t_545, 1024usize, t_164, Some(t_142), t_546, 6522usize);
+        op_ticks[334usize] += get_tick() - __t0;
     }
-    let __t0 = get_tick();
-    for _batch_idx in 0..511usize {
-        let _in_off = _batch_idx * 1024usize;
-        let _out_off = _batch_idx * 1024usize;
-        reduce_mean_hw(
-            &t_544[_in_off.._in_off + 1024usize],
-            &mut t_545[_out_off.._out_off + 1024usize],
-        );
-    }
-    op_ticks[333usize] += get_tick() - __t0;
-    let __t0 = get_tick();
-    for _batch_idx in 0..511usize {
-        let _in_off = _batch_idx * 1024usize;
-        let _out_off = _batch_idx * 6522usize;
-        fully_connected(
-            &t_545[_in_off.._in_off + 1024usize],
-            1024usize,
-            t_164,
-            Some(t_142),
-            &mut t_546[_out_off.._out_off + 6522usize],
-            6522usize,
-        );
-    }
-    op_ticks[334usize] += get_tick() - __t0;
     output.copy_from_slice(&t_546);
 }
 /// Instrumented inference with per-op hardware profiling counters.
 pub fn forward_profiled(
     input: &[f32; 144000usize],
-    output: &mut [f32; 3332742usize],
+    output: &mut [f32; 6522usize],
     op_ticks: &mut [u64; NUM_OPS],
     #[allow(unused)]
     op_profile: &mut [psp_ml::profiler::OpProfileStats; NUM_OPS],
@@ -7476,133 +7418,55 @@ pub fn forward_profiled(
             49056usize,
         )
     };
+    static mut T_221_BUF: Aligned16<49056usize> = Aligned16([0.0f32; 49056usize]);
     let t_221 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
+            core::ptr::addr_of_mut!(T_221_BUF) as *mut f32,
             49056usize,
         )
     };
     let t_228 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(288000usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             144000usize,
         )
     };
     let t_229 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(144000usize),
             144000usize,
         )
     };
     let t_241 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(193056usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(288000usize),
             523264usize,
         )
     };
     let t_242 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(716320usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(811264usize),
             523264usize,
         )
     };
     let t_243 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
             523264usize,
         )
     };
+    static mut T_247_BUF: Aligned16<262143usize> = Aligned16([0.0f32; 262143usize]);
     let t_247 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(572320usize),
+            core::ptr::addr_of_mut!(T_247_BUF) as *mut f32,
             262143usize,
         )
     };
-    let t_255 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
-            262143usize,
-        )
-    };
-    let t_256 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(311200usize),
-            49056usize,
-        )
-    };
-    let t_257 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
-            49056usize,
-        )
-    };
-    let t_258 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(98112usize),
-            49056usize,
-        )
-    };
-    let t_259 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
-            49056usize,
-        )
-    };
-    let t_260 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(98112usize),
-            49056usize,
-        )
-    };
-    let t_261 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(49056usize),
-            49056usize,
-        )
-    };
-    let t_262 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(98112usize),
-            49056usize,
-        )
-    };
-    let t_263 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(147168usize),
-            98112usize,
-        )
-    };
-    let t_264 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            98112usize,
-        )
-    };
-    static mut T_265_BUF: Aligned16<98112usize> = Aligned16([0.0f32; 98112usize]);
-    let t_265 = unsafe {
-        core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_265_BUF) as *mut f32,
-            98112usize,
-        )
-    };
-    static mut T_544_BUF: Aligned16<523264usize> = Aligned16([0.0f32; 523264usize]);
-    let t_544 = unsafe {
-        core::slice::from_raw_parts_mut(
-            core::ptr::addr_of_mut!(T_544_BUF) as *mut f32,
-            523264usize,
-        )
-    };
-    let t_545 = unsafe {
-        core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(0usize),
-            523264usize,
-        )
-    };
-    static mut T_546_BUF: Aligned16<3332742usize> = Aligned16([0.0f32; 3332742usize]);
+    static mut T_546_BUF: Aligned16<6522usize> = Aligned16([0.0f32; 6522usize]);
     let t_546 = unsafe {
         core::slice::from_raw_parts_mut(
             core::ptr::addr_of_mut!(T_546_BUF) as *mut f32,
-            3332742usize,
+            6522usize,
         )
     };
     let tensor_data = tensor_data_f32();
@@ -8463,7 +8327,7 @@ pub fn forward_profiled(
     }
     let scratch_26_0 = unsafe {
         core::slice::from_raw_parts_mut(
-            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(834464usize),
+            (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(523264usize),
             1024usize,
         )
     };
@@ -8654,259 +8518,100 @@ pub fn forward_profiled(
         psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
         op_profile[47usize].accumulate(__regs.assume_init_ref());
     }
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileClear();
-        psp_ml::profiler::ProfileEnable();
-    }
-    let __t0 = get_tick();
-    reshape(t_247, t_255);
-    op_ticks[48usize] += get_tick() - __t0;
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileDisable();
-        let mut __regs = core::mem::MaybeUninit::<
-            psp_ml::profiler::ProfileRegs,
-        >::zeroed();
-        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
-        op_profile[48usize].accumulate(__regs.assume_init_ref());
-    }
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileClear();
-        psp_ml::profiler::ProfileEnable();
-    }
-    let __t0 = get_tick();
-    for _batch_idx in 0..511usize {
-        let _in_off = _batch_idx * 513usize;
-        let _out_off = _batch_idx * 96usize;
-        fully_connected(
-            &t_255[_in_off.._in_off + 513usize],
-            513usize,
-            t_168,
-            None,
-            &mut t_256[_out_off.._out_off + 96usize],
-            96usize,
-        );
-    }
-    op_ticks[49usize] += get_tick() - __t0;
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileDisable();
-        let mut __regs = core::mem::MaybeUninit::<
-            psp_ml::profiler::ProfileRegs,
-        >::zeroed();
-        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
-        op_profile[49usize].accumulate(__regs.assume_init_ref());
-    }
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileClear();
-        psp_ml::profiler::ProfileEnable();
-    }
-    let __t0 = get_tick();
-    reshape(t_256, t_257);
-    op_ticks[50usize] += get_tick() - __t0;
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileDisable();
-        let mut __regs = core::mem::MaybeUninit::<
-            psp_ml::profiler::ProfileRegs,
-        >::zeroed();
-        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
-        op_profile[50usize].accumulate(__regs.assume_init_ref());
-    }
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileClear();
-        psp_ml::profiler::ProfileEnable();
-    }
-    let __t0 = get_tick();
-    binary_mul(t_257, t_257, t_258, 49056usize);
-    op_ticks[51usize] += get_tick() - __t0;
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileDisable();
-        let mut __regs = core::mem::MaybeUninit::<
-            psp_ml::profiler::ProfileRegs,
-        >::zeroed();
-        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
-        op_profile[51usize].accumulate(__regs.assume_init_ref());
-    }
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileClear();
-        psp_ml::profiler::ProfileEnable();
-    }
-    let __t0 = get_tick();
-    binary_pow(t_258, t_167, t_259, 1usize);
-    op_ticks[52usize] += get_tick() - __t0;
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileDisable();
-        let mut __regs = core::mem::MaybeUninit::<
-            psp_ml::profiler::ProfileRegs,
-        >::zeroed();
-        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
-        op_profile[52usize].accumulate(__regs.assume_init_ref());
-    }
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileClear();
-        psp_ml::profiler::ProfileEnable();
-    }
-    let __t0 = get_tick();
-    reverse_v2(t_259, &[511usize, 1usize, 96usize], t_260, 2usize);
-    op_ticks[53usize] += get_tick() - __t0;
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileDisable();
-        let mut __regs = core::mem::MaybeUninit::<
-            psp_ml::profiler::ProfileRegs,
-        >::zeroed();
-        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
-        op_profile[53usize].accumulate(__regs.assume_init_ref());
-    }
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileClear();
-        psp_ml::profiler::ProfileEnable();
-    }
-    let __t0 = get_tick();
-    transpose(
-        t_260,
-        &[511usize, 1usize, 96usize],
-        t_261,
-        &[511usize, 96usize, 1usize],
-        &[0usize, 2usize, 1usize],
-    );
-    op_ticks[54usize] += get_tick() - __t0;
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileDisable();
-        let mut __regs = core::mem::MaybeUninit::<
-            psp_ml::profiler::ProfileRegs,
-        >::zeroed();
-        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
-        op_profile[54usize].accumulate(__regs.assume_init_ref());
-    }
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileClear();
-        psp_ml::profiler::ProfileEnable();
-    }
-    let __t0 = get_tick();
-    reshape(t_261, t_262);
-    op_ticks[55usize] += get_tick() - __t0;
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileDisable();
-        let mut __regs = core::mem::MaybeUninit::<
-            psp_ml::profiler::ProfileRegs,
-        >::zeroed();
-        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
-        op_profile[55usize].accumulate(__regs.assume_init_ref());
-    }
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileClear();
-        psp_ml::profiler::ProfileEnable();
-    }
-    let __t0 = get_tick();
-    {
-        let src = t_221;
-        for p in 0..49056usize {
-            for a in 0..1usize {
-                let src_off = p * (1usize * 1usize) + a * 1usize;
-                let dst_off = p * (2usize * 1usize) + (0usize + a) * 1usize;
-                t_263[dst_off..dst_off + 1usize]
-                    .copy_from_slice(&src[src_off..src_off + 1usize]);
-            }
-        }
-    }
-    {
-        let src = t_262;
-        for p in 0..49056usize {
-            for a in 0..1usize {
-                let src_off = p * (1usize * 1usize) + a * 1usize;
-                let dst_off = p * (2usize * 1usize) + (1usize + a) * 1usize;
-                t_263[dst_off..dst_off + 1usize]
-                    .copy_from_slice(&src[src_off..src_off + 1usize]);
-            }
-        }
-    }
-    op_ticks[56usize] += get_tick() - __t0;
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileDisable();
-        let mut __regs = core::mem::MaybeUninit::<
-            psp_ml::profiler::ProfileRegs,
-        >::zeroed();
-        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
-        op_profile[56usize].accumulate(__regs.assume_init_ref());
-    }
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileClear();
-        psp_ml::profiler::ProfileEnable();
-    }
-    let __t0 = get_tick();
-    binary_mul(t_263, t_163, t_264, 2usize);
-    op_ticks[57usize] += get_tick() - __t0;
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileDisable();
-        let mut __regs = core::mem::MaybeUninit::<
-            psp_ml::profiler::ProfileRegs,
-        >::zeroed();
-        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
-        op_profile[57usize].accumulate(__regs.assume_init_ref());
-    }
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileClear();
-        psp_ml::profiler::ProfileEnable();
-    }
-    let __t0 = get_tick();
-    binary_add(t_264, t_162, t_265, 2usize);
-    op_ticks[58usize] += get_tick() - __t0;
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileDisable();
-        let mut __regs = core::mem::MaybeUninit::<
-            psp_ml::profiler::ProfileRegs,
-        >::zeroed();
-        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
-        op_profile[58usize].accumulate(__regs.assume_init_ref());
-    }
     for _frame_idx in 0..511usize {
+        let t_255 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(661880usize),
+                513usize,
+            )
+        };
+        let t_256 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667580usize),
+                96usize,
+            )
+        };
+        let t_257 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667676usize),
+                96usize,
+            )
+        };
+        let t_258 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667772usize),
+                96usize,
+            )
+        };
+        let t_259 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667868usize),
+                96usize,
+            )
+        };
+        let t_260 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667964usize),
+                96usize,
+            )
+        };
+        let t_261 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668060usize),
+                96usize,
+            )
+        };
+        let t_262 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668156usize),
+                96usize,
+            )
+        };
+        let t_263 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667004usize),
+                192usize,
+            )
+        };
+        let t_264 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667196usize),
+                192usize,
+            )
+        };
+        let t_265 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667388usize),
+                192usize,
+            )
+        };
         let t_266 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(621168usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(616560usize),
                 1152usize,
             )
         };
         let t_267 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(622320usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(617712usize),
                 1152usize,
             )
         };
         let t_268 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(623472usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(618864usize),
                 1152usize,
             )
         };
         let t_269 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(566832usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
                 2304usize,
             )
         };
         let t_270 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(624624usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(620016usize),
                 1152usize,
             )
         };
@@ -8936,121 +8641,121 @@ pub fn forward_profiled(
         };
         let t_275 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(569136usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(566064usize),
                 1728usize,
             )
         };
         let t_276 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(570864usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(567792usize),
                 1728usize,
             )
         };
         let t_277 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(572592usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(569520usize),
                 1728usize,
             )
         };
         let t_278 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(625776usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(623216usize),
                 864usize,
             )
         };
         let t_279 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(574320usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(571248usize),
                 1728usize,
             )
         };
         let t_280 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576048usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(572976usize),
                 1728usize,
             )
         };
         let t_281 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(577776usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(574704usize),
                 1728usize,
             )
         };
         let t_282 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(579504usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(576432usize),
                 1728usize,
             )
         };
         let t_283 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(581232usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(578160usize),
                 1728usize,
             )
         };
         let t_284 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(582960usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(579888usize),
                 1728usize,
             )
         };
         let t_285 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(626640usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(624080usize),
                 864usize,
             )
         };
         let t_286 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(627504usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(624944usize),
                 864usize,
             )
         };
         let t_287 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(584688usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(581616usize),
                 1728usize,
             )
         };
         let t_288 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(586416usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(583344usize),
                 1728usize,
             )
         };
         let t_289 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588144usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(585072usize),
                 1728usize,
             )
         };
         let t_290 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(589872usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(586800usize),
                 1728usize,
             )
         };
         let t_291 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(591600usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(588528usize),
                 1728usize,
             )
         };
         let t_292 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(593328usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(590256usize),
                 1728usize,
             )
         };
         let t_293 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(628368usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(625808usize),
                 864usize,
             )
         };
         let t_294 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(629232usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(626672usize),
                 864usize,
             )
         };
@@ -9098,43 +8803,43 @@ pub fn forward_profiled(
         };
         let t_302 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664440usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662396usize),
                 288usize,
             )
         };
         let t_306 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664728usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662684usize),
                 288usize,
             )
         };
         let t_307 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670044usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669248usize),
                 18usize,
             )
         };
         let t_308 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670064usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669268usize),
                 18usize,
             )
         };
         let t_309 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670084usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669288usize),
                 18usize,
             )
         };
         let t_310 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665016usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662972usize),
                 288usize,
             )
         };
         let t_311 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665304usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(663260usize),
                 288usize,
             )
         };
@@ -9146,7 +8851,7 @@ pub fn forward_profiled(
         };
         let t_313 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(630096usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(627536usize),
                 864usize,
             )
         };
@@ -9188,43 +8893,43 @@ pub fn forward_profiled(
         };
         let t_320 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665592usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(663548usize),
                 288usize,
             )
         };
         let t_324 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665880usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(663836usize),
                 288usize,
             )
         };
         let t_325 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670104usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669308usize),
                 18usize,
             )
         };
         let t_326 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670124usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669328usize),
                 18usize,
             )
         };
         let t_327 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670144usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669348usize),
                 18usize,
             )
         };
         let t_328 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666168usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664124usize),
                 288usize,
             )
         };
         let t_329 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666456usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664412usize),
                 288usize,
             )
         };
@@ -9236,13 +8941,13 @@ pub fn forward_profiled(
         };
         let t_331 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(630960usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(628400usize),
                 864usize,
             )
         };
         let t_332 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(631824usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(629264usize),
                 864usize,
             )
         };
@@ -9284,43 +8989,43 @@ pub fn forward_profiled(
         };
         let t_339 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666744usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664700usize),
                 288usize,
             )
         };
         let t_343 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667032usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(664988usize),
                 288usize,
             )
         };
         let t_344 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670164usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669368usize),
                 18usize,
             )
         };
         let t_345 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670184usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669388usize),
                 18usize,
             )
         };
         let t_346 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670204usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669408usize),
                 18usize,
             )
         };
         let t_347 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667320usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665276usize),
                 288usize,
             )
         };
         let t_348 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667608usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665564usize),
                 288usize,
             )
         };
@@ -9332,13 +9037,13 @@ pub fn forward_profiled(
         };
         let t_350 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(632688usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(630128usize),
                 864usize,
             )
         };
         let t_351 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(633552usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(630992usize),
                 864usize,
             )
         };
@@ -9380,43 +9085,43 @@ pub fn forward_profiled(
         };
         let t_358 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(667896usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(665852usize),
                 288usize,
             )
         };
         let t_362 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668184usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666140usize),
                 288usize,
             )
         };
         let t_363 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670224usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669428usize),
                 18usize,
             )
         };
         let t_364 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670244usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669448usize),
                 18usize,
             )
         };
         let t_365 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670264usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669468usize),
                 18usize,
             )
         };
         let t_366 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668472usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666428usize),
                 288usize,
             )
         };
         let t_367 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(666716usize),
                 288usize,
             )
         };
@@ -9428,13 +9133,13 @@ pub fn forward_profiled(
         };
         let t_369 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(634416usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(631856usize),
                 864usize,
             )
         };
         let t_370 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(635280usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(632720usize),
                 864usize,
             )
         };
@@ -9482,43 +9187,43 @@ pub fn forward_profiled(
         };
         let t_378 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(636144usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(633584usize),
                 864usize,
             )
         };
         let t_382 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(637008usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(634448usize),
                 864usize,
             )
         };
         let t_383 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669624usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668828usize),
                 27usize,
             )
         };
         let t_384 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669652usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668856usize),
                 27usize,
             )
         };
         let t_385 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669680usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668884usize),
                 27usize,
             )
         };
         let t_386 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(637872usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(635312usize),
                 864usize,
             )
         };
         let t_387 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(638736usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(636176usize),
                 864usize,
             )
         };
@@ -9530,7 +9235,7 @@ pub fn forward_profiled(
         };
         let t_389 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(653424usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(650864usize),
                 648usize,
             )
         };
@@ -9572,43 +9277,43 @@ pub fn forward_profiled(
         };
         let t_396 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(639600usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(637040usize),
                 864usize,
             )
         };
         let t_400 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(640464usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(637904usize),
                 864usize,
             )
         };
         let t_401 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669708usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668912usize),
                 27usize,
             )
         };
         let t_402 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669736usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668940usize),
                 27usize,
             )
         };
         let t_403 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669764usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668968usize),
                 27usize,
             )
         };
         let t_404 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(641328usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(638768usize),
                 864usize,
             )
         };
         let t_405 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(642192usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(639632usize),
                 864usize,
             )
         };
@@ -9620,13 +9325,13 @@ pub fn forward_profiled(
         };
         let t_407 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(654072usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(651512usize),
                 648usize,
             )
         };
         let t_408 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(654720usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(652160usize),
                 648usize,
             )
         };
@@ -9668,43 +9373,43 @@ pub fn forward_profiled(
         };
         let t_415 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(643056usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(640496usize),
                 864usize,
             )
         };
         let t_419 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(643920usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(641360usize),
                 864usize,
             )
         };
         let t_420 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669792usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668996usize),
                 27usize,
             )
         };
         let t_421 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669820usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669024usize),
                 27usize,
             )
         };
         let t_422 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669848usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669052usize),
                 27usize,
             )
         };
         let t_423 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(644784usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(642224usize),
                 864usize,
             )
         };
         let t_424 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(645648usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(643088usize),
                 864usize,
             )
         };
@@ -9716,13 +9421,13 @@ pub fn forward_profiled(
         };
         let t_426 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(655368usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(652808usize),
                 648usize,
             )
         };
         let t_427 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(656016usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(653456usize),
                 648usize,
             )
         };
@@ -9764,43 +9469,43 @@ pub fn forward_profiled(
         };
         let t_434 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(646512usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(643952usize),
                 864usize,
             )
         };
         let t_438 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(647376usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(644816usize),
                 864usize,
             )
         };
         let t_439 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669876usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669080usize),
                 27usize,
             )
         };
         let t_440 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669904usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669108usize),
                 27usize,
             )
         };
         let t_441 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669932usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669136usize),
                 27usize,
             )
         };
         let t_442 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648240usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(645680usize),
                 864usize,
             )
         };
         let t_443 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(649104usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(646544usize),
                 864usize,
             )
         };
@@ -9812,13 +9517,13 @@ pub fn forward_profiled(
         };
         let t_445 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(656664usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(654104usize),
                 648usize,
             )
         };
         let t_446 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(657312usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(654752usize),
                 648usize,
             )
         };
@@ -9860,43 +9565,43 @@ pub fn forward_profiled(
         };
         let t_453 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(649968usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(647408usize),
                 864usize,
             )
         };
         let t_457 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(650832usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(648272usize),
                 864usize,
             )
         };
         let t_458 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669960usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669164usize),
                 27usize,
             )
         };
         let t_459 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669988usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669192usize),
                 27usize,
             )
         };
         let t_460 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670016usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669220usize),
                 27usize,
             )
         };
         let t_461 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(651696usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(649136usize),
                 864usize,
             )
         };
         let t_462 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(652560usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(650000usize),
                 864usize,
             )
         };
@@ -9908,13 +9613,13 @@ pub fn forward_profiled(
         };
         let t_464 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(657960usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(655400usize),
                 648usize,
             )
         };
         let t_465 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(658608usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(656048usize),
                 648usize,
             )
         };
@@ -9962,43 +9667,43 @@ pub fn forward_profiled(
         };
         let t_473 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(595056usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(591984usize),
                 1536usize,
             )
         };
         let t_477 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(596592usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(593520usize),
                 1536usize,
             )
         };
         let t_478 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669048usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668252usize),
                 48usize,
             )
         };
         let t_479 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669096usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668300usize),
                 48usize,
             )
         };
         let t_480 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669144usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668348usize),
                 48usize,
             )
         };
         let t_481 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(598128usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(595056usize),
                 1536usize,
             )
         };
         let t_482 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(599664usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(596592usize),
                 1536usize,
             )
         };
@@ -10010,7 +9715,7 @@ pub fn forward_profiled(
         };
         let t_484 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(659256usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(656696usize),
                 576usize,
             )
         };
@@ -10052,43 +9757,43 @@ pub fn forward_profiled(
         };
         let t_491 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(601200usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(598128usize),
                 1536usize,
             )
         };
         let t_495 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(602736usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(599664usize),
                 1536usize,
             )
         };
         let t_496 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669192usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668396usize),
                 48usize,
             )
         };
         let t_497 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669240usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668444usize),
                 48usize,
             )
         };
         let t_498 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669288usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668492usize),
                 48usize,
             )
         };
         let t_499 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(604272usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(601200usize),
                 1536usize,
             )
         };
         let t_500 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(605808usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(602736usize),
                 1536usize,
             )
         };
@@ -10100,13 +9805,13 @@ pub fn forward_profiled(
         };
         let t_502 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(659832usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(657272usize),
                 576usize,
             )
         };
         let t_503 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(660408usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(657848usize),
                 576usize,
             )
         };
@@ -10148,43 +9853,43 @@ pub fn forward_profiled(
         };
         let t_510 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(607344usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(604272usize),
                 1536usize,
             )
         };
         let t_514 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(608880usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(605808usize),
                 1536usize,
             )
         };
         let t_515 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669336usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668540usize),
                 48usize,
             )
         };
         let t_516 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669384usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668588usize),
                 48usize,
             )
         };
         let t_517 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669432usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668636usize),
                 48usize,
             )
         };
         let t_518 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(610416usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(607344usize),
                 1536usize,
             )
         };
         let t_519 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(611952usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(608880usize),
                 1536usize,
             )
         };
@@ -10196,13 +9901,13 @@ pub fn forward_profiled(
         };
         let t_521 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(660984usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(658424usize),
                 576usize,
             )
         };
         let t_522 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(661560usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(659000usize),
                 576usize,
             )
         };
@@ -10244,43 +9949,43 @@ pub fn forward_profiled(
         };
         let t_529 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(613488usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(610416usize),
                 1536usize,
             )
         };
         let t_533 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(615024usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(611952usize),
                 1536usize,
             )
         };
         let t_534 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669480usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668684usize),
                 48usize,
             )
         };
         let t_535 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669528usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668732usize),
                 48usize,
             )
         };
         let t_536 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669576usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(668780usize),
                 48usize,
             )
         };
         let t_537 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(616560usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(613488usize),
                 1536usize,
             )
         };
         let t_538 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(618096usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(615024usize),
                 1536usize,
             )
         };
@@ -10292,39 +9997,265 @@ pub fn forward_profiled(
         };
         let t_540 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662136usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(659576usize),
                 576usize,
             )
         };
         let t_541 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(662712usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(660152usize),
                 576usize,
             )
         };
         let t_542 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(663288usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(660728usize),
                 576usize,
             )
         };
         let t_543 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(663864usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(661304usize),
                 576usize,
             )
         };
-        let t_547 = &t_265[_frame_idx * 192usize..(_frame_idx + 1) * 192usize];
-        let t_548 = &mut t_544[_frame_idx * 1024usize..(_frame_idx + 1) * 1024usize];
+        let t_544 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(621168usize),
+                1024usize,
+            )
+        };
+        let t_545 = unsafe {
+            core::slice::from_raw_parts_mut(
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(622192usize),
+                1024usize,
+            )
+        };
+        let t_547 = &t_247[_frame_idx * 513usize..(_frame_idx + 1) * 513usize];
+        let t_548 = &t_221[_frame_idx * 96usize..(_frame_idx + 1) * 96usize];
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileClear();
+            psp_ml::profiler::ProfileEnable();
+        }
+        let __t0 = get_tick();
+        reshape(t_547, t_255);
+        op_ticks[48usize] += get_tick() - __t0;
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileDisable();
+            let mut __regs = core::mem::MaybeUninit::<
+                psp_ml::profiler::ProfileRegs,
+            >::zeroed();
+            psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+            op_profile[48usize].accumulate(__regs.assume_init_ref());
+        }
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileClear();
+            psp_ml::profiler::ProfileEnable();
+        }
+        let __t0 = get_tick();
+        fully_connected(t_255, 513usize, t_168, None, t_256, 96usize);
+        op_ticks[49usize] += get_tick() - __t0;
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileDisable();
+            let mut __regs = core::mem::MaybeUninit::<
+                psp_ml::profiler::ProfileRegs,
+            >::zeroed();
+            psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+            op_profile[49usize].accumulate(__regs.assume_init_ref());
+        }
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileClear();
+            psp_ml::profiler::ProfileEnable();
+        }
+        let __t0 = get_tick();
+        reshape(t_256, t_257);
+        op_ticks[50usize] += get_tick() - __t0;
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileDisable();
+            let mut __regs = core::mem::MaybeUninit::<
+                psp_ml::profiler::ProfileRegs,
+            >::zeroed();
+            psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+            op_profile[50usize].accumulate(__regs.assume_init_ref());
+        }
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileClear();
+            psp_ml::profiler::ProfileEnable();
+        }
+        let __t0 = get_tick();
+        binary_mul(t_257, t_257, t_258, 96usize);
+        op_ticks[51usize] += get_tick() - __t0;
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileDisable();
+            let mut __regs = core::mem::MaybeUninit::<
+                psp_ml::profiler::ProfileRegs,
+            >::zeroed();
+            psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+            op_profile[51usize].accumulate(__regs.assume_init_ref());
+        }
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileClear();
+            psp_ml::profiler::ProfileEnable();
+        }
+        let __t0 = get_tick();
+        binary_pow(t_258, t_167, t_259, 1usize);
+        op_ticks[52usize] += get_tick() - __t0;
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileDisable();
+            let mut __regs = core::mem::MaybeUninit::<
+                psp_ml::profiler::ProfileRegs,
+            >::zeroed();
+            psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+            op_profile[52usize].accumulate(__regs.assume_init_ref());
+        }
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileClear();
+            psp_ml::profiler::ProfileEnable();
+        }
+        let __t0 = get_tick();
+        reverse_v2(t_259, &[1usize, 1usize, 96usize], t_260, 2usize);
+        op_ticks[53usize] += get_tick() - __t0;
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileDisable();
+            let mut __regs = core::mem::MaybeUninit::<
+                psp_ml::profiler::ProfileRegs,
+            >::zeroed();
+            psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+            op_profile[53usize].accumulate(__regs.assume_init_ref());
+        }
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileClear();
+            psp_ml::profiler::ProfileEnable();
+        }
+        let __t0 = get_tick();
+        transpose(
+            t_260,
+            &[1usize, 1usize, 96usize],
+            t_261,
+            &[1usize, 96usize, 1usize],
+            &[0usize, 2usize, 1usize],
+        );
+        op_ticks[54usize] += get_tick() - __t0;
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileDisable();
+            let mut __regs = core::mem::MaybeUninit::<
+                psp_ml::profiler::ProfileRegs,
+            >::zeroed();
+            psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+            op_profile[54usize].accumulate(__regs.assume_init_ref());
+        }
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileClear();
+            psp_ml::profiler::ProfileEnable();
+        }
+        let __t0 = get_tick();
+        reshape(t_261, t_262);
+        op_ticks[55usize] += get_tick() - __t0;
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileDisable();
+            let mut __regs = core::mem::MaybeUninit::<
+                psp_ml::profiler::ProfileRegs,
+            >::zeroed();
+            psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+            op_profile[55usize].accumulate(__regs.assume_init_ref());
+        }
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileClear();
+            psp_ml::profiler::ProfileEnable();
+        }
+        let __t0 = get_tick();
+        {
+            let src = t_548;
+            for p in 0..96usize {
+                for a in 0..1usize {
+                    let src_off = p * (1usize * 1usize) + a * 1usize;
+                    let dst_off = p * (2usize * 1usize) + (0usize + a) * 1usize;
+                    t_263[dst_off..dst_off + 1usize]
+                        .copy_from_slice(&src[src_off..src_off + 1usize]);
+                }
+            }
+        }
+        {
+            let src = t_262;
+            for p in 0..96usize {
+                for a in 0..1usize {
+                    let src_off = p * (1usize * 1usize) + a * 1usize;
+                    let dst_off = p * (2usize * 1usize) + (1usize + a) * 1usize;
+                    t_263[dst_off..dst_off + 1usize]
+                        .copy_from_slice(&src[src_off..src_off + 1usize]);
+                }
+            }
+        }
+        op_ticks[56usize] += get_tick() - __t0;
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileDisable();
+            let mut __regs = core::mem::MaybeUninit::<
+                psp_ml::profiler::ProfileRegs,
+            >::zeroed();
+            psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+            op_profile[56usize].accumulate(__regs.assume_init_ref());
+        }
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileClear();
+            psp_ml::profiler::ProfileEnable();
+        }
+        let __t0 = get_tick();
+        binary_mul(t_263, t_163, t_264, 2usize);
+        op_ticks[57usize] += get_tick() - __t0;
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileDisable();
+            let mut __regs = core::mem::MaybeUninit::<
+                psp_ml::profiler::ProfileRegs,
+            >::zeroed();
+            psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+            op_profile[57usize].accumulate(__regs.assume_init_ref());
+        }
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileClear();
+            psp_ml::profiler::ProfileEnable();
+        }
+        let __t0 = get_tick();
+        binary_add(t_264, t_162, t_265, 2usize);
+        op_ticks[58usize] += get_tick() - __t0;
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileDisable();
+            let mut __regs = core::mem::MaybeUninit::<
+                psp_ml::profiler::ProfileRegs,
+            >::zeroed();
+            psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+            op_profile[58usize].accumulate(__regs.assume_init_ref());
+        }
         let scratch_38_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 3072usize,
             )
         };
         let scratch_38_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(619632usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672560usize),
                 1536usize,
             )
         };
@@ -10336,7 +10267,7 @@ pub fn forward_profiled(
         }
         let __t0 = get_tick();
         im2col_padded(
-            t_547,
+            t_265,
             [1usize, 96usize, 1usize, 2usize],
             [4usize, 8usize],
             [2usize, 2usize],
@@ -10479,13 +10410,13 @@ pub fn forward_profiled(
         }
         let scratch_42_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2304usize,
             )
         };
         let scratch_42_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(619632usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(671792usize),
                 1152usize,
             )
         };
@@ -10551,13 +10482,13 @@ pub fn forward_profiled(
         }
         let scratch_43_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(565488usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(671216usize),
                 1152usize,
             )
         };
         let scratch_43_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 1728usize,
             )
         };
@@ -10741,13 +10672,13 @@ pub fn forward_profiled(
         }
         let scratch_50_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672080usize),
                 1728usize,
             )
         };
         let scratch_50_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2592usize,
             )
         };
@@ -10813,13 +10744,13 @@ pub fn forward_profiled(
         }
         let scratch_51_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(619632usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672080usize),
                 864usize,
             )
         };
         let scratch_51_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2592usize,
             )
         };
@@ -10980,13 +10911,13 @@ pub fn forward_profiled(
         }
         let scratch_57_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672080usize),
                 1728usize,
             )
         };
         let scratch_57_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2592usize,
             )
         };
@@ -11069,13 +11000,13 @@ pub fn forward_profiled(
         }
         let scratch_59_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(619632usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672080usize),
                 864usize,
             )
         };
         let scratch_59_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2592usize,
             )
         };
@@ -11236,13 +11167,13 @@ pub fn forward_profiled(
         }
         let scratch_65_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(672080usize),
                 1728usize,
             )
         };
         let scratch_65_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 2592usize,
             )
         };
@@ -11325,13 +11256,13 @@ pub fn forward_profiled(
         }
         let scratch_67_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(679856usize),
                 864usize,
             )
         };
         let scratch_67_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 10368usize,
             )
         };
@@ -11671,13 +11602,13 @@ pub fn forward_profiled(
         }
         let scratch_82_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(691020usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 3456usize,
             )
         };
         let scratch_82_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -11743,13 +11674,13 @@ pub fn forward_profiled(
         }
         let scratch_83_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 864usize,
             )
         };
         let scratch_83_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -12066,13 +11997,13 @@ pub fn forward_profiled(
         }
         let scratch_97_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(691020usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 3456usize,
             )
         };
         let scratch_97_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -12155,13 +12086,13 @@ pub fn forward_profiled(
         }
         let scratch_99_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 864usize,
             )
         };
         let scratch_99_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -12478,13 +12409,13 @@ pub fn forward_profiled(
         }
         let scratch_113_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(691020usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 3456usize,
             )
         };
         let scratch_113_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -12567,13 +12498,13 @@ pub fn forward_profiled(
         }
         let scratch_115_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 864usize,
             )
         };
         let scratch_115_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -12890,13 +12821,13 @@ pub fn forward_profiled(
         }
         let scratch_129_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(691020usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(690224usize),
                 3456usize,
             )
         };
         let scratch_129_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 20736usize,
             )
         };
@@ -12979,13 +12910,13 @@ pub fn forward_profiled(
         }
         let scratch_131_0 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(563760usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(731696usize),
                 864usize,
             )
         };
         let scratch_131_1 = unsafe {
             core::slice::from_raw_parts_mut(
-                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(670284usize),
+                (core::ptr::addr_of_mut!(ARENA) as *mut f32).add(669488usize),
                 62208usize,
             )
         };
@@ -15980,7 +15911,7 @@ pub fn forward_profiled(
             Some(t_1),
             [1usize, 1usize],
             [0usize, 0usize, 0usize, 0usize],
-            t_548,
+            t_544,
             [1usize, 1usize, 1usize, 1024usize],
         );
         op_ticks[332usize] += get_tick() - __t0;
@@ -15993,58 +15924,40 @@ pub fn forward_profiled(
             psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
             op_profile[332usize].accumulate(__regs.assume_init_ref());
         }
-    }
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileClear();
-        psp_ml::profiler::ProfileEnable();
-    }
-    let __t0 = get_tick();
-    for _batch_idx in 0..511usize {
-        let _in_off = _batch_idx * 1024usize;
-        let _out_off = _batch_idx * 1024usize;
-        reduce_mean_hw(
-            &t_544[_in_off.._in_off + 1024usize],
-            &mut t_545[_out_off.._out_off + 1024usize],
-        );
-    }
-    op_ticks[333usize] += get_tick() - __t0;
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileDisable();
-        let mut __regs = core::mem::MaybeUninit::<
-            psp_ml::profiler::ProfileRegs,
-        >::zeroed();
-        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
-        op_profile[333usize].accumulate(__regs.assume_init_ref());
-    }
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileClear();
-        psp_ml::profiler::ProfileEnable();
-    }
-    let __t0 = get_tick();
-    for _batch_idx in 0..511usize {
-        let _in_off = _batch_idx * 1024usize;
-        let _out_off = _batch_idx * 6522usize;
-        fully_connected(
-            &t_545[_in_off.._in_off + 1024usize],
-            1024usize,
-            t_164,
-            Some(t_142),
-            &mut t_546[_out_off.._out_off + 6522usize],
-            6522usize,
-        );
-    }
-    op_ticks[334usize] += get_tick() - __t0;
-    #[cfg(target_os = "psp")]
-    unsafe {
-        psp_ml::profiler::ProfileDisable();
-        let mut __regs = core::mem::MaybeUninit::<
-            psp_ml::profiler::ProfileRegs,
-        >::zeroed();
-        psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
-        op_profile[334usize].accumulate(__regs.assume_init_ref());
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileClear();
+            psp_ml::profiler::ProfileEnable();
+        }
+        let __t0 = get_tick();
+        reduce_mean_hw(t_544, t_545);
+        op_ticks[333usize] += get_tick() - __t0;
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileDisable();
+            let mut __regs = core::mem::MaybeUninit::<
+                psp_ml::profiler::ProfileRegs,
+            >::zeroed();
+            psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+            op_profile[333usize].accumulate(__regs.assume_init_ref());
+        }
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileClear();
+            psp_ml::profiler::ProfileEnable();
+        }
+        let __t0 = get_tick();
+        fully_connected(t_545, 1024usize, t_164, Some(t_142), t_546, 6522usize);
+        op_ticks[334usize] += get_tick() - __t0;
+        #[cfg(target_os = "psp")]
+        unsafe {
+            psp_ml::profiler::ProfileDisable();
+            let mut __regs = core::mem::MaybeUninit::<
+                psp_ml::profiler::ProfileRegs,
+            >::zeroed();
+            psp_ml::profiler::ProfileGetRegs(__regs.as_mut_ptr());
+            op_profile[334usize].accumulate(__regs.assume_init_ref());
+        }
     }
     output.copy_from_slice(&t_546);
 }
