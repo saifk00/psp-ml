@@ -6,6 +6,10 @@ A TFLite compiler for the PSP, written in Rust.
 
 Currently runs MNIST at 98.6% accuracy. Working toward real-time BirdNET inference.
 
+## Setup
+- Install the PSP dev [SDK](https://pspdev.github.io/installation)
+    - I like to install it directly to the repo root and then source `.envrc`
+- Install cargo psp https://crates.io/crates/psp
 ## Structure
 
 ```
