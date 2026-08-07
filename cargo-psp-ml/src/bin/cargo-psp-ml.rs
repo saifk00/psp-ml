@@ -5,7 +5,6 @@
 //!   cargo psp-ml run -p hello-psp --release
 
 use std::fs;
-use std::net::TcpStream;
 use std::path::PathBuf;
 use std::process;
 
@@ -189,7 +188,6 @@ fn cmd_info(args: &[String]) {
 // ---------------------------------------------------------------------------
 
 fn cmd_run(args: &[String]) {
-    use std::io::Write;
     use std::process::Command;
 
     let mut package: Option<String> = None;
@@ -225,8 +223,7 @@ fn cmd_run(args: &[String]) {
             "--help" | "-h" => {
                 eprintln!("Usage: cargo psp-ml run [OPTIONS] -p <PACKAGE>");
                 eprintln!();
-                eprintln!("Build a PSP PRX and deploy it to a PSP running psplink.");
-                eprintln!("Requires usbhostfs_pc (launched automatically if not running).");
+                eprintln!("Build a PSP PRX and deploy it to a PSP running psplink over USB.");
                 eprintln!();
                 eprintln!("Options:");
                 eprintln!("  -p, --package <PKG>    Package to build and run");
@@ -250,7 +247,7 @@ fn cmd_run(args: &[String]) {
 
     // Use `cargo metadata` to get workspace info
     let metadata = cargo_metadata();
-    let workspace_root = PathBuf::from(
+    let _workspace_root = PathBuf::from(
         metadata["workspace_root"].as_str().unwrap_or_else(|| {
             eprintln!("error: cargo metadata missing workspace_root");
             process::exit(1);
@@ -312,113 +309,61 @@ fn cmd_run(args: &[String]) {
         eprint!("{build_stdout}");
     }
     let profile = if release { "release" } else { "debug" };
-    let prx_path = target_directory
-        .join(format!("mipsel-sony-psp/{profile}/{prx_name}.prx"));
 
-    let prx_abs = fs::canonicalize(&prx_path).unwrap_or_else(|_| {
-        eprintln!("error: PRX not found at {}", prx_path.display());
-        process::exit(1);
-    });
+    // host1: is mounted to the profile's target dir (where the PRX lives)
+    let host1_target = target_directory.join(format!("mipsel-sony-psp/{profile}"));
+    let prx_path = format!("host1:{prx_name}.prx");
 
     // host0: = CWD (where user code writes files)
     // host1: = workspace root (where PRX lives, used by ld command)
-    let cwd = std::env::current_dir().unwrap_or_else(|e| {
+    let host0_target = std::env::current_dir().unwrap_or_else(|e| {
         eprintln!("error: cannot determine current directory: {e}");
         process::exit(1);
     });
-    let prx_rel = prx_abs.strip_prefix(&workspace_root).unwrap_or(&prx_abs);
-    let host1_path = format!("host1:/{}", prx_rel.display());
 
-    // --- Step 3: Ensure usbhostfs_pc is running ---
-    ensure_usbhostfs(&cwd, &workspace_root);
-
-    // --- Step 4: Send load command over TCP ---
-    eprintln!("==> Loading: {host1_path}");
-    let mut stream = TcpStream::connect("127.0.0.1:10000").unwrap_or_else(|e| {
-        eprintln!("error: cannot connect to usbhostfs_pc shell port: {e}");
-        process::exit(1);
-    });
-    // psplink shell protocol: NUL-separated args terminated by 0x01
-    let mut cmd = Vec::new();
-    cmd.extend_from_slice(b"ld\0");
-    cmd.extend_from_slice(host1_path.as_bytes());
-    cmd.push(0x00);
-    cmd.push(0x01);
-    stream.write_all(&cmd).unwrap_or_else(|e| {
-        eprintln!("error: failed to send load command: {e}");
-        process::exit(1);
-    });
-
-    eprintln!("==> Done");
-}
-
-/// Ensure usbhostfs_pc is running.
-///
-/// Drives: host0: = cwd (user files), host1: = workspace root (PRX location).
-fn ensure_usbhostfs(cwd: &std::path::Path, workspace_root: &std::path::Path) {
-    use std::process::Command;
-
-    const SHELL_PORT: &str = "127.0.0.1:10000";
-
-    // Check if already running by probing the shell TCP port.
-    if TcpStream::connect(SHELL_PORT).is_ok() {
-        eprintln!("==> usbhostfs_pc already running");
-        return;
-    }
-
-    // Find the binary.
-    let bin = find_usbhostfs_pc().unwrap_or_else(|| {
-        eprintln!("error: usbhostfs_pc not found");
-        eprintln!("       set $PSPDEV or add usbhostfs_pc to $PATH");
-        process::exit(1);
-    });
-
-    eprintln!("==> Starting usbhostfs_pc (host0: {}, host1: {})",
-        cwd.display(), workspace_root.display());
-    Command::new(&bin)
-        .arg(cwd)            // host0:
-        .arg(workspace_root) // host1:
-        .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn()
+    // Connects directly over USB (native FFI, via psplink-connection) —
+    // no usbhostfs_pc subprocess, no TCP bridge, no interactive-shell mount
+    // race to work around. host0/host1 are configured before the handshake,
+    // same as psplink-connection's own connect().
+    eprintln!("==> Connecting: host0:{} host1:{}", host0_target.display(), host1_target.display());
+    let conn = psplink_connection::PSPConnection::connect(&host0_target, &host1_target, Default::default())
         .unwrap_or_else(|e| {
-            eprintln!("error: failed to start usbhostfs_pc: {e}");
+            eprintln!("error: failed to connect to PSP: {e}");
             process::exit(1);
         });
 
-    // Poll until the shell port is ready.
-    for _ in 0..50 {
-        std::thread::sleep(std::time::Duration::from_millis(100));
-        if TcpStream::connect(SHELL_PORT).is_ok() {
-            return;
+    eprintln!("==> Loading {prx_path}");
+    let outcome = conn
+        .load_program(&prx_path, |bytes| {
+            use std::io::Write;
+            let _ = std::io::stdout().write_all(bytes);
+        })
+        .unwrap_or_else(|e| {
+            eprintln!("error: {e}");
+            process::exit(1);
+        });
+
+    use psplink_connection::LoadOutcome;
+    match outcome {
+        LoadOutcome::Success => eprintln!("==> Done"),
+        LoadOutcome::Panicked => {
+            eprintln!("==> Program panicked");
+            process::exit(1);
+        }
+        LoadOutcome::ShellError(v) => {
+            eprintln!("==> Shell error loading PRX: 0x{v:08X}");
+            process::exit(1);
+        }
+        LoadOutcome::KernelError(v) => {
+            eprintln!("==> Kernel error: 0x{v:08X}");
+            process::exit(1);
         }
     }
 
-    eprintln!("error: usbhostfs_pc started but shell port not ready after 5s");
-    process::exit(1);
+    conn.disconnect();
 }
 
-/// Search for usbhostfs_pc binary in $PSPDEV/bin and $PATH.
-fn find_usbhostfs_pc() -> Option<PathBuf> {
-    if let Ok(pspdev) = std::env::var("PSPDEV") {
-        let candidate = PathBuf::from(&pspdev).join("bin/usbhostfs_pc");
-        if candidate.is_file() {
-            return Some(candidate);
-        }
-    }
-    // Fall back to $PATH
-    which("usbhostfs_pc")
-}
 
-/// Simple which(1) — search $PATH for an executable.
-fn which(name: &str) -> Option<PathBuf> {
-    std::env::var_os("PATH").and_then(|paths| {
-        std::env::split_paths(&paths)
-            .map(|dir| dir.join(name))
-            .find(|p| p.is_file())
-    })
-}
 
 // ---------------------------------------------------------------------------
 // helpers

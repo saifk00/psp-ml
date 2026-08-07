@@ -1,0 +1,10 @@
+[package]
+name = "usbhostfs-sys"
+version = "0.1.0"
+edition = "2021"
+description = "Vendored, refactored subset of usbhostfs_pc's C protocol/device logic, statically linked."
+links = "usbhostfs_core"
+
+[build-dependencies]
+cc = "1"
+pkg-config = "0.3"

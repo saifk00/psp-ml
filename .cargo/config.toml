@@ -1,6 +1,5 @@
 [target.mipsel-sony-psp]
 rustflags = ["-A", "linker_messages"]
 
-[alias]
-psp-ml = "run -p cargo-psp-ml --bin cargo-psp-ml --"
+
 

@@ -1,0 +1,8 @@
+[package]
+name = "psplink-connection"
+version = "0.1.0"
+edition = "2021"
+description = "Safe PSPConnection API over usbhostfs-sys: connect to a PSP running psplink and load/run PRXs directly, without a usbhostfs_pc subprocess or TCP bridge."
+
+[dependencies]
+usbhostfs-sys = { path = "../usbhostfs-sys" }

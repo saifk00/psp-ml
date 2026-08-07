@@ -3,6 +3,8 @@ resolver = "2"
 members = [
     "psp-ml",
     "cargo-psp-ml",
+    "usbhostfs-sys",
+    "psplink-connection",
     "audio-recorder",
     "examples/mnist-bench",
     "examples/hello-psp",
