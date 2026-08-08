@@ -618,7 +618,7 @@ int handle_open(libusb_device_handle *dev, struct HostFsOpenCmd *cmd, int cmdlen
 		/* TODO: Should check that length is within a valid range */
 
 		ret = euid_usb_bulk_read(dev, 0x81, path, LE32(cmd->cmd.extralen), 10000);
-		if(ret != LE32(cmd->cmd.extralen))
+		if(ret < 0 || (uint32_t) ret != LE32(cmd->cmd.extralen))
 		{
 			fprintf(stderr, "Error reading open data cmd->extralen %ud, ret %d\n", LE32(cmd->cmd.extralen), ret);
 			break;
@@ -662,7 +662,7 @@ int handle_dopen(libusb_device_handle *dev, struct HostFsDopenCmd *cmd, int cmdl
 		/* TODO: Should check that length is within a valid range */
 
 		ret = euid_usb_bulk_read(dev, 0x81, path, LE32(cmd->cmd.extralen), 10000);
-		if(ret != LE32(cmd->cmd.extralen))
+		if(ret < 0 || (uint32_t) ret != LE32(cmd->cmd.extralen))
 		{
 			fprintf(stderr, "Error reading open data cmd->extralen %d, ret %d\n", LE32(cmd->cmd.extralen), ret);
 			break;
@@ -738,7 +738,7 @@ int handle_write(libusb_device_handle *dev, struct HostFsWriteCmd *cmd, int cmdl
 		/* TODO: Should check that length is within a valid range */
 
 		ret = euid_usb_bulk_read(dev, 0x81, write_block, LE32(cmd->cmd.extralen), 10000);
-		if(ret != LE32(cmd->cmd.extralen))
+		if(ret < 0 || (uint32_t) ret != LE32(cmd->cmd.extralen))
 		{
 			fprintf(stderr, "Error reading write data cmd->extralen %d, ret %d\n", LE32(cmd->cmd.extralen), ret);
 			break;
@@ -1092,7 +1092,7 @@ int handle_remove(libusb_device_handle *dev, struct HostFsRemoveCmd *cmd, int cm
 		/* TODO: Should check that length is within a valid range */
 
 		ret = euid_usb_bulk_read(dev, 0x81, path, LE32(cmd->cmd.extralen), 10000);
-		if(ret != LE32(cmd->cmd.extralen))
+		if(ret < 0 || (uint32_t) ret != LE32(cmd->cmd.extralen))
 		{
 			fprintf(stderr, "Error reading remove data cmd->extralen %d, ret %d\n", LE32(cmd->cmd.extralen), ret);
 			break;
@@ -1147,7 +1147,7 @@ int handle_rmdir(libusb_device_handle *dev, struct HostFsRmdirCmd *cmd, int cmdl
 		/* TODO: Should check that length is within a valid range */
 
 		ret = euid_usb_bulk_read(dev, 0x81, path, LE32(cmd->cmd.extralen), 10000);
-		if(ret != LE32(cmd->cmd.extralen))
+		if(ret < 0 || (uint32_t) ret != LE32(cmd->cmd.extralen))
 		{
 			fprintf(stderr, "Error reading rmdir data cmd->extralen %d, ret %d\n", LE32(cmd->cmd.extralen), ret);
 			break;
@@ -1202,7 +1202,7 @@ int handle_mkdir(libusb_device_handle *dev, struct HostFsMkdirCmd *cmd, int cmdl
 		/* TODO: Should check that length is within a valid range */
 
 		ret = euid_usb_bulk_read(dev, 0x81, path, LE32(cmd->cmd.extralen), 10000);
-		if(ret != LE32(cmd->cmd.extralen))
+		if(ret < 0 || (uint32_t) ret != LE32(cmd->cmd.extralen))
 		{
 			fprintf(stderr, "Error reading mkdir data cmd->extralen %d, ret %d\n", LE32(cmd->cmd.extralen), ret);
 			break;
@@ -1259,7 +1259,7 @@ int handle_getstat(libusb_device_handle *dev, struct HostFsGetstatCmd *cmd, int 
 		/* TODO: Should check that length is within a valid range */
 
 		ret = euid_usb_bulk_read(dev, 0x81, path, LE32(cmd->cmd.extralen), 10000);
-		if(ret != LE32(cmd->cmd.extralen))
+		if(ret < 0 || (uint32_t) ret != LE32(cmd->cmd.extralen))
 		{
 			fprintf(stderr, "Error reading getstat data cmd->extralen %d, ret %d\n", LE32(cmd->cmd.extralen), ret);
 			break;
@@ -1409,7 +1409,7 @@ int handle_chstat(libusb_device_handle *dev, struct HostFsChstatCmd *cmd, int cm
 		/* TODO: Should check that length is within a valid range */
 
 		ret = euid_usb_bulk_read(dev, 0x81, path, LE32(cmd->cmd.extralen), 10000);
-		if(ret != LE32(cmd->cmd.extralen))
+		if(ret < 0 || (uint32_t) ret != LE32(cmd->cmd.extralen))
 		{
 			fprintf(stderr, "Error reading chstat data cmd->extralen %d, ret %d\n", LE32(cmd->cmd.extralen), ret);
 			break;
@@ -1437,7 +1437,6 @@ int handle_rename(libusb_device_handle *dev, struct HostFsRenameCmd *cmd, int cm
 	char newpath[PATH_MAX];
 	char destpath[PATH_MAX];
 	int  oldpathlen;
-	int  newpathlen;
 
 	memset(&resp, 0, sizeof(resp));
 	resp.cmd.magic = LE32(HOSTFS_MAGIC);
@@ -1462,7 +1461,7 @@ int handle_rename(libusb_device_handle *dev, struct HostFsRenameCmd *cmd, int cm
 
 		memset(path, 0, sizeof(path));
 		ret = euid_usb_bulk_read(dev, 0x81, path, LE32(cmd->cmd.extralen), 10000);
-		if(ret != LE32(cmd->cmd.extralen))
+		if(ret < 0 || (uint32_t) ret != LE32(cmd->cmd.extralen))
 		{
 			fprintf(stderr, "Error reading rename data cmd->extralen %d, ret %d\n", LE32(cmd->cmd.extralen), ret);
 			break;
@@ -1470,7 +1469,6 @@ int handle_rename(libusb_device_handle *dev, struct HostFsRenameCmd *cmd, int cm
 
 		/* Really should check this better ;) */
 		oldpathlen = strlen(path);
-		newpathlen = strlen(path+oldpathlen+1);
 
 		/* If the old path is absolute and the new path is relative then rebase newpath */
 		if((*path == '/') && (*(path+oldpathlen+1) != '/'))
@@ -1540,7 +1538,7 @@ int handle_chdir(libusb_device_handle *dev, struct HostFsChdirCmd *cmd, int cmdl
 		/* TODO: Should check that length is within a valid range */
 
 		ret = euid_usb_bulk_read(dev, 0x81, path, LE32(cmd->cmd.extralen), 10000);
-		if(ret != LE32(cmd->cmd.extralen))
+		if(ret < 0 || (uint32_t) ret != LE32(cmd->cmd.extralen))
 		{
 			fprintf(stderr, "Error reading chdir data cmd->extralen %d, ret %d\n", LE32(cmd->cmd.extralen), ret);
 			break;
@@ -1899,7 +1897,12 @@ int add_drive(int num, const char *dir)
 	/* Make path */
 	if(dir[0] != '/')
 	{
-		snprintf(path, PATH_MAX, "%s/%s", g_rootdir, dir);
+		int pathlen = snprintf(path, PATH_MAX, "%s/%s", g_rootdir, dir);
+		if(pathlen < 0 || pathlen >= PATH_MAX)
+		{
+			printf("Drive path too long for '%s'\n", dir);
+			return 0;
+		}
 	}
 	else
 	{
