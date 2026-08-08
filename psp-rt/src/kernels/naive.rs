@@ -253,6 +253,110 @@ macro_rules! unary_op_kernel {
 }
 
 unary_op_kernel!(unary_logistic, |x: f32| 1.0 / (1.0 + libm::expf(-x)));
+unary_op_kernel!(unary_relu, |x: f32| if x < 0.0 { 0.0 } else { x });
+
+// ─── Quantization ops ──────────────────────────────────────────
+
+/// TFLite QUANTIZE simulated in f32: snap each value onto the int8 grid
+/// `out = (clamp(round(x/s) + z, -128, 127) - z) * s`. `libm::roundf` rounds
+/// half away from zero, matching TfLiteRound.
+pub fn fake_quant(input: &[f32], output: &mut [f32], scale: f32, zero_point: i32) {
+    let inv = 1.0 / scale;
+    let zp = zero_point as f32;
+    for i in 0..input.len() {
+        let mut q = libm::roundf(input[i] * inv) + zp;
+        if q < -128.0 {
+            q = -128.0;
+        }
+        if q > 127.0 {
+            q = 127.0;
+        }
+        output[i] = (q - zp) * scale;
+    }
+}
+
+/// 2D Convolution with int8 weights dequantized on the fly (NHWC, naive).
+///
+/// The integer weight products are accumulated in f32 and scaled once per
+/// output channel: `out = bias + scales[oc] * sum(in * wq)`. Weight
+/// zero-points are 0 (TFLite per-channel int8 spec).
+///
+/// - `input`:  [N, H, W, Ci] (f32, dequantized real values)
+/// - `filter`: [Co, Kh, Kw, Ci] (int8)
+/// - `scales`: [Co]
+pub fn conv2d_q8(
+    input: &[f32],
+    input_shape: [usize; 4],
+    filter: &[i8],
+    filter_shape: [usize; 4],
+    scales: &[f32],
+    bias: Option<&[f32]>,
+    stride: [usize; 2],
+    padding: [usize; 4],
+    output: &mut [f32],
+    output_shape: [usize; 4],
+) {
+    let [n, h, w, ci] = input_shape;
+    let [co, kh, kw, _] = filter_shape;
+    let [_, ho, wo, _] = output_shape;
+    let [sh, sw] = stride;
+    let [pad_top, _pad_bottom, pad_left, _pad_right] = padding;
+
+    for batch in 0..n {
+        for oy in 0..ho {
+            for ox in 0..wo {
+                for oc in 0..co {
+                    let mut sum = 0.0f32;
+                    for ky in 0..kh {
+                        for kx in 0..kw {
+                            let iy_padded = oy * sh + ky;
+                            let ix_padded = ox * sw + kx;
+                            if iy_padded < pad_top || ix_padded < pad_left {
+                                continue;
+                            }
+                            let iy = iy_padded - pad_top;
+                            let ix = ix_padded - pad_left;
+                            if iy >= h || ix >= w {
+                                continue;
+                            }
+                            for ic in 0..ci {
+                                let in_idx = batch * (h * w * ci) + iy * (w * ci) + ix * ci + ic;
+                                let f_idx = oc * (kh * kw * ci) + ky * (kw * ci) + kx * ci + ic;
+                                sum += input[in_idx] * filter[f_idx] as f32;
+                            }
+                        }
+                    }
+                    let out_idx = batch * (ho * wo * co) + oy * (wo * co) + ox * co + oc;
+                    output[out_idx] = bias.map_or(0.0, |b| b[oc]) + sum * scales[oc];
+                }
+            }
+        }
+    }
+}
+
+/// `conv2d_q8` followed by ReLU.
+pub fn conv2d_relu_q8(
+    input: &[f32],
+    input_shape: [usize; 4],
+    filter: &[i8],
+    filter_shape: [usize; 4],
+    scales: &[f32],
+    bias: Option<&[f32]>,
+    stride: [usize; 2],
+    padding: [usize; 4],
+    output: &mut [f32],
+    output_shape: [usize; 4],
+) {
+    conv2d_q8(
+        input, input_shape, filter, filter_shape, scales, bias, stride, padding, output,
+        output_shape,
+    );
+    for v in output.iter_mut() {
+        if *v < 0.0 {
+            *v = 0.0;
+        }
+    }
+}
 
 /// Fully Connected with ReLU (naive)
 ///
@@ -635,6 +739,47 @@ fn bit_reverse(mut x: usize, bits: usize) -> usize {
 ///
 /// `output` has N floats: N/2 complex pairs as [re0, im0, re1, im1, ...].
 /// Complex pair k (in bit-reversed order) = (input[2*br(k)], input[2*br(k)+1]).
+/// Batched real FFT over `frames` contiguous length-`n` frames.
+///
+/// `input` is `[frames, n]`, `output` is `[frames, n/2 + 1]` (real parts of
+/// the frequency bins, matching TFLite RFFT2D + CAST(complex→f32)). `scratch`
+/// holds one frame's packed complex data (`n` floats). `stage_twiddles` is
+/// the per-stage twiddle tables concatenated in stage order — stage `s` has
+/// `2^s` complex entries at float offset `(2^s - 1) * 2`.
+pub fn rfft_batch(
+    input: &[f32],
+    stage_twiddles: &[f32],
+    unpack_twiddles: &[f32],
+    scratch: &mut [f32],
+    output: &mut [f32],
+    n: usize,
+    frames: usize,
+) {
+    let n_complex = n / 2;
+    let out_bins = n_complex + 1;
+    let num_stages = n_complex.trailing_zeros() as usize;
+    for f in 0..frames {
+        let data = &mut scratch[..n];
+        rfft_pack(&input[f * n..(f + 1) * n], data, n);
+        for stage in 0..num_stages {
+            let half_size = 1usize << stage;
+            let tw_off = (half_size - 1) * 2;
+            fft_butterfly_stage(
+                data,
+                &stage_twiddles[tw_off..tw_off + half_size * 2],
+                n_complex,
+                half_size,
+            );
+        }
+        rfft_unpack(
+            data,
+            unpack_twiddles,
+            &mut output[f * out_bins..(f + 1) * out_bins],
+            n,
+        );
+    }
+}
+
 pub fn rfft_pack(input: &[f32], output: &mut [f32], n: usize) {
     let n_complex = n / 2;
     let bits = {

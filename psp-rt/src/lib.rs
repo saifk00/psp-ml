@@ -10,6 +10,7 @@
 #![cfg_attr(target_os = "psp", feature(asm_experimental_arch))]
 
 pub mod kernels;
+pub mod mem;
 pub mod print;
 pub mod profiler;
 
@@ -160,10 +161,16 @@ macro_rules! __module_impl {
                         unsafe { init_cwd(argv as *mut u8) };
                     }
 
-                    match ::psp::catch_unwind(super::psp_main) {
+                    let status = match ::psp::catch_unwind(super::psp_main) {
                         Ok(()) => PSP_RT_NO_RESIDENT,
                         Err(_) => PSP_RT_PANIC_STATUS,
-                    }
+                    };
+                    // Partition blocks are not reclaimed on module unload
+                    // under psplink; drain the tracked-allocation registry on
+                    // both the clean and the panic path so repeated `ld`s
+                    // can't exhaust the pool.
+                    $crate::mem::free_all();
+                    status
                 }
 
                 unsafe {

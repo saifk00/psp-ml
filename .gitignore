@@ -6,7 +6,7 @@ scrap
 .DS_Store
 *.bin
 .vscode
-models/BirdNET_v2.4_tflite/
+models/
 benchmarks.json
 meminfo.txt
 birdnet.txt
@@ -14,6 +14,13 @@ results.txt
 out.log
 
 examples/birdnet/results.txt
+examples/birdnet/golden.json
+
+# forward_debug tensor taps (~97 MB per run; regenerate with BIRDNET_TAP=1)
+examples/birdnet/device/tap/
+
+# roofline benchmark output
+examples/roofline/**/roofline.json
 
 # kernel-plugin build artifacts
 kernel-plugin/*.o

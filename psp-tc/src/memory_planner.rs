@@ -1,10 +1,79 @@
 //! Memory-planning analyses for the PSP IR.
 //!
-//! Currently exposes weight-budget tallying for hot-swap planning. Future
-//! additions: slot allocation, eviction policy, budget-based swap-point
-//! detection.
+//! Exposes weight-budget tallying (`swap_analysis`) and budget-based weight
+//! residency planning (`streamed_weights`): when the total constant footprint
+//! exceeds the device budget, the largest single-use FullyConnected weights
+//! are marked for runtime streaming from `host0:/weights.bin` instead of
+//! being kept resident.
 
+use std::collections::{HashMap, HashSet};
+
+use crate::ir::graph::{TensorId, TensorKind};
+use crate::ir::psp::PspOp;
 use crate::ir::PspModel;
+
+/// Resident-weight budget for the PSP: the measured max contiguous partition-2
+/// allocation is ~48.4 MiB, which must also hold the arena (~10 MiB), the PRX
+/// image, and misc statics. 24 MiB of resident weights leaves headroom.
+pub const DEFAULT_RESIDENT_BUDGET: usize = 24 * 1024 * 1024;
+
+/// Pick constants to stream from disk at runtime rather than keep resident.
+///
+/// Heuristic: only FullyConnected weight tensors used by exactly one op are
+/// candidates (their access pattern is a single sequential pass per forward,
+/// so chunked reads pipeline cleanly with the matmul — measured hostfs
+/// throughput is ~21.5 MB/s at ≥64 KiB chunks). Largest candidates are
+/// streamed first until the resident total fits `budget`.
+pub fn streamed_weights(model: &PspModel, budget: usize) -> HashSet<TensorId> {
+    let mut const_total = 0usize;
+    let mut use_count: HashMap<TensorId, usize> = HashMap::new();
+    let mut fc_weights: HashSet<TensorId> = HashSet::new();
+
+    let mut counted: HashSet<TensorId> = HashSet::new();
+    for op in &model.graph.ops {
+        for tid in op.inputs() {
+            if matches!(model.graph.tensor(tid).kind, TensorKind::Constant { .. }) {
+                *use_count.entry(tid).or_insert(0) += 1;
+                if counted.insert(tid) {
+                    const_total += model.graph.tensor(tid).size_bytes();
+                }
+            }
+        }
+        if let PspOp::FullyConnected { weights, .. } = op {
+            fc_weights.insert(*weights);
+        }
+    }
+
+    let mut streamed = HashSet::new();
+    if const_total <= budget {
+        return streamed;
+    }
+
+    let mut candidates: Vec<(usize, TensorId)> = fc_weights
+        .iter()
+        .filter(|tid| use_count.get(tid) == Some(&1))
+        .map(|&tid| (model.graph.tensor(tid).size_bytes(), tid))
+        .collect();
+    candidates.sort_unstable_by(|a, b| b.cmp(a));
+
+    let mut resident = const_total;
+    for (size, tid) in candidates {
+        if resident <= budget {
+            break;
+        }
+        streamed.insert(tid);
+        resident -= size;
+    }
+    if resident > budget {
+        eprintln!(
+            "memory_planner: WARNING resident weights {:.1} MiB still exceed budget {:.1} MiB \
+             after streaming all candidates",
+            resident as f64 / 1048576.0,
+            budget as f64 / 1048576.0
+        );
+    }
+    streamed
+}
 
 /// Walks the graph in topological order and returns a vector parallel-indexed
 /// to `model.graph.ops`, where entry `i` is the cumulative weight bytes
@@ -83,6 +152,7 @@ mod tests {
             weights: conv_w,
             bias: None,
             output: conv_out,
+            weight_scales: None,
             params: Conv2dParams {
                 kernel_h: 1,
                 kernel_w: 1,
@@ -121,6 +191,7 @@ mod tests {
             weights: conv_w,
             bias: None,
             output: conv_out,
+            weight_scales: None,
             params: Conv2dParams {
                 kernel_h: 1,
                 kernel_w: 1,

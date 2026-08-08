@@ -17,13 +17,14 @@
 use super::const_fold::{eval_strided_slice, store_i32, store_i32_shaped};
 use super::graph::DType;
 use super::psp::{PspModel, PspOp, ReduceOp};
+use crate::parse::tflite::lowering::compute_same_padding;
 
 pub fn infer(model: &mut PspModel) {
     let ops = model.graph.ops.clone();
     let mut shape_changes = 0usize;
     let mut i32_evals = 0usize;
 
-    for op in &ops {
+    for (op_idx, op) in ops.iter().enumerate() {
         match op {
             // ══════════════════════════════════════════════════════════
             // I32 shape-computation ops: evaluate and store as constants
@@ -383,6 +384,8 @@ pub fn infer(model: &mut PspModel) {
             // Identity shape
             PspOp::UnaryElementWise { input, output, .. }
             | PspOp::Softmax { input, output }
+            | PspOp::FakeQuant { input, output }
+            | PspOp::Dequantize { input, output }
             | PspOp::ReverseV2 { input, output, .. } => {
                 let shape = model.graph.tensor(*input).shape.clone();
                 shape_changes += set_shape(model, *output, shape);
@@ -404,18 +407,30 @@ pub fn infer(model: &mut PspModel) {
 
             // Conv2d / DepthwiseConv2d / Pool2d
             //
-            // TFLite's converter correctly infers shapes for these ops, and
-            // lowering bakes SAME padding into explicit values using TFLite's
-            // (potentially stale) input shapes. If upstream corrections changed
-            // the input shape, our conv_dim with the old padding can produce 0.
-            // In that case, keep TFLite's output shape — it was computed with
-            // correct padding.
+            // Lowering bakes SAME padding into explicit values using TFLite's
+            // static shapes — which for models with dynamic framing (BirdNET's
+            // SHAPE/RANGE/GATHER front-end) describe a single-frame trace, not
+            // the real runtime shapes. Once upstream corrections fix the input
+            // shape, any nonzero padding is re-derived as SAME padding for the
+            // corrected shape; all-zero padding means VALID and stays.
             PspOp::Conv2d { input, weights, output, params, .. } => {
-                let in_s = &model.graph.tensor(*input).shape;
-                let w_s = &model.graph.tensor(*weights).shape;
+                let in_s = model.graph.tensor(*input).shape.clone();
+                let w_s = model.graph.tensor(*weights).shape.clone();
                 if in_s.len() >= 4 && w_s.len() >= 4 {
-                    let out_h = conv_dim(in_s[1], params.kernel_h, params.stride_h, params.pad_top, params.pad_bottom);
-                    let out_w = conv_dim(in_s[2], params.kernel_w, params.stride_w, params.pad_left, params.pad_right);
+                    let mut p = params.clone();
+                    let was_same =
+                        p.pad_top + p.pad_bottom + p.pad_left + p.pad_right > 0;
+                    if was_same {
+                        let (pt, pb, pl, pr) = compute_same_padding(
+                            in_s[1], in_s[2], p.kernel_h, p.kernel_w, p.stride_h, p.stride_w,
+                        );
+                        (p.pad_top, p.pad_bottom, p.pad_left, p.pad_right) = (pt, pb, pl, pr);
+                        if let PspOp::Conv2d { params, .. } = &mut model.graph.ops[op_idx] {
+                            *params = p.clone();
+                        }
+                    }
+                    let out_h = conv_dim(in_s[1], p.kernel_h, p.stride_h, p.pad_top, p.pad_bottom);
+                    let out_w = conv_dim(in_s[2], p.kernel_w, p.stride_w, p.pad_left, p.pad_right);
                     if out_h > 0 && out_w > 0 {
                         let shape = vec![in_s[0], out_h, out_w, w_s[0]];
                         shape_changes += set_shape(model, *output, shape);
@@ -425,10 +440,22 @@ pub fn infer(model: &mut PspModel) {
                 }
             }
             PspOp::DepthwiseConv2d { input, output, params, .. } => {
-                let in_s = &model.graph.tensor(*input).shape;
+                let in_s = model.graph.tensor(*input).shape.clone();
                 if in_s.len() >= 4 {
-                    let out_h = conv_dim(in_s[1], params.kernel_h, params.stride_h, params.pad_top, params.pad_bottom);
-                    let out_w = conv_dim(in_s[2], params.kernel_w, params.stride_w, params.pad_left, params.pad_right);
+                    let mut p = params.clone();
+                    let was_same =
+                        p.pad_top + p.pad_bottom + p.pad_left + p.pad_right > 0;
+                    if was_same {
+                        let (pt, pb, pl, pr) = compute_same_padding(
+                            in_s[1], in_s[2], p.kernel_h, p.kernel_w, p.stride_h, p.stride_w,
+                        );
+                        (p.pad_top, p.pad_bottom, p.pad_left, p.pad_right) = (pt, pb, pl, pr);
+                        if let PspOp::DepthwiseConv2d { params, .. } = &mut model.graph.ops[op_idx] {
+                            *params = p.clone();
+                        }
+                    }
+                    let out_h = conv_dim(in_s[1], p.kernel_h, p.stride_h, p.pad_top, p.pad_bottom);
+                    let out_w = conv_dim(in_s[2], p.kernel_w, p.stride_w, p.pad_left, p.pad_right);
                     if out_h > 0 && out_w > 0 {
                         let shape = vec![in_s[0], out_h, out_w, in_s[3]];
                         shape_changes += set_shape(model, *output, shape);
@@ -438,10 +465,21 @@ pub fn infer(model: &mut PspModel) {
                 }
             }
             PspOp::Pool2d { input, output, filter, stride, padding, .. } => {
-                let in_s = &model.graph.tensor(*input).shape;
+                let in_s = model.graph.tensor(*input).shape.clone();
                 if in_s.len() >= 4 {
-                    let out_h = conv_dim(in_s[1], filter[0], stride[0], padding[0], padding[1]);
-                    let out_w = conv_dim(in_s[2], filter[1], stride[1], padding[2], padding[3]);
+                    let mut pad = *padding;
+                    let was_same = pad.iter().sum::<usize>() > 0;
+                    if was_same {
+                        let (pt, pb, pl, pr) = compute_same_padding(
+                            in_s[1], in_s[2], filter[0], filter[1], stride[0], stride[1],
+                        );
+                        pad = [pt, pb, pl, pr];
+                        if let PspOp::Pool2d { padding, .. } = &mut model.graph.ops[op_idx] {
+                            *padding = pad;
+                        }
+                    }
+                    let out_h = conv_dim(in_s[1], filter[0], stride[0], pad[0], pad[1]);
+                    let out_w = conv_dim(in_s[2], filter[1], stride[1], pad[2], pad[3]);
                     if out_h > 0 && out_w > 0 {
                         let shape = vec![in_s[0], out_h, out_w, in_s[3]];
                         shape_changes += set_shape(model, *output, shape);
@@ -488,16 +526,25 @@ pub fn infer(model: &mut PspModel) {
             // We must preserve the TFLite output RANK while scaling the batch
             // dims for corrected upstream shapes.
             PspOp::Rfft { input, output, fft_length } => {
-                let in_s = &model.graph.tensor(*input).shape;
+                let in_s = model.graph.tensor(*input).shape.clone();
                 let batch: usize = in_s[..in_s.len() - 1].iter().product();
                 let freq_bins = fft_length / 2 + 1;
                 let expected_elems = batch * freq_bins;
                 let out_s = &model.graph.tensor(*output).shape;
                 let out_elems: usize = out_s.iter().product();
                 if out_elems != expected_elems {
-                    // Preserve TFLite's output rank by expanding a singleton dim
-                    // to absorb the corrected batch size.
-                    if let Some(shape) = rfft_output_shape(out_s, batch, freq_bins) {
+                    // The FFT preserves the input's batch dims in order and
+                    // replaces the last dim with freq bins — e.g. [1,511,2048]
+                    // → [1,511,1025], matching TFLite's runtime shape. (An
+                    // earlier heuristic expanded the *first* singleton of the
+                    // static shape instead, yielding [511,1,1025] — which put
+                    // the frame count in the batch dim and silently turned the
+                    // whole downstream CNN into a per-frame model.)
+                    if in_s.len() == out_s.len() {
+                        let mut shape = in_s[..in_s.len() - 1].to_vec();
+                        shape.push(freq_bins);
+                        shape_changes += set_shape(model, *output, shape);
+                    } else if let Some(shape) = rfft_output_shape(out_s, batch, freq_bins) {
                         shape_changes += set_shape(model, *output, shape);
                     } else {
                         // Fallback: compute from input shape (changes rank)

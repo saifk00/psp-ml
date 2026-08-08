@@ -1,0 +1,10 @@
+[package]
+name = "roofline-host"
+edition = "2021"
+
+[[bin]]
+name = "roofline-host"
+path = "src/main.rs"
+
+[dependencies]
+psplink-connection = { path = "../../../psplink-connection" }

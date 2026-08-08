@@ -10,7 +10,7 @@ use super::{
 };
 
 type Buffers<'a> = flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<Buffer<'a>>>;
-use crate::ir::graph::{DType, Graph, Tensor, TensorId, TensorKind};
+use crate::ir::graph::{DType, Graph, Quant, Tensor, TensorId, TensorKind};
 use crate::ir::psp::{
     Activation, BinaryOp, Conv2dParams, FullyConnectedParams, PoolType, PspOp, ReduceOp, UnaryOp,
 };
@@ -63,12 +63,30 @@ pub fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
             TensorKind::Intermediate
         };
 
+        // Quantization parameters (scale/zero_point, possibly per-channel)
+        let quant = tensor.quantization().and_then(|q| {
+            let scale: Vec<f32> = q.scale()?.iter().collect();
+            if scale.is_empty() {
+                return None;
+            }
+            let zero_point: Vec<i64> = q
+                .zero_point()
+                .map(|z| z.iter().collect())
+                .unwrap_or_default();
+            Some(Quant {
+                scale,
+                zero_point,
+                axis: q.quantized_dimension(),
+            })
+        });
+
         let id = graph_tensors.len();
         graph_tensors.push(Tensor {
             id,
             shape,
             dtype,
             kind,
+            quant,
         });
         tensor_map.push(id);
     }
@@ -103,8 +121,24 @@ pub fn lower(model_data: &[u8]) -> Result<Graph<PspOp>, String> {
             | BuiltinOperator::FLOOR_DIV
             | BuiltinOperator::MAXIMUM
             | BuiltinOperator::POW => Some(lower_elementwise(&op, &tensor_map, builtin_code)?),
-            BuiltinOperator::LOGISTIC => {
+            BuiltinOperator::LOGISTIC | BuiltinOperator::RELU => {
                 Some(lower_unary_elementwise(&op, &tensor_map, builtin_code)?)
+            }
+            BuiltinOperator::QUANTIZE => {
+                let inputs = op.inputs().ok_or("QUANTIZE: no inputs")?;
+                let outputs = op.outputs().ok_or("QUANTIZE: no outputs")?;
+                Some(PspOp::FakeQuant {
+                    input: tensor_map[inputs.get(0) as usize],
+                    output: tensor_map[outputs.get(0) as usize],
+                })
+            }
+            BuiltinOperator::DEQUANTIZE => {
+                let inputs = op.inputs().ok_or("DEQUANTIZE: no inputs")?;
+                let outputs = op.outputs().ok_or("DEQUANTIZE: no outputs")?;
+                Some(PspOp::Dequantize {
+                    input: tensor_map[inputs.get(0) as usize],
+                    output: tensor_map[outputs.get(0) as usize],
+                })
             }
             BuiltinOperator::SOFTMAX => Some(lower_softmax(&op, &tensor_map)?),
             BuiltinOperator::SHAPE => Some(lower_shape(&op, &tensor_map)?),
@@ -248,6 +282,7 @@ fn lower_conv2d(
         weights,
         bias,
         output,
+        weight_scales: None,
         params: Conv2dParams {
             kernel_h,
             kernel_w,
@@ -556,6 +591,7 @@ fn lower_unary_elementwise(
 
     let unary_op = match builtin_code {
         BuiltinOperator::LOGISTIC => UnaryOp::Logistic,
+        BuiltinOperator::RELU => UnaryOp::Relu,
         _ => unreachable!(),
     };
 
@@ -810,7 +846,7 @@ fn convert_activation(a: ActivationFunctionType) -> Option<Activation> {
 /// Compute SAME padding for convolution.
 ///
 /// Returns (pad_top, pad_bottom, pad_left, pad_right)
-fn compute_same_padding(
+pub(crate) fn compute_same_padding(
     input_h: usize,
     input_w: usize,
     kernel_h: usize,

@@ -1,6 +1,6 @@
 mod compiler;
 mod info;
-mod lowering;
+pub mod lowering;
 mod schema_generated;
 
 pub use compiler::to_psp_ir;

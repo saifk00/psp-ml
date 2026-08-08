@@ -102,6 +102,8 @@ fn is_batch_independent(model: &PspModel, op: &PspOp) -> bool {
         | PspOp::Pool2d { .. }
         | PspOp::ElementWise { .. }
         | PspOp::UnaryElementWise { .. }
+        | PspOp::FakeQuant { .. }
+        | PspOp::Dequantize { .. }
         | PspOp::FullyConnected { .. }
         | PspOp::Softmax { .. }
         | PspOp::Cast { .. }

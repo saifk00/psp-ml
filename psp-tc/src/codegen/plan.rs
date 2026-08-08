@@ -7,7 +7,7 @@
 
 use std::collections::HashSet;
 
-use crate::ir::graph::TensorId;
+use crate::ir::graph::{DType, TensorId};
 use crate::ir::psp::{BinaryOp, PoolType, ReduceOp, UnaryOp};
 
 use super::arena::ArenaLayout;
@@ -74,10 +74,20 @@ pub struct FrameBoundaryTensor {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TensorAlloc {
+    /// A weight-blob constant. Offsets/lengths are in 4-byte units
+    /// regardless of dtype (int8 constants must be a multiple of 4 bytes);
+    /// `dtype` controls whether the rendered view is `&[f32]` or `&[i8]`.
+    ///
+    /// `streamed` constants are packed at the *end* of `weights.bin`, are
+    /// never loaded by `init()`, and are read chunkwise from the file when
+    /// their op executes; for them `float_offset` is a file offset, not a
+    /// resident-memory offset.
     Constant {
         id: TensorId,
         float_offset: usize,
         float_len: usize,
+        dtype: DType,
+        streamed: bool,
     },
     Intermediate {
         id: TensorId,
@@ -110,6 +120,14 @@ pub enum CopyStrategy {
         num_rows: usize,
         src_stride: usize,
         dst_stride: usize,
+    },
+    /// Row-padded copy from an int8 source, dequantizing each row with its
+    /// per-output-channel scale: `dst[r][c] = src[r][c] as f32 * scales[r]`.
+    RowPaddedDequantI8 {
+        num_rows: usize,
+        src_stride: usize,
+        dst_stride: usize,
+        scales: TensorId,
     },
 }
 
@@ -147,6 +165,9 @@ pub enum KernelCall {
         padding: [usize; 4],
         output: Tensor4d,
         has_relu: bool,
+        /// When set, `filter` is int8 and the kernel dequantizes with these
+        /// per-output-channel scales (`conv2d_q8` / `conv2d_relu_q8`).
+        weight_scales: Option<TensorId>,
     },
     Im2colPadded {
         input: Tensor4d,
@@ -195,6 +216,22 @@ pub enum KernelCall {
         has_relu: bool,
         batch_size: usize,
     },
+    /// FullyConnected whose weight matrix is streamed from the weight file in
+    /// row chunks (through a scratch buffer) instead of being memory-resident.
+    /// Batch-1 only.
+    FullyConnectedStreamed {
+        input: TensorId,
+        in_features: usize,
+        /// The streamed weight constant (render uses its FILE_OFFSET const).
+        weights: TensorId,
+        bias: Option<TensorId>,
+        output: TensorId,
+        out_features: usize,
+        has_relu: bool,
+        /// Scratch sized to `chunk_rows * in_features` floats.
+        scratch: ScratchId,
+        chunk_rows: usize,
+    },
     ElementWise {
         op: BinaryOp,
         input_a: TensorId,
@@ -206,6 +243,14 @@ pub enum KernelCall {
         op: UnaryOp,
         input: TensorId,
         output: TensorId,
+    },
+    /// Snap f32 values to an int8 quantization grid (TFLite QUANTIZE
+    /// simulated in f32).
+    FakeQuant {
+        input: TensorId,
+        output: TensorId,
+        scale: f32,
+        zero_point: i32,
     },
     Reduce {
         op: ReduceOp,
@@ -232,6 +277,18 @@ pub enum KernelCall {
         output: TensorId,
         input_shape: Vec<usize>,
         axis: usize,
+    },
+
+    /// Batched real FFT: `frames` contiguous length-`n` frames in, real
+    /// frequency-bin parts out. Twiddles precomputed as blob constants.
+    RfftBatch {
+        input: TensorId,
+        stage_twiddles: TensorId,
+        unpack_twiddles: TensorId,
+        output: TensorId,
+        scratch: ScratchId,
+        n: usize,
+        frames: usize,
     },
 
     /// Pack N real values into N/2 interleaved complex pairs in bit-reversed order.

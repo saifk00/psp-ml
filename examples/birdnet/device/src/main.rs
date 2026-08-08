@@ -17,7 +17,7 @@ mod generated {
 
 const INPUT_SAMPLES: usize = 144000;
 const OUTPUT_CLASSES: usize = 6522;
-const OUTPUT_FRAMES: usize = 511;
+const TOP_K: usize = 5;
 
 // Audio pre-converted to f32 by build.rs (avoids 562KB stack allocation)
 #[repr(C, align(16))]
@@ -29,13 +29,36 @@ fn audio_input() -> &'static [f32; INPUT_SAMPLES] {
     unsafe { &*(AUDIO_F32_BYTES.0.as_ptr() as *const [f32; INPUT_SAMPLES]) }
 }
 
+// BirdNET species labels, one per line, index-aligned with the output vector.
+static LABELS: &str = include_str!("../../../../models/birdnet/labels/en_us.txt");
+
+fn label(index: usize) -> &'static str {
+    LABELS.lines().nth(index).unwrap_or("?")
+}
+
+/// Indices of the k largest scores, by repeated argmax (k * 6522 is cheap).
+fn top_k(output: &[f32; OUTPUT_CLASSES]) -> [usize; TOP_K] {
+    let mut picked = [usize::MAX; TOP_K];
+    for slot in 0..TOP_K {
+        let mut best = usize::MAX;
+        let mut best_v = f32::NEG_INFINITY;
+        for (i, &v) in output.iter().enumerate() {
+            if v > best_v && !picked[..slot].contains(&i) {
+                best = i;
+                best_v = v;
+            }
+        }
+        picked[slot] = best;
+    }
+    picked
+}
+
 // ============================================================================
 // Benchmark result collection (shared between PSP and local)
 // ============================================================================
 
 struct BenchResult {
     total_us: u64,
-    per_image_us: u64,
     op_ticks: [u64; generated::NUM_OPS],
 }
 
@@ -57,11 +80,7 @@ fn run_benchmark(
 
     let total_us = (elapsed_ticks * 1_000_000) / tick_res;
 
-    BenchResult {
-        total_us,
-        per_image_us: total_us,
-        op_ticks,
-    }
+    BenchResult { total_us, op_ticks }
 }
 
 // ============================================================================
@@ -130,16 +149,12 @@ fn format_json(result: &BenchResult, tick_res: u64) -> JsonBuf {
     let mut j = JsonBuf::new();
     j.push_str("{\n");
 
-    j.push_str("  \"model\": \"birdnet_v2.4\",\n");
+    j.push_str("  \"model\": \"birdnet_v2.4_int8\",\n");
 
     j.push_str("  \"inference\": {\n");
     j.push_str("    \"total_us\": ");
     j.push_u64(result.total_us);
-    j.push_str(",\n");
-    j.push_str("    \"per_inference_us\": ");
-    j.push_u64(result.per_image_us);
-    j.push_str("\n");
-    j.push_str("  },\n");
+    j.push_str("\n  },\n");
 
     j.push_str("  \"ops\": [\n");
     for (idx, name) in generated::OP_NAMES.iter().enumerate() {
@@ -162,26 +177,11 @@ fn format_json(result: &BenchResult, tick_res: u64) -> JsonBuf {
     j
 }
 
-// ============================================================================
-// Results writer — dump raw output scores as text
-// ============================================================================
-
-/// Write output scores as text, one per line. Uses a static buffer since
-/// 6522 floats × ~15 chars ≈ 100KB.
-fn write_results_to_buf_avg(output: &[f32; OUTPUT_CLASSES], buf: &mut [u8]) -> usize {
-    write_results_to_buf_slice(output, buf)
-}
-
+/// Format raw output scores as text, one per line, 6 decimal places.
 fn write_results_to_buf(output: &[f32; OUTPUT_CLASSES], buf: &mut [u8]) -> usize {
-    // Only used by PSP path — writes first frame for debugging
-    write_results_to_buf_slice(&output[..OUTPUT_CLASSES], buf)
-}
-
-fn write_results_to_buf_slice(output: &[f32], buf: &mut [u8]) -> usize {
     let mut pos = 0;
 
     for &val in output.iter() {
-        // Format float with 6 decimal places using integer math
         let negative = val < 0.0;
         let abs_val = if negative { -val } else { val };
         let integer_part = abs_val as u64;
@@ -206,7 +206,6 @@ fn write_results_to_buf_slice(output: &[f32], buf: &mut [u8]) -> usize {
                 tmp /= 10;
                 pos += 1;
             }
-            // Reverse integer digits
             let mut i = start;
             let mut j = pos - 1;
             while i < j {
@@ -216,7 +215,6 @@ fn write_results_to_buf_slice(output: &[f32], buf: &mut [u8]) -> usize {
             }
         }
 
-        // Decimal point
         if pos < buf.len() {
             buf[pos] = b'.';
             pos += 1;
@@ -231,7 +229,6 @@ fn write_results_to_buf_slice(output: &[f32], buf: &mut [u8]) -> usize {
                 pos += 1;
             }
         }
-        // Fill from right to left
         let mut fi = pos - 1;
         while frac > 0 && fi >= frac_start {
             buf[fi] = b'0' + (frac % 10) as u8;
@@ -242,7 +239,6 @@ fn write_results_to_buf_slice(output: &[f32], buf: &mut [u8]) -> usize {
             fi -= 1;
         }
 
-        // Newline
         if pos < buf.len() {
             buf[pos] = b'\n';
             pos += 1;
@@ -258,6 +254,15 @@ fn write_results_to_buf_slice(output: &[f32], buf: &mut [u8]) -> usize {
 
 #[cfg(not(feature = "local"))]
 fn get_tick() -> u64 {
+    // forward_timed calls this between ops; use it as a progress heartbeat so
+    // the host's per-event timeout never starves during a long inference.
+    static mut CALLS: u32 = 0;
+    unsafe {
+        CALLS += 1;
+        if CALLS % 64 == 0 {
+            psp_rt::dprint!(".");
+        }
+    }
     let mut tick = 0u64;
     unsafe { sceRtcGetCurrentTick(&mut tick) };
     tick
@@ -286,31 +291,38 @@ fn write_file(path: &[u8], data: &[u8]) {
 fn app_main() {
     psp::enable_home_button();
 
+    // Run at full clock: psplink boots at 222/111 MHz (measured by
+    // examples/roofline; 333/166 is a 1.5x speedup).
+    unsafe { psp::sys::scePowerSetClockFrequency(333, 333, 166) };
+
+    psp_rt::dprintln!("birdnet: started, loading weights...");
     generated::init();
 
-    psp_rt::dprintln!("Running BirdNET...");
+    psp_rt::dprintln!("Running BirdNET (int8)...");
 
     let tick_res = unsafe { sceRtcGetTickResolution() } as u64;
     static mut OUTPUT_BUF: [f32; OUTPUT_CLASSES] = [0.0f32; OUTPUT_CLASSES];
-    let output = unsafe { &mut OUTPUT_BUF };
+    let output = unsafe { &mut *core::ptr::addr_of_mut!(OUTPUT_BUF) };
     let result = run_benchmark(get_tick, tick_res, output);
 
     psp_rt::dprintln!("");
-    psp_rt::dprintln!("Results:");
-    psp_rt::dprintln!("  Total time: {} ms", result.total_us / 1000);
+    psp_rt::dprintln!("Total time: {} ms", result.total_us / 1000);
     psp_rt::dprintln!("");
-
-    psp_rt::dprintln!("Per-op breakdown:");
-    for (idx, name) in generated::OP_NAMES.iter().enumerate() {
-        let op_us = (result.op_ticks[idx] * 1_000_000) / tick_res;
-        psp_rt::dprintln!("  [{}] {}: {} us", idx, name, op_us);
+    psp_rt::dprintln!("Top-{} species:", TOP_K);
+    for &i in top_k(output).iter() {
+        psp_rt::dprintln!("  [{}] {} raw={}", i, label(i), output[i]);
     }
 
-    // Write benchmarks.json
+    // Raw scores for host-side comparison against the Python golden run.
+    static mut RESULT_BUF: [u8; 131072] = [0u8; 131072];
+    let result_buf = unsafe { &mut *core::ptr::addr_of_mut!(RESULT_BUF) };
+    let len = write_results_to_buf(output, result_buf);
+    write_file(b"host0:/results.txt\0", &result_buf[..len]);
+
     let json = format_json(&result, tick_res);
     write_file(b"host0:/benchmarks.json\0", json.as_bytes());
     psp_rt::dprintln!("");
-    psp_rt::dprintln!("Wrote benchmarks.json");
+    psp_rt::dprintln!("Wrote results.txt and benchmarks.json");
 }
 
 // ============================================================================
@@ -330,56 +342,53 @@ fn main() {
     EPOCH.set(std::time::Instant::now()).unwrap();
     let tick_res: u64 = 1_000_000_000;
 
-    println!("BirdNET Inference Benchmark");
-    println!("===========================");
-    println!();
+    println!("BirdNET Inference (local, int8-as-f32)");
+    println!("======================================");
 
     generated::init();
 
-    println!("Running inference...");
-    let mut output = vec![0.0f32; OUTPUT_TOTAL];
-    let output_arr: &mut [f32; OUTPUT_TOTAL] = output.as_mut_slice().try_into().unwrap();
-    let result = run_benchmark(local_get_tick, tick_res, output_arr);
-
-    println!();
-    println!("Results:");
-    println!("  Total time: {} ms", result.total_us / 1000);
-
-    println!();
-    println!("Per-op breakdown:");
-    for (idx, name) in generated::OP_NAMES.iter().enumerate() {
-        let op_us = (result.op_ticks[idx] * 1_000_000) / tick_res;
-        let pct = if result.total_us > 0 {
-            (op_us * 100) / result.total_us
-        } else {
-            0
-        };
-        println!("  [{idx}] {name}: {op_us} us ({pct}%)");
+    // Debug tap mode: dump every op's output tensor to tap/t<ID>.bin for
+    // layer-by-layer comparison against a TFLite reference run.
+    if std::env::var("BIRDNET_TAP").is_ok() {
+        let tap_dir = format!("{}/tap", env!("CARGO_MANIFEST_DIR"));
+        std::fs::create_dir_all(&tap_dir).unwrap();
+        let mut output = Box::new([0.0f32; OUTPUT_CLASSES]);
+        let mut manifest = String::new();
+        generated::forward_debug(
+            audio_input(),
+            &mut output,
+            &mut |op_idx, tensor_id, values| {
+                let bytes: Vec<u8> = values.iter().flat_map(|v| v.to_le_bytes()).collect();
+                std::fs::write(format!("{tap_dir}/t{tensor_id}.bin"), bytes).unwrap();
+                manifest.push_str(&format!("{op_idx} {tensor_id} {}\n", values.len()));
+            },
+        );
+        std::fs::write(format!("{tap_dir}/manifest.txt"), manifest).unwrap();
+        println!("Wrote taps to {tap_dir}");
+        return;
     }
 
-    // Write benchmarks.json
-    let json = format_json(&result, tick_res);
+    let mut output = Box::new([0.0f32; OUTPUT_CLASSES]);
+    let result = run_benchmark(local_get_tick, tick_res, &mut output);
+
+    println!();
+    println!("Total time: {} ms", result.total_us / 1000);
+    println!();
+    println!("Top-{TOP_K} species:");
+    for &i in top_k(&output).iter() {
+        println!("  [{i:4}] raw={:9.4}  {}", output[i], label(i));
+    }
+
     let out_dir = env!("CARGO_MANIFEST_DIR");
+
+    let mut result_buf = vec![0u8; 131072];
+    let len = write_results_to_buf(&output, &mut result_buf);
+    let results_path = format!("{}/results.txt", out_dir);
+    std::fs::write(&results_path, &result_buf[..len]).expect("failed to write results.txt");
+
+    let json = format_json(&result, tick_res);
     let json_path = format!("{}/benchmarks.json", out_dir);
     std::fs::write(&json_path, json.as_bytes()).expect("failed to write benchmarks.json");
     println!();
-    println!("Wrote {}", json_path);
-
-    // Aggregate per-frame predictions by averaging across frames
-    let mut avg_output = [0.0f32; OUTPUT_CLASSES];
-    for frame in 0..OUTPUT_FRAMES {
-        for c in 0..OUTPUT_CLASSES {
-            avg_output[c] += output[frame * OUTPUT_CLASSES + c];
-        }
-    }
-    for c in 0..OUTPUT_CLASSES {
-        avg_output[c] /= OUTPUT_FRAMES as f32;
-    }
-
-    // Write averaged results.txt
-    let mut result_buf = vec![0u8; 131072];
-    let len = write_results_to_buf_avg(&avg_output, &mut result_buf);
-    let results_path = format!("{}/results.txt", out_dir);
-    std::fs::write(&results_path, &result_buf[..len]).expect("failed to write results.txt");
-    println!("Wrote {}", results_path);
+    println!("Wrote {results_path} and {json_path}");
 }

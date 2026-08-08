@@ -8,6 +8,30 @@ pub struct Tensor {
     pub shape: Vec<usize>,
     pub dtype: DType,
     pub kind: TensorKind,
+    /// TFLite quantization parameters, if the tensor is quantized.
+    /// `scale.len() == 1` for per-tensor quantization; per-channel weights
+    /// carry one scale per output channel (`quantized_dimension` axis).
+    pub quant: Option<Quant>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Quant {
+    pub scale: Vec<f32>,
+    pub zero_point: Vec<i64>,
+    pub axis: i32,
+}
+
+impl Quant {
+    /// Per-tensor scale/zero-point; errors if per-channel.
+    pub fn scalar(&self) -> Result<(f32, i32), String> {
+        if self.scale.len() != 1 {
+            return Err(format!(
+                "expected per-tensor quantization, got {} scales",
+                self.scale.len()
+            ));
+        }
+        Ok((self.scale[0], *self.zero_point.first().unwrap_or(&0) as i32))
+    }
 }
 
 impl Tensor {
@@ -80,6 +104,7 @@ impl<Op> Graph<Op> {
             shape,
             dtype,
             kind,
+            quant: None,
         });
         id
     }

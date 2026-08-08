@@ -90,12 +90,22 @@ pub fn extract_tensor_refs(kernel: &KernelCall) -> Vec<TensorRef> {
             if let Some(b) = bias { refs.push(r(*b)); }
             refs.push(w(*output));
         }
+        KernelCall::FullyConnectedStreamed { input, bias, output, .. } => {
+            // weights are file-streamed, not memory-resident
+            refs.push(r(*input));
+            if let Some(b) = bias { refs.push(r(*b)); }
+            refs.push(w(*output));
+        }
         KernelCall::ElementWise { input_a, input_b, output, .. } => {
             refs.push(r(*input_a));
             refs.push(r(*input_b));
             refs.push(w(*output));
         }
         KernelCall::UnaryElementWise { input, output, .. } => {
+            refs.push(r(*input));
+            refs.push(w(*output));
+        }
+        KernelCall::FakeQuant { input, output, .. } => {
             refs.push(r(*input));
             refs.push(w(*output));
         }
@@ -113,6 +123,18 @@ pub fn extract_tensor_refs(kernel: &KernelCall) -> Vec<TensorRef> {
         }
         KernelCall::ReverseV2 { input, output, .. } => {
             refs.push(r(*input));
+            refs.push(w(*output));
+        }
+        KernelCall::RfftBatch {
+            input,
+            stage_twiddles,
+            unpack_twiddles,
+            output,
+            ..
+        } => {
+            refs.push(r(*input));
+            refs.push(r(*stage_twiddles));
+            refs.push(r(*unpack_twiddles));
             refs.push(w(*output));
         }
         KernelCall::RfftPack { input, .. } => {

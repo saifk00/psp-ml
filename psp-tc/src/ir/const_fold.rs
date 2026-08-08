@@ -31,6 +31,24 @@ pub fn fold(model: &mut PspModel) {
             continue;
         }
 
+        // infer_shapes already evaluated this op (all outputs are stored
+        // constants): keep its results — which carry correct multi-dim
+        // broadcast values and shapes — and just drop the dead op. Re-running
+        // the simpler evaluators below would overwrite them (eval_binary_i32
+        // wraps indices instead of broadcasting, and store_i32 flattens the
+        // shape), which is exactly what mangled BirdNET's [511,1024] framing
+        // indices into hop-140 garbage.
+        let outputs_const = op.all_outputs().iter().all(|id| {
+            matches!(
+                model.graph.tensor(*id).kind,
+                TensorKind::Constant { .. }
+            )
+        });
+        if outputs_const {
+            to_remove.push(op_idx);
+            continue;
+        }
+
         match op {
             PspOp::Shape { input, output } => {
                 let vals: Vec<i32> = model

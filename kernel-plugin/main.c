@@ -6,7 +6,10 @@ PSP_MODULE_INFO("psp_ml_kernel", 0x1000, 1, 0);
 PSP_NO_CREATE_MAIN_THREAD();
 
 #define PROFILER_REG_BASE  ((volatile u32 *)0xBC400000)
-#define PROFILER_REG_COUNT 21
+/* Must equal the field count of ProfileRegs (and the Rust mirror in
+ * psp-rt/src/profiler.rs) — GetRegs copies exactly this many words into the
+ * caller's struct, so an extra register here overruns the caller's stack. */
+#define PROFILER_REG_COUNT (sizeof(ProfileRegs) / sizeof(u32))
 
 typedef struct {
     u32 enable;

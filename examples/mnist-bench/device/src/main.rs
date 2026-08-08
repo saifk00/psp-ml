@@ -6,6 +6,7 @@ use core::ffi::c_void;
 #[cfg(not(feature = "local"))]
 use psp::sys::{
     sceIoClose, sceIoOpen, sceIoWrite, sceRtcGetCurrentTick, sceRtcGetTickResolution,
+    scePowerGetCpuClockFrequencyInt, scePowerGetBusClockFrequencyInt, scePowerSetClockFrequency,
     IoOpenFlags,
 };
 
@@ -299,6 +300,18 @@ fn get_tick() -> u64 {
 #[cfg(not(feature = "local"))]
 fn app_main() {
     psp::enable_home_button();
+
+    let (cpu0, bus0) = unsafe {
+        (scePowerGetCpuClockFrequencyInt(), scePowerGetBusClockFrequencyInt())
+    };
+    let set_ret = unsafe { scePowerSetClockFrequency(333, 333, 166) };
+    let (cpu1, bus1) = unsafe {
+        (scePowerGetCpuClockFrequencyInt(), scePowerGetBusClockFrequencyInt())
+    };
+    psp_rt::dprintln!(
+        "clock: was {}/{} MHz, set(333,333,166) -> {} (now {}/{} MHz)",
+        cpu0, bus0, set_ret, cpu1, bus1
+    );
 
     psp_rt::dprintln!("MNIST Inference Benchmark");
     psp_rt::dprintln!("=========================");

@@ -17,6 +17,10 @@ pub fn to_psp_ir(model_data: Vec<u8>, dump_ir: bool) -> Result<PspModel, String>
     if dump_ir {
         eprintln!("=== IR: after lowering ===\n{}", dump::dump(&model));
     }
+    crate::ir::quant::rewrite(&mut model)?;
+    if dump_ir {
+        eprintln!("=== IR: after quant rewrite ===\n{}", dump::dump(&model));
+    }
     fuse::fuse(&mut model);
     if dump_ir {
         eprintln!("=== IR: after fusion ===\n{}", dump::dump(&model));

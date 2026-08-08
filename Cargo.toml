@@ -16,6 +16,8 @@ members = [
     "examples/meminfo/host",
     "examples/profiler-demo/device",
     "examples/profiler-demo/host",
+    "examples/roofline/device",
+    "examples/roofline/host",
 ]
 default-members = [
     "psp-rt",

@@ -10,7 +10,7 @@ use quote::quote;
 
 use std::collections::HashSet;
 
-use super::arena::{ArenaLayout, ArenaSlot};
+use super::arena::{extract_tensor_refs, ArenaLayout, ArenaSlot, RefKind};
 use super::plan::*;
 use super::tensor_expr::TensorExprWriter;
 
@@ -26,6 +26,7 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
     let plain_calls = render_all_ops_plain(plan, &writer, arena);
     let timed_calls = render_all_ops_timed(plan, &writer, arena);
     let profiled_calls = render_all_ops_profiled(plan, &writer, arena);
+    let debug_calls = render_all_ops_debug(plan, &writer, arena);
     let op_metadata = render_op_metadata(plan);
 
     let input_size = plan.input_size;
@@ -87,10 +88,65 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
             output.copy_from_slice(&#output_ident);
         }
 
+        /// Debug inference: invokes `tap(op_idx, tensor_id, values)` after
+        /// each op for every tensor it wrote. Tensor ids correspond to TFLite
+        /// tensor indices, so taps can be diffed against a TFLite reference
+        /// run layer by layer. Host-only (code size).
+        #[cfg(not(target_os = "psp"))]
+        #[allow(dead_code)]
+        pub fn forward_debug(
+            input: &[f32; #input_size],
+            output: &mut [f32; #output_size],
+            tap: &mut dyn FnMut(usize, usize, &[f32]),
+        ) {
+            #tensor_allocs
+
+            #weight_views
+
+            #debug_calls
+
+            output.copy_from_slice(&#output_ident);
+        }
+
         #op_metadata
 
         #weight_statics
     }
+}
+
+/// Render all ops (debug mode): plain calls plus a `tap` after each op for
+/// every tensor it wrote. Falls back to plain (no taps) for streamed plans.
+fn render_all_ops_debug(
+    plan: &CodegenPlan,
+    writer: &TensorExprWriter,
+    arena: Option<&ArenaLayout>,
+) -> TokenStream {
+    if plan.stream.is_some() {
+        return render_all_ops_plain(plan, writer, arena);
+    }
+    let op_tokens: Vec<TokenStream> = plan
+        .ops
+        .iter()
+        .enumerate()
+        .map(|(i, op)| {
+            let body = render_op_plain(op, i, writer, arena);
+            let mut seen = HashSet::new();
+            let mut taps = Vec::new();
+            for sub in &op.sub_ops {
+                for kernel in &sub.kernels {
+                    for r in extract_tensor_refs(kernel) {
+                        if matches!(r.kind, RefKind::Write) && seen.insert(r.tensor_id) {
+                            let expr = writer.read(r.tensor_id);
+                            let tid = r.tensor_id;
+                            taps.push(quote! { tap(#i, #tid, &#expr); });
+                        }
+                    }
+                }
+            }
+            quote! { #body #(#taps)* }
+        })
+        .collect();
+    quote!(#(#op_tokens)*)
 }
 
 // ---------------------------------------------------------------------------
@@ -318,12 +374,17 @@ fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
     let total_bytes = plan.blob_bytes;
     let total_floats = plan.blob_floats;
 
+    let has_streamed = plan.allocs.iter().any(
+        |a| matches!(a, TensorAlloc::Constant { streamed: true, .. }),
+    );
+
     let mut const_entries = Vec::new();
     for alloc in &plan.allocs {
         if let TensorAlloc::Constant {
             id,
             float_offset,
             float_len,
+            ..
         } = alloc
         {
             let offset_ident = Ident::new(&format!("T_{id}_OFFSET"), Span::call_site());
@@ -335,7 +396,82 @@ fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
         }
     }
 
-    if plan.blob_bytes <= EXTERNAL_WEIGHT_THRESHOLD {
+    // Chunked reader for weights that stay on disk (streamed constants).
+    // Opens the weight file once per call, seeks to `byte_offset`, and feeds
+    // `consume(bytes_done, chunk_floats)` per chunk read into `scratch`.
+    let stream_helper = if has_streamed {
+        quote! {
+            #[cfg(target_os = "psp")]
+            fn stream_weight_rows(
+                byte_offset: usize,
+                total_bytes: usize,
+                chunk_bytes: usize,
+                scratch: &mut [f32],
+                consume: &mut dyn FnMut(usize, &[f32]),
+            ) {
+                use psp::sys::{sceIoClose, sceIoLseek, sceIoOpen, sceIoRead, IoOpenFlags, IoWhence};
+                let fd = unsafe {
+                    sceIoOpen(b"host0:/weights.bin\0".as_ptr(), IoOpenFlags::RD_ONLY, 0)
+                };
+                if fd.0 < 0 {
+                    psp_rt::dprintln!("FATAL: could not open host0:/weights.bin for streaming");
+                    panic!("weight stream open failed");
+                }
+                unsafe { sceIoLseek(fd, byte_offset as i64, IoWhence::Set) };
+                let mut done = 0usize;
+                while done < total_bytes {
+                    let want = core::cmp::min(chunk_bytes, total_bytes - done);
+                    let dst = scratch.as_mut_ptr() as *mut u8;
+                    let mut got = 0usize;
+                    while got < want {
+                        let n = unsafe {
+                            sceIoRead(
+                                fd,
+                                dst.add(got) as *mut core::ffi::c_void,
+                                (want - got) as u32,
+                            )
+                        };
+                        if n <= 0 {
+                            psp_rt::dprintln!("FATAL: streamed weight read failed");
+                            panic!("weight stream read failed");
+                        }
+                        got += n as usize;
+                    }
+                    consume(done, &scratch[..want / 4]);
+                    done += want;
+                }
+                unsafe { sceIoClose(fd) };
+            }
+
+            #[cfg(not(target_os = "psp"))]
+            fn stream_weight_rows(
+                byte_offset: usize,
+                total_bytes: usize,
+                chunk_bytes: usize,
+                scratch: &mut [f32],
+                consume: &mut dyn FnMut(usize, &[f32]),
+            ) {
+                use std::io::{Read, Seek, SeekFrom};
+                let mut f = std::fs::File::open(concat!(env!("OUT_DIR"), "/weights.bin"))
+                    .expect("failed to open weights.bin for streaming");
+                f.seek(SeekFrom::Start(byte_offset as u64)).unwrap();
+                let mut done = 0usize;
+                while done < total_bytes {
+                    let want = core::cmp::min(chunk_bytes, total_bytes - done);
+                    let dst = unsafe {
+                        core::slice::from_raw_parts_mut(scratch.as_mut_ptr() as *mut u8, want)
+                    };
+                    f.read_exact(dst).expect("streamed weight read failed");
+                    consume(done, &scratch[..want / 4]);
+                    done += want;
+                }
+            }
+        }
+    } else {
+        quote!()
+    };
+
+    if plan.blob_bytes <= EXTERNAL_WEIGHT_THRESHOLD && !has_streamed {
         // Embedded path: weights compiled into the binary via include_bytes!
         quote! {
             #[allow(dead_code)]
@@ -383,6 +519,8 @@ fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
 
             #(#const_entries)*
 
+            #stream_helper
+
             fn tensor_data_f32() -> &'static [f32] {
                 unsafe {
                     core::slice::from_raw_parts(
@@ -394,28 +532,22 @@ fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
 
             /// Initialize the model by loading weights from file.
             /// Must be called once before `forward()` or `forward_timed()`.
+            /// The weight block is registered with `psp_rt::mem` and freed
+            /// automatically when the module exits (clean or panicking).
             #[cfg(target_os = "psp")]
             pub fn init() {
-                use psp::sys::{
-                    sceIoClose, sceIoOpen, sceIoRead,
-                    sceKernelAllocPartitionMemory, sceKernelGetBlockHeadAddr,
-                    IoOpenFlags, SceSysMemBlockTypes,
-                };
+                use psp::sys::{sceIoClose, sceIoOpen, sceIoRead, IoOpenFlags};
 
-                let uid = unsafe {
-                    sceKernelAllocPartitionMemory(
-                        core::mem::transmute(2i32),
-                        b"weights\0".as_ptr(),
-                        SceSysMemBlockTypes::Low,
-                        WEIGHT_BYTES as u32,
-                        core::ptr::null_mut(),
-                    )
-                };
-                if uid.0 < 0 {
-                    psp_rt::dprintln!("FATAL: weight alloc failed (0x{:08X})", uid.0 as u32);
-                    loop {} // halt — forward() would dereference null
+                let mut alloc_err = 0u32;
+                let ptr = psp_rt::mem::alloc_partition(
+                    b"weights\0",
+                    WEIGHT_BYTES,
+                    Some(&mut alloc_err),
+                );
+                if ptr.is_null() {
+                    psp_rt::dprintln!("FATAL: weight alloc failed (0x{:08X})", alloc_err);
+                    panic!("weight alloc failed"); // surfaces as the panic exit sentinel
                 }
-                let ptr = unsafe { sceKernelGetBlockHeadAddr(uid) } as *mut u8;
 
                 let fd = unsafe {
                     sceIoOpen(
@@ -426,7 +558,7 @@ fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
                 };
                 if fd.0 < 0 {
                     psp_rt::dprintln!("FATAL: could not open host0:/weights.bin");
-                    loop {} // halt — forward() would dereference null
+                    panic!("weights.bin open failed"); // surfaces as the panic exit sentinel
                 }
                 let mut loaded = 0usize;
                 while loaded < WEIGHT_BYTES {
@@ -450,20 +582,24 @@ fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
                 unsafe { sceIoClose(fd) };
                 if loaded != WEIGHT_BYTES {
                     psp_rt::dprintln!("FATAL: incomplete weight load: {} / {} bytes", loaded, WEIGHT_BYTES);
-                    loop {} // halt — partial weights produce wrong results
+                    panic!("incomplete weight load"); // surfaces as the panic exit sentinel
                 }
                 unsafe { WEIGHT_PTR = ptr };
                 psp_rt::dprintln!("Loaded weights: {} bytes", WEIGHT_BYTES);
             }
 
-            /// Initialize the model by loading weights from file.
+            /// Initialize the model by loading the resident weight prefix.
+            /// `weights.bin` sits next to the generated source in OUT_DIR;
+            /// any streamed constants live past WEIGHT_BYTES and are read at
+            /// op execution time.
             #[cfg(not(target_os = "psp"))]
             pub fn init() {
-                let data = std::fs::read(
-                    concat!(env!("CARGO_MANIFEST_DIR"), "/src/weights.bin"),
+                let mut data = std::fs::read(
+                    concat!(env!("OUT_DIR"), "/weights.bin"),
                 )
                 .expect("failed to read weights.bin");
-                assert_eq!(data.len(), WEIGHT_BYTES, "weights.bin size mismatch");
+                assert!(data.len() >= WEIGHT_BYTES, "weights.bin smaller than resident size");
+                data.truncate(WEIGHT_BYTES);
                 let ptr = data.as_ptr();
                 std::mem::forget(data);
                 unsafe { WEIGHT_PTR = ptr };
@@ -479,13 +615,31 @@ fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
 fn render_weight_views(plan: &CodegenPlan, writer: &TensorExprWriter) -> TokenStream {
     let mut view_entries = Vec::new();
     for alloc in &plan.allocs {
-        if let TensorAlloc::Constant { id, .. } = alloc {
+        if let TensorAlloc::Constant { id, dtype, streamed, .. } = alloc {
+            if *streamed {
+                // Not memory-resident: ops read it chunkwise from the weight
+                // file via stream_weight_rows; no view binding exists.
+                continue;
+            }
             let var_ident = writer.ident(*id);
             let offset_ident = writer.offset_const(*id);
             let len_ident = writer.len_const(*id);
-            view_entries.push(quote! {
-                let #var_ident = &tensor_data[#offset_ident..#offset_ident + #len_ident];
-            });
+            if *dtype == crate::ir::graph::DType::I8 {
+                // Int8 constants live in the same blob; lengths are stored in
+                // 4-byte units, so the byte length is LEN * 4.
+                view_entries.push(quote! {
+                    let #var_ident: &[i8] = unsafe {
+                        core::slice::from_raw_parts(
+                            tensor_data[#offset_ident..].as_ptr() as *const i8,
+                            #len_ident * 4,
+                        )
+                    };
+                });
+            } else {
+                view_entries.push(quote! {
+                    let #var_ident = &tensor_data[#offset_ident..#offset_ident + #len_ident];
+                });
+            }
         }
     }
 
@@ -684,6 +838,24 @@ fn render_scratch(
                         }
                     });
                 }
+                CopyStrategy::RowPaddedDequantI8 {
+                    num_rows,
+                    src_stride,
+                    dst_stride,
+                    scales,
+                } => {
+                    let scales_expr = writer.read(*scales);
+                    entries.push(quote! {
+                        for row in 0..#num_rows {
+                            let s = #scales_expr[row];
+                            let src = &#src_expr[row * #src_stride..(row + 1) * #src_stride];
+                            let dst = &mut #local_ident[row * #dst_stride..row * #dst_stride + #src_stride];
+                            for (d, &q) in dst.iter_mut().zip(src.iter()) {
+                                *d = q as f32 * s;
+                            }
+                        }
+                    });
+                }
             }
         }
     }
@@ -711,6 +883,7 @@ fn render_kernel_call(
             padding,
             output,
             has_relu,
+            weight_scales,
         } => {
             let input_expr = writer.read(input.id);
             let input_shape_tok = shape_tokens(&input.shape);
@@ -729,28 +902,31 @@ fn render_kernel_call(
                 None => quote!(None),
             };
 
-            if *has_relu {
-                quote! {
-                    conv2d_relu(
-                        #input_expr, #input_shape_tok,
-                        #filter_expr, #filter_shape_tok,
-                        #bias_tok,
-                        [#sh, #sw],
-                        [#pt, #pb, #pl, #pr],
-                        #output_expr, #output_shape_tok
-                    );
+            let fn_name = match (weight_scales.is_some(), *has_relu) {
+                (true, true) => "conv2d_relu_q8",
+                (true, false) => "conv2d_q8",
+                (false, true) => "conv2d_relu",
+                (false, false) => "conv2d",
+            };
+            let fn_ident = Ident::new(fn_name, Span::call_site());
+            let scales_tok = match weight_scales {
+                Some(s) => {
+                    let s_expr = writer.read(*s);
+                    quote!(#s_expr,)
                 }
-            } else {
-                quote! {
-                    conv2d(
-                        #input_expr, #input_shape_tok,
-                        #filter_expr, #filter_shape_tok,
-                        #bias_tok,
-                        [#sh, #sw],
-                        [#pt, #pb, #pl, #pr],
-                        #output_expr, #output_shape_tok
-                    );
-                }
+                None => quote!(),
+            };
+
+            quote! {
+                #fn_ident(
+                    #input_expr, #input_shape_tok,
+                    #filter_expr, #filter_shape_tok,
+                    #scales_tok
+                    #bias_tok,
+                    [#sh, #sw],
+                    [#pt, #pb, #pl, #pr],
+                    #output_expr, #output_shape_tok
+                );
             }
         }
 
@@ -846,6 +1022,84 @@ fn render_kernel_call(
             let input_expr = writer.read(*input);
             let output_expr = writer.write(*output);
             quote! { reshape(#input_expr, #output_expr); }
+        }
+
+        KernelCall::FakeQuant {
+            input,
+            output,
+            scale,
+            zero_point,
+        } => {
+            let input_expr = writer.read(*input);
+            let output_expr = writer.write(*output);
+            quote! { fake_quant(#input_expr, #output_expr, #scale, #zero_point); }
+        }
+
+        KernelCall::FullyConnectedStreamed {
+            input,
+            in_features,
+            weights,
+            bias,
+            output,
+            out_features,
+            has_relu,
+            scratch,
+            chunk_rows,
+        } => {
+            let input_expr = writer.read(*input);
+            let output_expr = writer.write(*output);
+            let w_offset = writer.offset_const(*weights);
+            let scratch_ident =
+                Ident::new(&format!("scratch_{op_idx}_{scratch}"), Span::call_site());
+            let fc_fn = if *has_relu {
+                quote!(fully_connected_relu)
+            } else {
+                quote!(fully_connected)
+            };
+            let bias_tok = match bias {
+                Some(b) => {
+                    let b_expr = writer.read(*b);
+                    quote!(Some(&#b_expr[_row0.._row0 + _rows]))
+                }
+                None => quote!(None),
+            };
+            quote! {
+                stream_weight_rows(
+                    #w_offset * 4,
+                    #out_features * #in_features * 4,
+                    #chunk_rows * #in_features * 4,
+                    #scratch_ident,
+                    &mut |_byte_off, _chunk| {
+                        let _row0 = _byte_off / (#in_features * 4);
+                        let _rows = _chunk.len() / #in_features;
+                        #fc_fn(
+                            #input_expr, #in_features,
+                            _chunk, #bias_tok,
+                            &mut #output_expr[_row0.._row0 + _rows], _rows
+                        );
+                    },
+                );
+            }
+        }
+
+        KernelCall::RfftBatch {
+            input,
+            stage_twiddles,
+            unpack_twiddles,
+            output,
+            scratch,
+            n,
+            frames,
+        } => {
+            let input_expr = writer.read(*input);
+            let stw_expr = writer.read(*stage_twiddles);
+            let utw_expr = writer.read(*unpack_twiddles);
+            let output_expr = writer.write(*output);
+            let scratch_ident =
+                Ident::new(&format!("scratch_{op_idx}_{scratch}"), Span::call_site());
+            quote! {
+                rfft_batch(#input_expr, #stw_expr, #utw_expr, #scratch_ident, #output_expr, #n, #frames);
+            }
         }
 
         KernelCall::FullyConnected {

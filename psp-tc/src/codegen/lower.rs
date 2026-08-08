@@ -17,6 +17,8 @@ struct Conv2dKernelParams {
     stride: [usize; 2],
     padding: [usize; 4],
     has_relu: bool,
+    /// Per-output-channel dequant scales when the filter is int8.
+    weight_scales: Option<TensorId>,
 }
 
 impl Conv2dKernelParams {
@@ -62,8 +64,19 @@ pub fn lower(model: &mut PspModel) -> Result<CodegenPlan, String> {
     // TODO: expose as compiler flag
     let use_vfpu_conv2d = true;
 
-    let mut allocs = lower_allocs(model)?;
-    let ops = lower_ops(model, use_vfpu_conv2d, &mut allocs)?;
+    // Budget-based weight residency: oversized single-use FC weights are
+    // streamed from the weight file at runtime instead of held in memory.
+    let streamed =
+        crate::memory_planner::streamed_weights(model, crate::memory_planner::DEFAULT_RESIDENT_BUDGET);
+    for &tid in &streamed {
+        eprintln!(
+            "memory_planner: streaming t{tid} ({:.1} MiB) from weight file at runtime",
+            model.graph.tensor(tid).size_bytes() as f64 / 1048576.0
+        );
+    }
+
+    let mut allocs = lower_allocs(model, &streamed)?;
+    let ops = lower_ops(model, use_vfpu_conv2d, &mut allocs, &streamed)?;
 
     // Compute blob size AFTER lower_ops, which may append twiddle constants
     let blob_bytes = model.model_data.len();
@@ -83,7 +96,10 @@ pub fn lower(model: &mut PspModel) -> Result<CodegenPlan, String> {
     })
 }
 
-fn lower_allocs(model: &PspModel) -> Result<Vec<TensorAlloc>, String> {
+fn lower_allocs(
+    model: &PspModel,
+    streamed: &std::collections::HashSet<TensorId>,
+) -> Result<Vec<TensorAlloc>, String> {
     let mut allocs = Vec::new();
     let sz = std::mem::size_of::<f32>();
 
@@ -127,6 +143,8 @@ fn lower_allocs(model: &PspModel) -> Result<Vec<TensorAlloc>, String> {
                     id: tensor.id,
                     float_offset: offset / sz,
                     float_len: len / sz,
+                    dtype: tensor.dtype,
+                    streamed: streamed.contains(&tensor.id),
                 });
             }
             TensorKind::Intermediate => {
@@ -157,6 +175,7 @@ fn lower_ops(
     model: &mut PspModel,
     use_vfpu_conv2d: bool,
     allocs: &mut Vec<TensorAlloc>,
+    streamed: &std::collections::HashSet<TensorId>,
 ) -> Result<Vec<OpPlan>, String> {
     let mut ops = Vec::new();
 
@@ -181,10 +200,16 @@ fn lower_ops(
                 weights,
                 bias,
                 output,
+                weight_scales,
                 params,
             } => {
                 let in_shape = &graph.tensor(*input).shape;
                 let w_shape = &graph.tensor(*weights).shape;
+                if graph.tensor(*weights).dtype == DType::I8 && weight_scales.is_none() {
+                    return Err(format!(
+                        "Op {i}: int8 conv weights without scales (quant rewrite not run?)"
+                    ));
+                }
                 let out_shape = &graph.tensor(*output).shape;
 
                 if in_shape.len() != 4 || w_shape.len() != 4 || out_shape.len() != 4 {
@@ -228,6 +253,7 @@ fn lower_ops(
                     stride,
                     padding,
                     has_relu,
+                    weight_scales: *weight_scales,
                 };
                 if use_vfpu_conv2d && conv2d_params.is_vfpu_eligible() {
                     lower_conv2d_vfpu(conv2d_params)
@@ -311,21 +337,52 @@ fn lower_ops(
                     "fully_connected"
                 };
 
-                OpPlan {
-                    scratch: vec![],
-                    sub_ops: vec![SubOpPlan {
-                        name: name.into(),
-                        kernels: vec![KernelCall::FullyConnected {
-                            input: *input,
-                            in_features,
-                            weights: *weights,
-                            bias: *bias,
-                            output: *output,
-                            out_features,
-                            has_relu,
-                            batch_size,
+                if streamed.contains(weights) {
+                    if batch_size != 1 {
+                        return Err(format!(
+                            "Op {i}: streamed FullyConnected requires batch 1, got {batch_size}"
+                        ));
+                    }
+                    // Row chunks sized to the hostfs sweet spot (~64 KiB —
+                    // measured 21.5 MB/s at 64 KiB vs 3.9 MB/s at 4 KiB).
+                    let chunk_rows = (65536 / (in_features * 4)).max(1);
+                    OpPlan {
+                        scratch: vec![ScratchBuffer {
+                            size: chunk_rows * in_features,
+                            load_from: None,
                         }],
-                    }],
+                        sub_ops: vec![SubOpPlan {
+                            name: format!("{name}_streamed"),
+                            kernels: vec![KernelCall::FullyConnectedStreamed {
+                                input: *input,
+                                in_features,
+                                weights: *weights,
+                                bias: *bias,
+                                output: *output,
+                                out_features,
+                                has_relu,
+                                scratch: 0,
+                                chunk_rows,
+                            }],
+                        }],
+                    }
+                } else {
+                    OpPlan {
+                        scratch: vec![],
+                        sub_ops: vec![SubOpPlan {
+                            name: name.into(),
+                            kernels: vec![KernelCall::FullyConnected {
+                                input: *input,
+                                in_features,
+                                weights: *weights,
+                                bias: *bias,
+                                output: *output,
+                                out_features,
+                                has_relu,
+                                batch_size,
+                            }],
+                        }],
+                    }
                 }
             }
 
@@ -421,6 +478,34 @@ fn lower_ops(
                     }],
                 }],
             },
+
+            PspOp::FakeQuant { input, output } => {
+                let (scale, zero_point) = graph
+                    .tensor(*output)
+                    .quant
+                    .as_ref()
+                    .ok_or_else(|| format!("Op {i}: FakeQuant output missing quantization"))?
+                    .scalar()
+                    .map_err(|e| format!("Op {i}: {e}"))?;
+                OpPlan {
+                    scratch: vec![],
+                    sub_ops: vec![SubOpPlan {
+                        name: "fake_quant".into(),
+                        kernels: vec![KernelCall::FakeQuant {
+                            input: *input,
+                            output: *output,
+                            scale,
+                            zero_point,
+                        }],
+                    }],
+                }
+            }
+
+            PspOp::Dequantize { .. } => {
+                return Err(format!(
+                    "Op {i}: Dequantize should have been eliminated by the quant rewrite"
+                ));
+            }
 
             PspOp::Softmax { .. } => {
                 return Err(format!("Op {i}: Softmax kernel not yet implemented"));
@@ -770,15 +855,20 @@ fn lower_ops(
 }
 
 fn lower_conv2d_naive(conv2d: Conv2dKernelParams) -> OpPlan {
-    let name = if conv2d.has_relu {
+    let base = if conv2d.has_relu {
         "conv2d_relu"
     } else {
         "conv2d"
     };
+    let name = if conv2d.weight_scales.is_some() {
+        format!("{base}_q8")
+    } else {
+        base.to_string()
+    };
     OpPlan {
         scratch: vec![],
         sub_ops: vec![SubOpPlan {
-            name: name.into(),
+            name,
             kernels: vec![KernelCall::Conv2d {
                 input: conv2d.input,
                 filter: conv2d.filter,
@@ -787,6 +877,7 @@ fn lower_conv2d_naive(conv2d: Conv2dKernelParams) -> OpPlan {
                 padding: conv2d.padding,
                 output: conv2d.output,
                 has_relu: conv2d.has_relu,
+                weight_scales: conv2d.weight_scales,
             }],
         }],
     }
@@ -815,7 +906,16 @@ fn lower_conv2d_vfpu(conv2d: Conv2dKernelParams) -> OpPlan {
     // Scratch 1: padded weight copy (CO × K_padded)
     let weight_size = co * k_padded;
 
-    let weight_copy_strategy = if k_padded != gemm_k {
+    let weight_copy_strategy = if let Some(scales) = conv2d.weight_scales {
+        // Int8 weights: dequantize into the padded f32 scratch during the
+        // (already required) copy — the matmul kernel stays pure f32.
+        CopyStrategy::RowPaddedDequantI8 {
+            num_rows: co,
+            src_stride: gemm_k,
+            dst_stride: k_padded,
+            scales,
+        }
+    } else if k_padded != gemm_k {
         CopyStrategy::RowPadded {
             num_rows: co,
             src_stride: gemm_k,
@@ -918,11 +1018,14 @@ fn append_constant_f32(
         id,
         float_offset: offset / sz,
         float_len: data.len(),
+        dtype: DType::F32,
+        streamed: false,
     });
     id
 }
 
-/// Lower a fused RFFT op into pack → butterfly stages → unpack.
+/// Lower a fused RFFT op into a single batched kernel call
+/// (per-frame pack → butterfly stages → unpack, looped over all frames).
 fn lower_rfft(
     model: &mut PspModel,
     allocs: &mut Vec<TensorAlloc>,
@@ -934,62 +1037,39 @@ fn lower_rfft(
     let n = fft_length;
     let n_complex = n / 2;
 
-    // Number of butterfly stages = log2(n_complex)
-    let num_stages = {
-        let mut s = 0;
-        let mut v = n_complex;
-        while v > 1 {
-            v >>= 1;
-            s += 1;
-        }
-        s
-    };
+    // Batched over all leading dims: input is [.., frames, n] flattened.
+    let in_elems: usize = model.graph.tensor(input).shape.iter().product();
+    if in_elems % n != 0 {
+        return Err(format!(
+            "Rfft: input size {in_elems} not a multiple of fft_length {n}"
+        ));
+    }
+    let frames = in_elems / n;
 
-    // Scratch buffer: n floats (n_complex interleaved complex pairs)
+    // Number of butterfly stages = log2(n_complex)
+    let num_stages = n_complex.trailing_zeros() as usize;
+
+    // Scratch buffer: n floats (n_complex interleaved complex pairs), reused
+    // across frames.
     let scratch = vec![ScratchBuffer {
         size: n,
         load_from: None,
     }];
 
-    let mut sub_ops = Vec::new();
-
-    // Sub-op 0: rfft_pack
-    sub_ops.push(SubOpPlan {
-        name: "rfft_pack".into(),
-        kernels: vec![KernelCall::RfftPack {
-            input,
-            output: 0, // scratch index 0
-            n,
-        }],
-    });
-
-    // Sub-ops 1..num_stages: butterfly stages
+    // Stage twiddles, concatenated in stage order: stage s holds 2^s complex
+    // entries exp(-2πi·j / 2^(s+1)) at float offset (2^s - 1) * 2.
+    let mut stage_twiddles = Vec::new();
     for stage in 0..num_stages {
-        let half_size = 1 << stage;
-
-        // Generate twiddle factors: exp(-2πi·j / (2·half_size)) for j = 0..half_size
-        // Stored as interleaved [cos, sin] pairs (sin because our twiddle is e^{-i·angle})
-        let mut twiddles = Vec::with_capacity(half_size * 2);
+        let half_size = 1usize << stage;
         for j in 0..half_size {
             let angle = -2.0 * std::f64::consts::PI * (j as f64) / (2.0 * half_size as f64);
-            twiddles.push(angle.cos() as f32);
-            twiddles.push(angle.sin() as f32);
+            stage_twiddles.push(angle.cos() as f32);
+            stage_twiddles.push(angle.sin() as f32);
         }
-
-        let tw_id = append_constant_f32(model, allocs, vec![half_size * 2], &twiddles);
-
-        sub_ops.push(SubOpPlan {
-            name: format!("fft_butterfly_s{stage}"),
-            kernels: vec![KernelCall::FftButterflyStage {
-                data: 0, // scratch index 0
-                twiddles: tw_id,
-                n_complex,
-                half_size,
-            }],
-        });
     }
+    let stage_tw_id =
+        append_constant_f32(model, allocs, vec![stage_twiddles.len()], &stage_twiddles);
 
-    // Sub-op final: rfft_unpack
     // Unpack twiddles: W_N^k = exp(2πi·k/N) stored as [cos, -sin] for k = 1..n_complex-1
     let mut unpack_twiddles = Vec::with_capacity((n_complex - 1) * 2);
     for k in 1..n_complex {
@@ -997,21 +1077,24 @@ fn lower_rfft(
         unpack_twiddles.push(angle.cos() as f32);
         unpack_twiddles.push(-(angle.sin() as f32));
     }
-
     let unpack_tw_id =
         append_constant_f32(model, allocs, vec![(n_complex - 1) * 2], &unpack_twiddles);
 
-    sub_ops.push(SubOpPlan {
-        name: "rfft_unpack".into(),
-        kernels: vec![KernelCall::RfftUnpack {
-            data: 0, // scratch index 0
-            twiddles: unpack_tw_id,
-            output,
-            n,
+    Ok(OpPlan {
+        scratch,
+        sub_ops: vec![SubOpPlan {
+            name: "rfft".into(),
+            kernels: vec![KernelCall::RfftBatch {
+                input,
+                stage_twiddles: stage_tw_id,
+                unpack_twiddles: unpack_tw_id,
+                output,
+                scratch: 0,
+                n,
+                frames,
+            }],
         }],
-    });
-
-    Ok(OpPlan { scratch, sub_ops })
+    })
 }
 
 
@@ -1082,6 +1165,7 @@ mod tests {
             weights,
             bias,
             output,
+            weight_scales: None,
             params: Conv2dParams {
                 kernel_h: kh,
                 kernel_w: kw,

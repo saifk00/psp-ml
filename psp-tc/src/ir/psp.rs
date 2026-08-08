@@ -38,6 +38,9 @@ pub enum PspOp {
         weights: TensorId,
         bias: Option<TensorId>,
         output: TensorId,
+        /// Per-output-channel dequantization scales (f32 constant of len
+        /// `Co`) when `weights` is an int8 tensor; `None` for f32 weights.
+        weight_scales: Option<TensorId>,
         params: Conv2dParams,
     },
 
@@ -110,6 +113,18 @@ pub enum PspOp {
         input: TensorId,
         output: TensorId,
     },
+
+    // ─── Quantization ops (rewritten to f32 semantics by ir::quant) ─────
+    /// TFLite QUANTIZE, simulated in f32: snap each value to its int8
+    /// quantization grid, `out = (clamp(round(x/s) + z) - z) * s`.
+    /// Scale/zero-point come from the output tensor's `Quant`.
+    FakeQuant { input: TensorId, output: TensorId },
+
+    /// TFLite DEQUANTIZE. After the `ir::quant` rewrite every "int8"
+    /// activation already holds dequantized f32 values, so this is an
+    /// identity; the pass aliases it away (or lowers it to a copy when the
+    /// output is the graph output).
+    Dequantize { input: TensorId, output: TensorId },
 
     // ─── Constant-foldable ops (eliminated before codegen) ──────
     /// Extract tensor shape as INT32 vector
@@ -261,12 +276,14 @@ impl BinaryOp {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
     Logistic,
+    Relu,
 }
 
 impl UnaryOp {
     pub fn name(self) -> &'static str {
         match self {
             UnaryOp::Logistic => "logistic",
+            UnaryOp::Relu => "relu",
         }
     }
 }
@@ -309,6 +326,7 @@ impl std::fmt::Display for PspOp {
                 weights,
                 bias,
                 output,
+                weight_scales: _,
                 params,
             } => {
                 write!(f, "Conv2d(t{}, t{}", input, weights)?;
@@ -419,6 +437,12 @@ impl std::fmt::Display for PspOp {
             }
             PspOp::UnaryElementWise { op, input, output } => {
                 write!(f, "UnaryElementWise(t{} → t{}; {})", input, output, op)
+            }
+            PspOp::FakeQuant { input, output } => {
+                write!(f, "FakeQuant(t{} → t{})", input, output)
+            }
+            PspOp::Dequantize { input, output } => {
+                write!(f, "Dequantize(t{} → t{})", input, output)
             }
             PspOp::Shape { input, output } => write!(f, "Shape(t{} → t{})", input, output),
             PspOp::Pack {
@@ -575,6 +599,7 @@ impl std::fmt::Display for UnaryOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             UnaryOp::Logistic => write!(f, "Logistic"),
+            UnaryOp::Relu => write!(f, "Relu"),
         }
     }
 }
@@ -606,9 +631,19 @@ impl PspOp {
                 input,
                 weights,
                 bias,
+                weight_scales,
                 ..
+            } => {
+                let mut v = vec![*input, *weights];
+                if let Some(b) = bias {
+                    v.push(*b);
+                }
+                if let Some(s) = weight_scales {
+                    v.push(*s);
+                }
+                v
             }
-            | PspOp::DepthwiseConv2d {
+            PspOp::DepthwiseConv2d {
                 input,
                 weights,
                 bias,
@@ -635,6 +670,8 @@ impl PspOp {
             | PspOp::Shape { input, .. }
             | PspOp::Cast { input, .. }
             | PspOp::UnaryElementWise { input, .. }
+            | PspOp::FakeQuant { input, .. }
+            | PspOp::Dequantize { input, .. }
             | PspOp::Rfft { input, .. } => vec![*input],
             PspOp::Pad {
                 input, paddings, ..
@@ -713,6 +750,8 @@ impl PspOp {
             | PspOp::Reduce { output, .. }
             | PspOp::Range { output, .. }
             | PspOp::Cast { output, .. }
+            | PspOp::FakeQuant { output, .. }
+            | PspOp::Dequantize { output, .. }
             | PspOp::Pad { output, .. }
             | PspOp::Transpose { output, .. }
             | PspOp::ReverseV2 { output, .. }
@@ -785,6 +824,8 @@ impl PspOp {
             | PspOp::UnaryElementWise { input, output, .. }
             | PspOp::Shape { input, output }
             | PspOp::Cast { input, output }
+            | PspOp::FakeQuant { input, output }
+            | PspOp::Dequantize { input, output }
             | PspOp::Rfft { input, output, .. } => {
                 r(input);
                 r(output);
