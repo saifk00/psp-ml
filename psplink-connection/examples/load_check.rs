@@ -1,6 +1,6 @@
 //! Manual hardware checkpoint for the psplink-connection crate: connect,
 //! load a PRX, stream its stdout, and print the completion outcome. Not
-//! wired into cargo-psp-ml — this is a standalone smoke test.
+//! wired into any example's `host/` crate — this is a standalone smoke test.
 //!
 //! Usage: cargo run --example load_check -p psplink-connection -- <host0_dir> <host1_dir> <prx_path>
 

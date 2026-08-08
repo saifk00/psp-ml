@@ -1,0 +1,10 @@
+[package]
+name = "birdnet-host"
+edition = "2021"
+
+[[bin]]
+name = "birdnet-host"
+path = "src/main.rs"
+
+[dependencies]
+psplink-connection = { path = "../../../psplink-connection" }

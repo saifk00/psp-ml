@@ -1,0 +1,21 @@
+[package]
+name = "psp-tc"
+version = "0.1.0"
+edition = "2021"
+description = "TFLite -> Rust AOT compiler targeting the psp-rt runtime."
+
+[lib]
+name = "psp_tc"
+path = "src/lib.rs"
+
+[[bin]]
+name = "psp-tc"
+path = "src/bin/psp-tc.rs"
+
+[dependencies]
+flatbuffers = "24.3"
+quote = "1"
+proc-macro2 = "1"
+syn = "2"
+prettyplease = "0.2"
+serde_json = "1"

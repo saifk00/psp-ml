@@ -182,7 +182,7 @@ impl PSPConnection {
     /// Sends a psplink shell command. Wire format: each arg NUL-terminated,
     /// followed by a trailing 0x01 byte — psplink's `usbShellReadInput`
     /// (psplink/usbshell.c) reads the shell channel byte-by-byte, not as
-    /// text lines; see `psp_ml::module!`'s doc comments / this session's
+    /// text lines; see `psp_rt::module!`'s doc comments / this session's
     /// findings for why a plain `"cmd arg\n"` string doesn't work.
     pub fn send_shell_command(&self, args: &[&str]) -> Result<(), PspError> {
         let mut buf = Vec::new();

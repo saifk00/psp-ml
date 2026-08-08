@@ -1,0 +1,10 @@
+[package]
+name = "mnist-bench-host"
+edition = "2021"
+
+[[bin]]
+name = "mnist-bench-host"
+path = "src/main.rs"
+
+[dependencies]
+psplink-connection = { path = "../../../psplink-connection" }

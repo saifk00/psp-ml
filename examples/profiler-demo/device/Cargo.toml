@@ -1,0 +1,8 @@
+[package]
+name = "profiler-demo"
+version = "0.1.0"
+edition = "2021"
+
+[target.'cfg(target_os = "psp")'.dependencies]
+psp = "0.3"
+psp-rt = { path = "../../../psp-rt" }

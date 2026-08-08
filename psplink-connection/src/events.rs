@@ -28,7 +28,7 @@ pub enum PspEvent {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ShellMarker {
     /// SHELL_CMD_SUCCESS (0xFD) — dispatch succeeded; see the
-    /// psp_ml::module! convention for what the value itself means for `ld`.
+    /// psp_rt::module! convention for what the value itself means for `ld`.
     Success(u32),
     /// SHELL_CMD_ERROR (0xFC) — shellExecute couldn't dispatch the command
     /// at all (e.g. unknown command name).

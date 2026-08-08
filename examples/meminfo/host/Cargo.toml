@@ -1,0 +1,10 @@
+[package]
+name = "meminfo-host"
+edition = "2021"
+
+[[bin]]
+name = "meminfo-host"
+path = "src/main.rs"
+
+[dependencies]
+psplink-connection = { path = "../../../psplink-connection" }

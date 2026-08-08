@@ -14,7 +14,15 @@ name = "birdnet"
 version = "0.1.0"
 dependencies = [
  "psp",
- "psp-ml",
+ "psp-rt",
+ "psp-tc",
+]
+
+[[package]]
+name = "birdnet-host"
+version = "0.0.0"
+dependencies = [
+ "psplink-connection",
 ]
 
 [[package]]
@@ -28,19 +36,6 @@ name = "bitflags"
 version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "812e12b5285cc515a9c72a5c1d3b6d46a19dac5acfef5265968c166106e31dd3"
-
-[[package]]
-name = "cargo-psp-ml"
-version = "0.1.0"
-dependencies = [
- "flatbuffers",
- "prettyplease",
- "proc-macro2",
- "psplink-connection",
- "quote",
- "serde_json",
- "syn",
-]
 
 [[package]]
 name = "cc"
@@ -73,7 +68,14 @@ name = "hello-psp"
 version = "0.0.0"
 dependencies = [
  "psp",
- "psp-ml",
+ "psp-rt",
+]
+
+[[package]]
+name = "hello-psp-host"
+version = "0.0.0"
+dependencies = [
+ "psplink-connection",
 ]
 
 [[package]]
@@ -99,7 +101,14 @@ name = "meminfo"
 version = "0.0.0"
 dependencies = [
  "psp",
- "psp-ml",
+ "psp-rt",
+]
+
+[[package]]
+name = "meminfo-host"
+version = "0.0.0"
+dependencies = [
+ "psplink-connection",
 ]
 
 [[package]]
@@ -107,7 +116,15 @@ name = "mnist-bench"
 version = "0.1.0"
 dependencies = [
  "psp",
- "psp-ml",
+ "psp-rt",
+ "psp-tc",
+]
+
+[[package]]
+name = "mnist-bench-host"
+version = "0.0.0"
+dependencies = [
+ "psplink-connection",
 ]
 
 [[package]]
@@ -167,7 +184,14 @@ name = "profiler-demo"
 version = "0.1.0"
 dependencies = [
  "psp",
- "psp-ml",
+ "psp-rt",
+]
+
+[[package]]
+name = "profiler-demo-host"
+version = "0.0.0"
+dependencies = [
+ "psplink-connection",
 ]
 
 [[package]]
@@ -185,11 +209,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "psp-ml"
+name = "psp-rt"
 version = "0.1.0"
 dependencies = [
  "libm",
  "psp",
+]
+
+[[package]]
+name = "psp-tc"
+version = "0.1.0"
+dependencies = [
+ "flatbuffers",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "syn",
 ]
 
 [[package]]

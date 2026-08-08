@@ -1,0 +1,22 @@
+[package]
+name = "mnist-bench"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "mnist-bench"
+path = "src/main.rs"
+
+[features]
+default = []
+local = []
+profile = []
+
+[dependencies]
+psp-rt = { path = "../../../psp-rt" }
+
+[target.'cfg(target_os = "psp")'.dependencies]
+psp = "0.3"
+
+[build-dependencies]
+psp-tc = { path = "../../../psp-tc" }

@@ -38,11 +38,11 @@ Full disassembly in [`disassembled-prx.txt`](disassembled-prx.txt). Built with `
 
 | Function | Address | Size | Notes |
 |----------|---------|------|-------|
-| `psp_ml::kernels::relu` | 0x3780 | 340B | VFPU-accelerated (vzero.q + vmax.q) |
-| `psp_ml::kernels::im2col` | 0x38d4 | 1032B | Pure scalar, 6-nested loops |
-| `psp_ml::kernels::matmul_bt` | 0x3d44 | 1628B | Tiled GEMM, VFPU inner kernel |
-| `psp_ml::kernels::naive::max_pool2d` | 0x4440 | 1048B | Naive scalar |
-| `psp_ml::kernels::naive::fully_connected_relu` | 0x4858 | 836B | Naive scalar |
+| `psp_rt::kernels::relu` | 0x3780 | 340B | VFPU-accelerated (vzero.q + vmax.q) |
+| `psp_rt::kernels::im2col` | 0x38d4 | 1032B | Pure scalar, 6-nested loops |
+| `psp_rt::kernels::matmul_bt` | 0x3d44 | 1628B | Tiled GEMM, VFPU inner kernel |
+| `psp_rt::kernels::naive::max_pool2d` | 0x4440 | 1048B | Naive scalar |
+| `psp_rt::kernels::naive::fully_connected_relu` | 0x4858 | 836B | Naive scalar |
 
 ### VFPU Inner Kernel: `vfpu_mul_acc_bt` (inlined at 0x4098)
 
@@ -285,9 +285,9 @@ Full disassembly in [`disassembled-prx-tiled.txt`](disassembled-prx-tiled.txt).
 
 | Function | Address | Size | Size Delta vs V0 |
 |----------|---------|------|-------------------|
-| `psp_ml::kernels::relu` | 0x4518 | 340B | (unchanged) |
-| `psp_ml::kernels::im2col_padded` | 0x37d4 | 1124B | +9% (was 1032B) |
-| `psp_ml::kernels::matmul_bt_tiled` | 0x3c38 | 2272B | +39% (was 1628B) |
+| `psp_rt::kernels::relu` | 0x4518 | 340B | (unchanged) |
+| `psp_rt::kernels::im2col_padded` | 0x37d4 | 1124B | +9% (was 1032B) |
+| `psp_rt::kernels::matmul_bt_tiled` | 0x3c38 | 2272B | +39% (was 1628B) |
 
 Code size increase (+736B total) is a good trade — the extra code eliminates per-element branches in the hot inner loop.
 

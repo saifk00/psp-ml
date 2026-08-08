@@ -1,7 +1,8 @@
 //! Manual hardware checkpoint for C Stage A (see the implementation plan):
 //! connects to a real PSP over USB and pumps the read loop a few times,
 //! confirming the HOSTFS_CMD_HELLO handshake completes. Not wired into
-//! cargo-psp-ml — this is a standalone smoke test for the vendored C.
+//! any example's `host/` crate — this is a standalone smoke test for the
+//! vendored C.
 //!
 //! Usage: cargo run --example connect_check -p usbhostfs-sys -- <host0_dir> <host1_dir>
 

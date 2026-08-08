@@ -1,18 +1,24 @@
 [workspace]
 resolver = "2"
 members = [
-    "psp-ml",
-    "cargo-psp-ml",
+    "psp-rt",
+    "psp-tc",
     "usbhostfs-sys",
     "psplink-connection",
     "audio-recorder",
-    "examples/mnist-bench",
-    "examples/hello-psp",
-    "examples/birdnet",
-    "examples/meminfo",
-    "examples/profiler-demo",
+    "examples/mnist-bench/device",
+    "examples/mnist-bench/host",
+    "examples/hello-psp/device",
+    "examples/hello-psp/host",
+    "examples/birdnet/device",
+    "examples/birdnet/host",
+    "examples/meminfo/device",
+    "examples/meminfo/host",
+    "examples/profiler-demo/device",
+    "examples/profiler-demo/host",
 ]
 default-members = [
-    "psp-ml",
-    "examples/mnist-bench",
+    "psp-rt",
+    "examples/mnist-bench/device",
+    "examples/mnist-bench/host",
 ]

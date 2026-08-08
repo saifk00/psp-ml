@@ -5,14 +5,14 @@ use crate::events::{PspEvent, ShellFramer, ShellMarker};
 use crate::{PSPConnection, PspError};
 use std::time::Duration;
 
-/// `main_thread`'s exit-status convention chosen for `psp_ml::module!`
+/// `main_thread`'s exit-status convention chosen for `psp_rt::module!`
 /// (see that macro's doc comment for the full trace through uofw/psplink
 /// justifying these specific values). `main_thread` itself returns `1` on
 /// a clean exit, but the kernel's ModuleManager collapses
 /// `SCE_KERNEL_NO_RESIDENT` (1) down to `SCE_ERROR_OK` (0) before it
 /// reaches the shell channel — so by the time it gets here, `0` is what a
 /// clean exit looks like, and this sentinel (passed through raw, since
-/// it's neither 0 nor 1) is a caught panic. Kept here (not psp-ml, which
+/// it's neither 0 nor 1) is a caught panic. Kept here (not psp-rt, which
 /// is a `no_std` on-device crate this host-side crate can't depend on)
 /// since both sides need to agree on the same bit pattern.
 pub const PANIC_SENTINEL: u32 = 0xFFFF_FFFF;
@@ -27,7 +27,7 @@ const EVENT_TIMEOUT: Duration = Duration::from_secs(120);
 pub enum LoadOutcome {
     /// The module ran to completion without panicking.
     Success,
-    /// `app_main` panicked (caught by `catch_unwind` in `psp_ml::module!`).
+    /// `app_main` panicked (caught by `catch_unwind` in `psp_rt::module!`).
     Panicked,
     /// psplink's shell couldn't dispatch the `ld` command at all.
     ShellError(u32),
@@ -42,7 +42,7 @@ impl PSPConnection {
     /// Loads and runs `prx_path` (e.g. `"host1:hello-psp.prx"`), streaming
     /// its stdout/stderr to `on_stdout` as it arrives, and blocking until
     /// psplink reports the module's thread has finished — see
-    /// `psp_ml::module!`'s doc comment for why that's a truthful signal
+    /// `psp_rt::module!`'s doc comment for why that's a truthful signal
     /// only once its wait-on-thread-end fix has landed on the device side.
     pub fn load_program(
         &self,
@@ -72,7 +72,7 @@ fn outcome_for(marker: ShellMarker) -> LoadOutcome {
         // returning SCE_KERNEL_NO_RESIDENT (1) down to SCE_ERROR_OK (0)
         // before it reaches userland/the shell channel — so 0, not 1, is
         // what a clean exit actually looks like from here. See
-        // psp_ml::module!'s doc comment for the full chain.
+        // psp_rt::module!'s doc comment for the full chain.
         ShellMarker::Success(0) => LoadOutcome::Success,
         ShellMarker::Success(PANIC_SENTINEL) => LoadOutcome::Panicked,
         ShellMarker::Success(other) => LoadOutcome::KernelError(other),

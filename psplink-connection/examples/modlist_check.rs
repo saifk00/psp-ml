@@ -1,5 +1,5 @@
 //! Ad-hoc hardware check: connect, send `modlist`, print the raw shell
-//! response. Used to confirm psp_ml::module!'s exit-status fix doesn't
+//! response. Used to confirm psp_rt::module!'s exit-status fix doesn't
 //! leak a resident module per `ld` call. Not a permanent fixture.
 
 use psplink_connection::PSPConnection;

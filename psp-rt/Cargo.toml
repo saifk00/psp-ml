@@ -1,0 +1,24 @@
+[package]
+name = "psp-rt"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "psp_rt"
+path = "src/lib.rs"
+
+[[bin]]
+name = "test-kernels"
+path = "src/bin/test-kernels.rs"
+required-features = ["test-kernels"]
+
+[features]
+default = []
+test-kernels = []
+local = []
+
+[dependencies]
+libm = "0.2"
+
+[target.'cfg(target_os = "psp")'.dependencies]
+psp = "0.3"
