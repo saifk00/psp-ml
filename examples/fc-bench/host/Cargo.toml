@@ -1,0 +1,10 @@
+[package]
+name = "fc-bench-host"
+edition = "2021"
+
+[[bin]]
+name = "fc-bench-host"
+path = "src/main.rs"
+
+[dependencies]
+psplink-connection = { path = "../../../psplink-connection" }

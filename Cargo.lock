@@ -48,6 +48,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "fc-bench"
+version = "0.0.0"
+dependencies = [
+ "libm",
+ "psp",
+ "psp-rt",
+]
+
+[[package]]
+name = "fc-bench-host"
+version = "0.0.0"
+dependencies = [
+ "psplink-connection",
+]
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -223,6 +239,7 @@ dependencies = [
  "flatbuffers",
  "prettyplease",
  "proc-macro2",
+ "psp-rt",
  "quote",
  "serde_json",
  "syn",

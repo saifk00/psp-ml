@@ -15,6 +15,86 @@ pub fn fuse(model: &mut PspModel) {
     if count > 0 {
         eprintln!("fuse: fused {} RFFT2D+SQUEEZE+CAST chains", count);
     }
+    let count = fuse_swish(model);
+    if count > 0 {
+        eprintln!("fuse: fused {} Logistic+Mul chains into Swish", count);
+    }
+}
+
+/// Fuse `Logistic(x → s)` + `Mul(x, s → o)` into `Swish(x → o)`.
+///
+/// This is the swish/SiLU activation, which TFLite emits as two primitive ops
+/// because the format has no opcode for it. BirdNET has 45 such pairs over 3.7
+/// M elements; fusing removes an entire pass over the tensor (the intermediate
+/// `s` never has to be written or re-read) on top of letting one VFPU kernel
+/// do the whole chain.
+///
+/// Only fires when `s` has exactly one consumer, otherwise the sigmoid is
+/// needed in its own right.
+fn fuse_swish(model: &mut PspModel) -> usize {
+    use super::psp::{BinaryOp, UnaryOp};
+    let consumers = consumer_map(model);
+    let producers = producer_map(model);
+    let mut to_remove: Vec<usize> = Vec::new();
+    let mut replacements: Vec<(usize, PspOp)> = Vec::new();
+
+    for (idx, op) in model.graph.ops.iter().enumerate() {
+        let PspOp::ElementWise {
+            op: BinaryOp::Mul,
+            input_a,
+            input_b,
+            output,
+        } = op
+        else {
+            continue;
+        };
+
+        // One operand must be a Logistic whose input is the other operand.
+        for (sig, x) in [(*input_a, *input_b), (*input_b, *input_a)] {
+            let Some(&prod_idx) = producers.get(&sig) else {
+                continue;
+            };
+            let PspOp::UnaryElementWise {
+                op: UnaryOp::Logistic,
+                input: logistic_in,
+                output: logistic_out,
+            } = &model.graph.ops[prod_idx]
+            else {
+                continue;
+            };
+            if *logistic_in != x || *logistic_out != sig {
+                continue;
+            }
+            // The sigmoid must feed nothing else, or we still have to compute it.
+            if consumers.get(&sig).map(|c| c.len()) != Some(1) {
+                continue;
+            }
+            // Don't swallow a value the caller asked for.
+            if model.graph.outputs.contains(&sig) {
+                continue;
+            }
+            replacements.push((
+                idx,
+                PspOp::Swish {
+                    input: x,
+                    output: *output,
+                },
+            ));
+            to_remove.push(prod_idx);
+            break;
+        }
+    }
+
+    let count = replacements.len();
+    for (idx, op) in replacements {
+        model.graph.ops[idx] = op;
+    }
+    to_remove.sort_unstable();
+    to_remove.dedup();
+    for idx in to_remove.into_iter().rev() {
+        model.graph.ops.remove(idx);
+    }
+    count
 }
 
 /// Build map from tensor ID → vec of op indices that consume it.

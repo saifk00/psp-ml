@@ -51,10 +51,12 @@ pub fn extract_tensor_refs(kernel: &KernelCall) -> Vec<TensorRef> {
             if let Some(b) = bias { refs.push(r(*b)); }
             refs.push(w(output.id));
         }
-        KernelCall::Conv2d { input, filter, bias, output, .. } => {
+        KernelCall::Conv2d { input, filter, bias, output, weight_scales, .. } => {
             refs.push(r(input.id));
             refs.push(r(filter.id));
             if let Some(b) = bias { refs.push(r(*b)); }
+            // int8 convs also read a per-output-channel scale vector
+            if let Some(s) = weight_scales { refs.push(r(*s)); }
             refs.push(w(output.id));
         }
         KernelCall::Im2colPadded { input, .. } => {
@@ -90,6 +92,12 @@ pub fn extract_tensor_refs(kernel: &KernelCall) -> Vec<TensorRef> {
             if let Some(b) = bias { refs.push(r(*b)); }
             refs.push(w(*output));
         }
+        KernelCall::GemmBtPacked { a, b, output, .. } => {
+            // ap/cp are ScratchIds, handled separately; so are scratch operands
+            if let GemmOperand::Tensor(id) = a { refs.push(r(*id)); }
+            if let GemmOperand::Tensor(id) = b { refs.push(r(*id)); }
+            refs.push(w(*output));
+        }
         KernelCall::FullyConnectedStreamed { input, bias, output, .. } => {
             // weights are file-streamed, not memory-resident
             refs.push(r(*input));
@@ -102,6 +110,10 @@ pub fn extract_tensor_refs(kernel: &KernelCall) -> Vec<TensorRef> {
             refs.push(w(*output));
         }
         KernelCall::UnaryElementWise { input, output, .. } => {
+            refs.push(r(*input));
+            refs.push(w(*output));
+        }
+        KernelCall::Swish { input, output } => {
             refs.push(r(*input));
             refs.push(w(*output));
         }

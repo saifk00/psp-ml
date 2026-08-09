@@ -18,6 +18,8 @@ members = [
     "examples/profiler-demo/host",
     "examples/roofline/device",
     "examples/roofline/host",
+    "examples/fc-bench/device",
+    "examples/fc-bench/host",
 ]
 default-members = [
     "psp-rt",

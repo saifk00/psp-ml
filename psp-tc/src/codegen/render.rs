@@ -3,7 +3,7 @@
 //! This is the only codegen file that depends on proc_macro2/quote.
 
 use crate::ir::graph::Graph;
-use crate::ir::psp::{PoolType, PspOp};
+use crate::ir::psp::{PoolType, PspOp, UnaryOp};
 
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
@@ -12,6 +12,7 @@ use std::collections::HashSet;
 
 use super::arena::{extract_tensor_refs, ArenaLayout, ArenaSlot, RefKind};
 use super::plan::*;
+use super::plan::GemmOperand;
 use super::tensor_expr::TensorExprWriter;
 
 pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
@@ -838,6 +839,17 @@ fn render_scratch(
                         }
                     });
                 }
+                CopyStrategy::PackB { n, k } => {
+                    entries.push(quote! {
+                        pack_b_panel(#src_expr, #local_ident, #n, #k);
+                    });
+                }
+                CopyStrategy::PackBDequantI8 { n, k, scales } => {
+                    let scales_expr = writer.read(*scales);
+                    entries.push(quote! {
+                        pack_b_panel_dequant_i8(#src_expr, #scales_expr, #local_ident, #n, #k);
+                    });
+                }
                 CopyStrategy::RowPaddedDequantI8 {
                     num_rows,
                     src_stride,
@@ -1024,6 +1036,12 @@ fn render_kernel_call(
             quote! { reshape(#input_expr, #output_expr); }
         }
 
+        KernelCall::Swish { input, output } => {
+            let in_expr = writer.read(*input);
+            let out_expr = writer.write(*output);
+            quote! { swish(#in_expr, #out_expr); }
+        }
+
         KernelCall::FakeQuant {
             input,
             output,
@@ -1033,6 +1051,40 @@ fn render_kernel_call(
             let input_expr = writer.read(*input);
             let output_expr = writer.write(*output);
             quote! { fake_quant(#input_expr, #output_expr, #scale, #zero_point); }
+        }
+
+        KernelCall::GemmBtPacked {
+            a,
+            lda,
+            b,
+            output,
+            m,
+            k,
+            n,
+            ap,
+            cp,
+            mc,
+            kc,
+        } => {
+            let operand = |o: &GemmOperand| match o {
+                GemmOperand::Tensor(id) => writer.read(*id),
+                GemmOperand::Scratch(s) => {
+                    let i = Ident::new(&format!("scratch_{op_idx}_{s}"), Span::call_site());
+                    quote!(#i)
+                }
+            };
+            let a_expr = operand(a);
+            let b_expr = operand(b);
+            let output_expr = writer.write(*output);
+            let ap_ident = Ident::new(&format!("scratch_{op_idx}_{ap}"), Span::call_site());
+            let cp_ident = Ident::new(&format!("scratch_{op_idx}_{cp}"), Span::call_site());
+            quote! {
+                gemm_bt_packed(
+                    #a_expr, #lda, #b_expr, #output_expr,
+                    #ap_ident, #cp_ident,
+                    #m, #k, #n, #mc, #kc
+                );
+            }
         }
 
         KernelCall::FullyConnectedStreamed {
@@ -1166,7 +1218,12 @@ fn render_kernel_call(
         }
 
         KernelCall::UnaryElementWise { op, input, output } => {
-            let fn_ident = Ident::new(&format!("unary_{}", op.name()), Span::call_site());
+            // Logistic has a VFPU implementation in the kernels root; the rest
+            // fall back to the scalar `naive::unary_*` family.
+            let fn_ident = match op {
+                UnaryOp::Logistic => Ident::new("logistic", Span::call_site()),
+                _ => Ident::new(&format!("unary_{}", op.name()), Span::call_site()),
+            };
             let in_expr = writer.read(*input);
             let out_expr = writer.write(*output);
             quote! { #fn_ident(#in_expr, #out_expr); }

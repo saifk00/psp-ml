@@ -8,6 +8,9 @@
 
 #![no_std]
 #![cfg_attr(target_os = "psp", feature(asm_experimental_arch))]
+// `vfpu_asm!` expands one macro recursion per instruction; the 4x8 GEMM
+// micro-kernel is ~70 instructions in a single block, well past the default 128.
+#![recursion_limit = "1024"]
 
 pub mod kernels;
 pub mod mem;

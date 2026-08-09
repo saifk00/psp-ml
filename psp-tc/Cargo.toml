@@ -13,6 +13,9 @@ name = "psp-tc"
 path = "src/bin/psp-tc.rs"
 
 [dependencies]
+# psp-rt supplies the packed-B layout used by `gemm_bt_packed`, so the
+# compile-time packer here cannot drift from the runtime kernel.
+psp-rt = { path = "../psp-rt" }
 flatbuffers = "24.3"
 quote = "1"
 proc-macro2 = "1"

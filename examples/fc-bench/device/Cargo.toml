@@ -1,0 +1,14 @@
+[package]
+name = "fc-bench"
+edition = "2021"
+
+[[bin]]
+name = "fc_bench"
+path = "src/main.rs"
+
+[dependencies]
+libm = "0.2"
+
+[target.'cfg(target_os = "psp")'.dependencies]
+psp = "0.3"
+psp-rt = { path = "../../../psp-rt" }

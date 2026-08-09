@@ -77,6 +77,7 @@ pub fn lower(model: &mut PspModel) -> Result<CodegenPlan, String> {
 
     let mut allocs = lower_allocs(model, &streamed)?;
     let ops = lower_ops(model, use_vfpu_conv2d, &mut allocs, &streamed)?;
+    prune_dead_constants(&mut allocs, &ops);
 
     // Compute blob size AFTER lower_ops, which may append twiddle constants
     let blob_bytes = model.model_data.len();
@@ -94,6 +95,41 @@ pub fn lower(model: &mut PspModel) -> Result<CodegenPlan, String> {
         arena: None, // filled in by generate_code() after lowering
         stream: None, // filled in by generate_code() from stream rewrite
     })
+}
+
+/// Drop constants no kernel call or scratch load actually reads.
+///
+/// `lower_allocs` runs before `lower_ops` and so admits every constant the IR
+/// referenced. Lowering can then make one dead — the VFPU FC path replaces its
+/// weight matrix with a repacked copy — and without this the blob would carry
+/// both (an extra 394 KB per mel projection on BirdNET).
+fn prune_dead_constants(allocs: &mut Vec<TensorAlloc>, ops: &[OpPlan]) {
+    let mut live: std::collections::HashSet<TensorId> = std::collections::HashSet::new();
+    for op in ops {
+        for scratch in &op.scratch {
+            if let Some(load) = &scratch.load_from {
+                live.insert(load.source);
+                if let Some(extra) = load.copy.extra_tensor_refs() {
+                    live.insert(extra);
+                }
+            }
+        }
+        for sub in &op.sub_ops {
+            for kernel in &sub.kernels {
+                for r in super::arena::extract_tensor_refs(kernel) {
+                    live.insert(r.tensor_id);
+                }
+            }
+        }
+    }
+    allocs.retain(|a| match a {
+        // Streamed constants are reached through their file offset, not through
+        // a tensor ref (`extract_tensor_refs` omits them on purpose), and their
+        // presence is also what makes render emit the streaming helper.
+        TensorAlloc::Constant { streamed: true, .. } => true,
+        TensorAlloc::Constant { id, .. } => live.contains(id),
+        _ => true,
+    });
 }
 
 fn lower_allocs(
@@ -182,6 +218,25 @@ fn lower_ops(
     for i in 0..model.graph.ops.len() {
         let op = model.graph.ops[i].clone();
 
+        // FullyConnected with a big batch: repack the weights at compile time
+        // and use the blocked VFPU GEMM. Handled here, before the immutable
+        // `graph` borrow below, because it appends a constant to `model`.
+        if let PspOp::FullyConnected {
+            input,
+            weights,
+            bias,
+            output,
+            fused_activation,
+        } = &op
+        {
+            if let Some(plan) = lower_fc_vfpu(
+                model, allocs, streamed, *input, *weights, *bias, *output, fused_activation,
+            )? {
+                ops.push(plan);
+                continue;
+            }
+        }
+
         // Handle RFFT separately: it needs &mut model to append twiddle constants
         if let PspOp::Rfft {
             input,
@@ -255,7 +310,7 @@ fn lower_ops(
                     has_relu,
                     weight_scales: *weight_scales,
                 };
-                if use_vfpu_conv2d && conv2d_params.is_vfpu_eligible() {
+                if use_vfpu_conv2d {
                     lower_conv2d_vfpu(conv2d_params)
                 } else {
                     lower_conv2d_naive(conv2d_params)
@@ -473,6 +528,17 @@ fn lower_ops(
                     name: op.name().into(),
                     kernels: vec![KernelCall::UnaryElementWise {
                         op: *op,
+                        input: *input,
+                        output: *output,
+                    }],
+                }],
+            },
+
+            PspOp::Swish { input, output } => OpPlan {
+                scratch: vec![],
+                sub_ops: vec![SubOpPlan {
+                    name: "swish".into(),
+                    kernels: vec![KernelCall::Swish {
                         input: *input,
                         output: *output,
                     }],
@@ -890,54 +956,41 @@ fn lower_conv2d_vfpu(conv2d: Conv2dKernelParams) -> OpPlan {
 
     let gemm_m = n * ho * wo;
     let gemm_k = kh * kw * ci;
+    // im2col writes rows padded to a multiple of 4 and leaves the pad columns
+    // untouched; passing the logical `gemm_k` alongside this stride means the
+    // GEMM never reads them.
     let k_padded = ceil_vfpu_q(gemm_k);
     let m_padded = ceil_vfpu_q(gemm_m);
-    let n_padded = ceil_vfpu_q(co);
-
-    debug_assert_eq!(gemm_m % VFPU_Q, 0, "caller must check is_vfpu_eligible");
-    debug_assert_eq!(co % VFPU_Q, 0, "caller must check is_vfpu_eligible");
-
-    let m_tiles = m_padded / VFPU_Q;
-    let k_tiles = k_padded / VFPU_Q;
-    let n_tiles = n_padded / VFPU_Q;
-
-    // Scratch 0: im2col output (M × K_padded)
-    let im2col_size = m_padded * k_padded;
-    // Scratch 1: padded weight copy (CO × K_padded)
-    let weight_size = co * k_padded;
-
-    let weight_copy_strategy = if let Some(scales) = conv2d.weight_scales {
-        // Int8 weights: dequantize into the padded f32 scratch during the
-        // (already required) copy — the matmul kernel stays pure f32.
-        CopyStrategy::RowPaddedDequantI8 {
-            num_rows: co,
-            src_stride: gemm_k,
-            dst_stride: k_padded,
-            scales,
-        }
-    } else if k_padded != gemm_k {
-        CopyStrategy::RowPadded {
-            num_rows: co,
-            src_stride: gemm_k,
-            dst_stride: k_padded,
-        }
-    } else {
-        CopyStrategy::BulkCopy
-    };
-
-    let weight_load = ScratchLoad {
-        source: conv2d.filter.id,
-        copy: weight_copy_strategy,
-    };
 
     let scratch = vec![
+        // 0: im2col output
         ScratchBuffer {
-            size: im2col_size,
+            size: m_padded * k_padded,
+            load_from: None,
+        },
+        // 1: weights repacked into the micro-kernel's B layout
+        ScratchBuffer {
+            size: psp_rt::kernels::gemm_bp_len(co, gemm_k),
+            load_from: Some(ScratchLoad {
+                source: conv2d.filter.id,
+                copy: match conv2d.weight_scales {
+                    Some(scales) => CopyStrategy::PackBDequantI8 {
+                        n: co,
+                        k: gemm_k,
+                        scales,
+                    },
+                    None => CopyStrategy::PackB { n: co, k: gemm_k },
+                },
+            }),
+        },
+        // 2/3: GEMM packing and accumulator scratch
+        ScratchBuffer {
+            size: psp_rt::kernels::gemm_ap_len(GEMM_MC, GEMM_KC),
             load_from: None,
         },
         ScratchBuffer {
-            size: weight_size,
-            load_from: Some(weight_load),
+            size: psp_rt::kernels::gemm_cp_len(GEMM_MC, co),
+            load_from: None,
         },
     ];
 
@@ -950,24 +1003,27 @@ fn lower_conv2d_vfpu(conv2d: Conv2dKernelParams) -> OpPlan {
                 stride: conv2d.stride,
                 padding: conv2d.padding,
                 output_hw: [ho, wo],
-                // TODO: proper index handling; maybe two way pointers?
-                output: 0, // scratch index 0
+                output: 0,
             }],
         },
         SubOpPlan {
-            name: "matmul".into(),
-            kernels: vec![KernelCall::MatmulBtTiled {
-                a: 0, // scratch index 0
-                b: 1, // scratch index 1
+            name: "gemm_vfpu".into(),
+            kernels: vec![KernelCall::GemmBtPacked {
+                a: GemmOperand::Scratch(0),
+                lda: k_padded,
+                b: GemmOperand::Scratch(1),
                 output: conv2d.output.id,
-                m_tiles,
-                k_tiles,
-                n_tiles,
+                m: gemm_m,
+                k: gemm_k,
+                n: co,
+                ap: 2,
+                cp: 3,
+                mc: GEMM_MC,
+                kc: GEMM_KC,
             }],
         },
     ];
 
-    // Bias + relu sub-op
     if conv2d.bias.is_some() || conv2d.has_relu {
         let name = if conv2d.has_relu {
             "bias_add_relu"
@@ -995,6 +1051,122 @@ fn lower_conv2d_vfpu(conv2d: Conv2dKernelParams) -> OpPlan {
     }
 
     OpPlan { scratch, sub_ops }
+}
+
+/// L1 blocking factors for the VFPU GEMM, chosen by sweeping `examples/fc-bench`
+/// on hardware: (32, 64) was a flat optimum, with everything within +/-8 in mc
+/// or 2x in kc landing inside 3%.
+const GEMM_MC: usize = 32;
+const GEMM_KC: usize = 64;
+
+/// Minimum batch size worth the pack/unpack overhead. Below this the batched
+/// GEMV path wins; BirdNET's mel projections have batch 511.
+const GEMM_MIN_BATCH: usize = 8;
+
+/// Try to lower a FullyConnected to the blocked VFPU GEMM, repacking its
+/// weights into the micro-kernel layout at compile time.
+///
+/// Returns `Ok(None)` when the op should fall through to the existing paths:
+/// small batches, streamed weights (a different, I/O-bound shape), non-f32 or
+/// non-constant weights.
+#[allow(clippy::too_many_arguments)]
+fn lower_fc_vfpu(
+    model: &mut PspModel,
+    allocs: &mut Vec<TensorAlloc>,
+    streamed: &std::collections::HashSet<TensorId>,
+    input: TensorId,
+    weights: TensorId,
+    bias: Option<TensorId>,
+    output: TensorId,
+    fused_activation: &crate::ir::psp::FullyConnectedParams,
+) -> Result<Option<OpPlan>, String> {
+    if streamed.contains(&weights) {
+        return Ok(None);
+    }
+    let w = model.graph.tensor(weights);
+    if w.dtype != DType::F32 {
+        return Ok(None);
+    }
+    let TensorKind::Constant { offset, len } = w.kind else {
+        return Ok(None);
+    };
+
+    let in_shape = &model.graph.tensor(input).shape;
+    let k = *in_shape.last().unwrap_or(&0);
+    let m: usize = in_shape[..in_shape.len() - 1].iter().product::<usize>().max(1);
+    let n = *w.shape.first().unwrap_or(&0);
+    if m < GEMM_MIN_BATCH || k == 0 || n == 0 {
+        return Ok(None);
+    }
+    if len != n * k * 4 {
+        return Ok(None);
+    }
+
+    let has_relu = match fused_activation.fused_activation {
+        Some(Activation::Relu) => true,
+        Some(Activation::Relu6) => return Err("Relu6 not supported for FullyConnected".into()),
+        None => false,
+    };
+
+    // Repack B once, here, using the runtime crate's own packer so the two
+    // cannot drift apart.
+    let src: Vec<f32> = model.model_data[offset..offset + len]
+        .chunks_exact(4)
+        .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
+        .collect();
+    let mut packed = vec![0.0f32; psp_rt::kernels::gemm_bp_len(n, k)];
+    psp_rt::kernels::pack_b_panel(&src, &mut packed, n, k);
+    let packed_id = append_constant_f32(model, allocs, vec![packed.len()], &packed);
+
+    let scratch = vec![
+        ScratchBuffer {
+            size: psp_rt::kernels::gemm_ap_len(GEMM_MC, GEMM_KC),
+            load_from: None,
+        },
+        ScratchBuffer {
+            size: psp_rt::kernels::gemm_cp_len(GEMM_MC, n),
+            load_from: None,
+        },
+    ];
+
+    let mut sub_ops = vec![SubOpPlan {
+        name: "gemm_vfpu".into(),
+        kernels: vec![KernelCall::GemmBtPacked {
+            a: GemmOperand::Tensor(input),
+            lda: k,
+            b: GemmOperand::Tensor(packed_id),
+            output,
+            m,
+            k,
+            n,
+            ap: 0,
+            cp: 1,
+            mc: GEMM_MC,
+            kc: GEMM_KC,
+        }],
+    }];
+
+    if bias.is_some() || has_relu {
+        let name = if has_relu { "bias_add_relu" } else { "bias_add" };
+        let mut kernels = Vec::new();
+        if let Some(bias_id) = bias {
+            kernels.push(KernelCall::BiasAdd {
+                output,
+                bias: bias_id,
+                rows: m,
+                cols: n,
+            });
+        }
+        if has_relu {
+            kernels.push(KernelCall::Relu { output });
+        }
+        sub_ops.push(SubOpPlan {
+            name: name.into(),
+            kernels,
+        });
+    }
+
+    Ok(Some(OpPlan { scratch, sub_ops }))
 }
 
 /// Append a float slice to model_data as a constant tensor, returning its TensorId.
@@ -1195,69 +1367,45 @@ mod tests {
         let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
         let plan = lower(&mut model).unwrap();
         let op = &plan.ops[0];
-        // matmul is sub_op[1]
+        // gemm is sub_op[1]
         match &op.sub_ops[1].kernels[0] {
-            KernelCall::MatmulBtTiled {
-                m_tiles,
-                k_tiles,
-                n_tiles,
-                ..
-            } => {
-                assert_eq!(*m_tiles, 196); // 784/4
-                assert_eq!(*k_tiles, 7); // 28/4
-                assert_eq!(*n_tiles, 2); // 8/4
+            KernelCall::GemmBtPacked { m, k, lda, n, .. } => {
+                assert_eq!(*m, 784);
+                assert_eq!(*k, 25); // logical K
+                assert_eq!(*lda, 28); // im2col row stride, padded to a multiple of 4
+                assert_eq!(*n, 8);
             }
-            other => panic!("Expected MatmulBtTiled, got {:?}", other),
+            other => panic!("Expected GemmBtPacked, got {:?}", other),
         }
     }
 
     #[test]
-    fn vfpu_conv2d_row_padded_when_k_unaligned() {
-        // K=25, K_pad=28 → RowPadded
+    fn vfpu_conv2d_packs_f32_weights() {
         let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
         let plan = lower(&mut model).unwrap();
         let scratch = &plan.ops[0].scratch[1]; // weight scratch
         match &scratch.load_from {
             Some(ScratchLoad {
-                copy:
-                    CopyStrategy::RowPadded {
-                        num_rows,
-                        src_stride,
-                        dst_stride,
-                    },
+                copy: CopyStrategy::PackB { n, k },
                 ..
             }) => {
-                assert_eq!(*num_rows, 8);
-                assert_eq!(*src_stride, 25);
-                assert_eq!(*dst_stride, 28);
+                assert_eq!(*n, 8);
+                assert_eq!(*k, 25);
             }
-            other => panic!("Expected RowPadded, got {:?}", other),
+            other => panic!("Expected PackB, got {:?}", other),
         }
-    }
-
-    #[test]
-    fn vfpu_conv2d_bulk_copy_when_k_aligned() {
-        // MNIST Conv2: [1,14,14,8] * [16,5,5,8] pad=2 → [1,14,14,16]
-        // K=200, K_pad=200 (already aligned) → BulkCopy
-        let mut model = make_conv2d_model(14, 14, 8, 16, 5, 5, 2, 1, true, true);
-        let plan = lower(&mut model).unwrap();
-        let scratch = &plan.ops[0].scratch[1];
-        match &scratch.load_from {
-            Some(ScratchLoad {
-                copy: CopyStrategy::BulkCopy,
-                ..
-            }) => {}
-            other => panic!("Expected BulkCopy, got {:?}", other),
-        }
+        assert_eq!(scratch.size, psp_rt::kernels::gemm_bp_len(8, 25));
     }
 
     #[test]
     fn vfpu_conv2d_scratch_sizes() {
-        // Conv1: M=784, K_pad=28 → im2col=784*28=21952, weights=8*28=224
+        // Conv1: M=784, K=25, K_pad=28 → im2col=784*28=21952.
+        // The weight scratch is now a packed B panel, which rounds K up to a
+        // multiple of 8 and N up to a multiple of 8: 1 nb * 8 kt * 8 * 4 = 256.
         let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
         let plan = lower(&mut model).unwrap();
         assert_eq!(plan.ops[0].scratch[0].size, 21952);
-        assert_eq!(plan.ops[0].scratch[1].size, 224);
+        assert_eq!(plan.ops[0].scratch[1].size, psp_rt::kernels::gemm_bp_len(8, 25));
 
         // Conv2: M=196, K_pad=200 → im2col=196*200=39200, weights=16*200=3200
         let mut model = make_conv2d_model(14, 14, 8, 16, 5, 5, 2, 1, true, true);
@@ -1278,13 +1426,18 @@ mod tests {
     }
 
     #[test]
-    fn vfpu_conv2d_unaligned_m_falls_back_to_naive() {
-        // M = 1*3*3 = 9 (not multiple of 4) — falls back to naive Conv2d
+    fn vfpu_conv2d_handles_m_not_divisible_by_four() {
+        // M = 1*3*3 = 9. The blocked GEMM absorbs the M tail in its pack, so
+        // this no longer falls back to the naive kernel — which is what moves
+        // BirdNET's conv2d_q8 ops onto the fast path.
         let mut model = make_conv2d_model(5, 5, 1, 4, 3, 3, 0, 1, true, true);
         let plan = lower(&mut model).unwrap();
-        match &plan.ops[0].sub_ops[0].kernels[0] {
-            KernelCall::Conv2d { .. } => {} // naive path
-            other => panic!("expected naive Conv2d fallback, got: {other:?}"),
+        match &plan.ops[0].sub_ops[1].kernels[0] {
+            KernelCall::GemmBtPacked { m, n, .. } => {
+                assert_eq!(*m, 9);
+                assert_eq!(*n, 4);
+            }
+            other => panic!("expected GemmBtPacked, got: {other:?}"),
         }
     }
 
@@ -1312,6 +1465,101 @@ mod tests {
         }
         let err = lower(&mut model).unwrap_err();
         assert!(err.contains("Relu6"), "got: {err}");
+    }
+
+    /// Build an FC model with the given batch, k and n.
+    fn make_fc_model(batch: usize, k: usize, n: usize, has_bias: bool) -> PspModel {
+        let mut graph = Graph::new();
+        let input = graph.add_tensor(vec![batch, k], DType::F32, TensorKind::Input);
+        graph.inputs.push(input);
+        let wbytes = n * k * 4;
+        let weights = graph.add_tensor(
+            vec![n, k],
+            DType::F32,
+            TensorKind::Constant { offset: 0, len: wbytes },
+        );
+        let bias = has_bias.then(|| {
+            graph.add_tensor(
+                vec![n],
+                DType::F32,
+                TensorKind::Constant { offset: wbytes, len: n * 4 },
+            )
+        });
+        let output = graph.add_tensor(vec![batch, n], DType::F32, TensorKind::Output);
+        graph.outputs.push(output);
+        graph.ops.push(PspOp::FullyConnected {
+            input,
+            weights,
+            bias,
+            output,
+            fused_activation: FullyConnectedParams { fused_activation: None },
+        });
+        let total = wbytes + if has_bias { n * 4 } else { 0 };
+        PspModel { graph, model_data: vec![0u8; total] }
+    }
+
+    #[test]
+    fn vfpu_gemm_used_for_batched_fc() {
+        // BirdNET's op14 shape.
+        let mut model = make_fc_model(511, 1025, 96, false);
+        let plan = lower(&mut model).unwrap();
+        assert_eq!(plan.ops[0].sub_ops[0].name, "gemm_vfpu");
+        match &plan.ops[0].sub_ops[0].kernels[0] {
+            KernelCall::GemmBtPacked { m, k, n, mc, kc, .. } => {
+                assert_eq!((*m, *k, *n), (511, 1025, 96));
+                assert_eq!((*mc, *kc), (GEMM_MC, GEMM_KC));
+            }
+            other => panic!("expected GemmBtPacked, got: {other:?}"),
+        }
+        // Two scratch buffers: packed-A block and the packed-C slab.
+        assert_eq!(plan.ops[0].scratch.len(), 2);
+        assert_eq!(plan.ops[0].scratch[0].size, psp_rt::kernels::gemm_ap_len(GEMM_MC, GEMM_KC));
+        assert_eq!(plan.ops[0].scratch[1].size, psp_rt::kernels::gemm_cp_len(GEMM_MC, 96));
+    }
+
+    #[test]
+    fn vfpu_gemm_repacks_weights_and_drops_the_original() {
+        let mut model = make_fc_model(511, 1025, 96, false);
+        let original = match &model.graph.ops[0] {
+            PspOp::FullyConnected { weights, .. } => *weights,
+            _ => unreachable!(),
+        };
+        let plan = lower(&mut model).unwrap();
+        let packed = match &plan.ops[0].sub_ops[0].kernels[0] {
+            KernelCall::GemmBtPacked { b: GemmOperand::Tensor(id), .. } => *id,
+            other => panic!("expected GemmBtPacked with tensor B, got: {other:?}"),
+        };
+        assert_ne!(packed, original, "weights should be repacked into a new constant");
+        // The unpacked original is now dead and must not reach the blob.
+        let ids: Vec<_> = plan
+            .allocs
+            .iter()
+            .filter_map(|a| match a {
+                TensorAlloc::Constant { id, .. } => Some(*id),
+                _ => None,
+            })
+            .collect();
+        assert!(ids.contains(&packed), "packed weights missing from allocs");
+        assert!(!ids.contains(&original), "dead original weights still in the blob");
+    }
+
+    #[test]
+    fn vfpu_gemm_keeps_bias_as_a_follow_on_sub_op() {
+        let mut model = make_fc_model(64, 128, 32, true);
+        let plan = lower(&mut model).unwrap();
+        let names: Vec<&str> = plan.ops[0].sub_ops.iter().map(|s| s.name.as_str()).collect();
+        assert_eq!(names, vec!["gemm_vfpu", "bias_add"]);
+    }
+
+    #[test]
+    fn small_batch_fc_stays_on_the_scalar_path() {
+        // Below GEMM_MIN_BATCH the pack/unpack overhead is not worth it.
+        let mut model = make_fc_model(1, 1024, 16, false);
+        let plan = lower(&mut model).unwrap();
+        match &plan.ops[0].sub_ops[0].kernels[0] {
+            KernelCall::FullyConnected { .. } => {}
+            other => panic!("expected scalar FullyConnected, got: {other:?}"),
+        }
     }
 
     #[test]
@@ -1419,10 +1667,10 @@ mod tests {
     fn conv2d_no_bias_no_relu_has_2_sub_ops() {
         let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, false, false);
         let plan = lower(&mut model).unwrap();
-        // im2col + matmul, no bias/relu sub-op
+        // im2col + gemm, no bias/relu sub-op
         assert_eq!(plan.ops[0].sub_ops.len(), 2);
         assert_eq!(plan.ops[0].sub_ops[0].name, "im2col");
-        assert_eq!(plan.ops[0].sub_ops[1].name, "matmul");
+        assert_eq!(plan.ops[0].sub_ops[1].name, "gemm_vfpu");
     }
 
     #[test]
@@ -1431,7 +1679,7 @@ mod tests {
         let plan = lower(&mut model).unwrap();
         assert_eq!(plan.ops[0].sub_ops.len(), 3);
         assert_eq!(plan.ops[0].sub_ops[0].name, "im2col");
-        assert_eq!(plan.ops[0].sub_ops[1].name, "matmul");
+        assert_eq!(plan.ops[0].sub_ops[1].name, "gemm_vfpu");
         assert_eq!(plan.ops[0].sub_ops[2].name, "bias_add_relu");
     }
 }

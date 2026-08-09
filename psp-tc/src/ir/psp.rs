@@ -114,6 +114,10 @@ pub enum PspOp {
         output: TensorId,
     },
 
+    /// Swish / SiLU: `out = x * sigmoid(x)`. Produced by `ir::fuse` from a
+    /// `Logistic` + `Mul` pair; TFLite has no opcode for it.
+    Swish { input: TensorId, output: TensorId },
+
     // ─── Quantization ops (rewritten to f32 semantics by ir::quant) ─────
     /// TFLite QUANTIZE, simulated in f32: snap each value to its int8
     /// quantization grid, `out = (clamp(round(x/s) + z) - z) * s`.
@@ -441,6 +445,9 @@ impl std::fmt::Display for PspOp {
             PspOp::FakeQuant { input, output } => {
                 write!(f, "FakeQuant(t{} → t{})", input, output)
             }
+            PspOp::Swish { input, output } => {
+                write!(f, "Swish(t{} → t{})", input, output)
+            }
             PspOp::Dequantize { input, output } => {
                 write!(f, "Dequantize(t{} → t{})", input, output)
             }
@@ -672,6 +679,7 @@ impl PspOp {
             | PspOp::UnaryElementWise { input, .. }
             | PspOp::FakeQuant { input, .. }
             | PspOp::Dequantize { input, .. }
+            | PspOp::Swish { input, .. }
             | PspOp::Rfft { input, .. } => vec![*input],
             PspOp::Pad {
                 input, paddings, ..
@@ -752,6 +760,7 @@ impl PspOp {
             | PspOp::Cast { output, .. }
             | PspOp::FakeQuant { output, .. }
             | PspOp::Dequantize { output, .. }
+            | PspOp::Swish { output, .. }
             | PspOp::Pad { output, .. }
             | PspOp::Transpose { output, .. }
             | PspOp::ReverseV2 { output, .. }
@@ -826,6 +835,7 @@ impl PspOp {
             | PspOp::Cast { input, output }
             | PspOp::FakeQuant { input, output }
             | PspOp::Dequantize { input, output }
+            | PspOp::Swish { input, output }
             | PspOp::Rfft { input, output, .. } => {
                 r(input);
                 r(output);

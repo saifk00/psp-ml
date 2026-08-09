@@ -113,6 +113,14 @@ pub struct ScratchLoad {
     pub copy: CopyStrategy,
 }
 
+/// Where a GEMM operand lives: a model tensor, or an op-local scratch buffer
+/// (im2col output, or weights packed at runtime).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum GemmOperand {
+    Tensor(TensorId),
+    Scratch(ScratchId),
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum CopyStrategy {
     BulkCopy,
@@ -121,6 +129,12 @@ pub enum CopyStrategy {
         src_stride: usize,
         dst_stride: usize,
     },
+    /// Repack an `[n, k]` f32 weight matrix into `gemm_bt_packed`'s B layout.
+    PackB { n: usize, k: usize },
+    /// Repack an `[n, k]` int8 weight matrix into `gemm_bt_packed`'s B layout,
+    /// dequantising with a per-output-channel scale during the pack so the
+    /// weights stay 1 byte each in the blob.
+    PackBDequantI8 { n: usize, k: usize, scales: TensorId },
     /// Row-padded copy from an int8 source, dequantizing each row with its
     /// per-output-channel scale: `dst[r][c] = src[r][c] as f32 * scales[r]`.
     RowPaddedDequantI8 {
@@ -129,6 +143,23 @@ pub enum CopyStrategy {
         dst_stride: usize,
         scales: TensorId,
     },
+}
+
+impl CopyStrategy {
+    /// Tensors this copy reads *besides* the `ScratchLoad::source`.
+    ///
+    /// Exhaustive on purpose: liveness (`arena`) and dead-constant pruning
+    /// (`lower`) both depend on it, and a missing arm here silently drops a
+    /// constant from the blob. Add an arm when you add a variant.
+    pub fn extra_tensor_refs(&self) -> Option<TensorId> {
+        match self {
+            CopyStrategy::BulkCopy => None,
+            CopyStrategy::RowPadded { .. } => None,
+            CopyStrategy::PackB { .. } => None,
+            CopyStrategy::RowPaddedDequantI8 { scales, .. } => Some(*scales),
+            CopyStrategy::PackBDequantI8 { scales, .. } => Some(*scales),
+        }
+    }
 }
 
 // ─── (3) Kernel calls ───────────────────────────────────────────
@@ -216,6 +247,29 @@ pub enum KernelCall {
         has_relu: bool,
         batch_size: usize,
     },
+    /// Cache-blocked, VFPU register-blocked FullyConnected:
+    /// `output[m,n] = input[m,k] @ weights_packed[n,k]^T`.
+    ///
+    /// `weights_packed` is a compile-time repacking of the weight constant
+    /// into `psp_rt::kernels`' micro-kernel layout, so there is no runtime
+    /// weight shuffling. `ap`/`cp` are the packing and accumulator scratch.
+    /// Measured 19.7x over the batched-GEMV path at BirdNET's mel shape.
+    GemmBtPacked {
+        a: GemmOperand,
+        /// A's row stride, which may exceed `k` (im2col pads rows to a
+        /// multiple of 4 and leaves those columns stale).
+        lda: usize,
+        b: GemmOperand,
+        output: TensorId,
+        m: usize,
+        k: usize,
+        n: usize,
+        ap: ScratchId,
+        cp: ScratchId,
+        mc: usize,
+        kc: usize,
+    },
+
     /// FullyConnected whose weight matrix is streamed from the weight file in
     /// row chunks (through a scratch buffer) instead of being memory-resident.
     /// Batch-1 only.
@@ -244,6 +298,8 @@ pub enum KernelCall {
         input: TensorId,
         output: TensorId,
     },
+    /// `out = x * sigmoid(x)`, computed 4 lanes at a time on the VFPU.
+    Swish { input: TensorId, output: TensorId },
     /// Snap f32 values to an int8 quantization grid (TFLite QUANTIZE
     /// simulated in f32).
     FakeQuant {
