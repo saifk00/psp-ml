@@ -12,8 +12,7 @@ This repo is two things, built to work together but genuinely useful apart:
 - **A TFLite → Rust AOT compiler.** `psp-tc` reads a `.tflite` model and generates Rust inference
   code — VFPU-accelerated conv2d/pooling/fully-connected kernels, static memory planning, no heap,
   no interpreter — that you link into your own PSP crate from a normal `build.rs`. Currently runs
-  MNIST at 99% accuracy on real hardware; working toward real-time BirdNET.
-
+  MNIST at 99% accuracy in ~15ms/image and BirdNET hybrid quantized int8/fp16 in about 6.5sec / audio clip
 ## Status: Experimental
 
 ## Quick start
