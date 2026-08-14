@@ -36,8 +36,24 @@ impl Conv2dKernelParams {
  *
  * If the graph was rewritten by `ir::stream::rewrite()`, the lowerer sees
  * a clean batch=1 graph — no streaming logic needed here.
+ *
+ * `streamed` is the set of constant tensors the caller decided to leave on
+ * disk and read chunkwise at op time (see `memory_planner::streamed_weights`);
+ * everything else is packed into the resident blob. Residency *policy* lives
+ * in `generate_code`, which needs the resulting `blob_bytes` to decide — this
+ * function only mechanises the decision.
+ *
+ * **Append-only contract.** The only mutations `lower` makes to `model` are
+ * `append_constant_f32` calls (repacked VFPU weight matrices, FFT twiddles),
+ * which push onto the ends of `model.model_data` and `model.graph.tensors`
+ * and nothing else. `generate_code` relies on this to roll a speculative
+ * lowering back by truncating both to their prior lengths; `lower_is_append_only`
+ * guards it.
  */
-pub fn lower(model: &mut PspModel) -> Result<CodegenPlan, String> {
+pub fn lower(
+    model: &mut PspModel,
+    streamed: &std::collections::HashSet<TensorId>,
+) -> Result<CodegenPlan, String> {
     if model.graph.inputs.len() != 1 {
         return Err(format!(
             "Expected 1 input tensor, found {}",
@@ -64,19 +80,8 @@ pub fn lower(model: &mut PspModel) -> Result<CodegenPlan, String> {
     // TODO: expose as compiler flag
     let use_vfpu_conv2d = true;
 
-    // Budget-based weight residency: oversized single-use FC weights are
-    // streamed from the weight file at runtime instead of held in memory.
-    let streamed =
-        crate::memory_planner::streamed_weights(model, crate::memory_planner::DEFAULT_RESIDENT_BUDGET);
-    for &tid in &streamed {
-        eprintln!(
-            "memory_planner: streaming t{tid} ({:.1} MiB) from weight file at runtime",
-            model.graph.tensor(tid).size_bytes() as f64 / 1048576.0
-        );
-    }
-
-    let mut allocs = lower_allocs(model, &streamed)?;
-    let ops = lower_ops(model, use_vfpu_conv2d, &mut allocs, &streamed)?;
+    let mut allocs = lower_allocs(model, streamed)?;
+    let ops = lower_ops(model, use_vfpu_conv2d, &mut allocs, streamed)?;
     prune_dead_constants(&mut allocs, &ops);
 
     // Compute blob size AFTER lower_ops, which may append twiddle constants
@@ -1170,6 +1175,11 @@ fn lower_fc_vfpu(
 }
 
 /// Append a float slice to model_data as a constant tensor, returning its TensorId.
+///
+/// This is the *only* way lowering mutates `model`, and it is strictly
+/// append-only on both `model_data` and `graph.tensors` (`add_tensor` derives
+/// ids from `tensors.len()`). `generate_code` rolls a speculative lowering back
+/// by truncating both to their pre-lowering lengths — keep it that way.
 fn append_constant_f32(
     model: &mut PspModel,
     allocs: &mut Vec<TensorAlloc>,
@@ -1230,15 +1240,27 @@ fn lower_rfft(
 
     // Stage twiddles, concatenated in stage order: stage s holds 2^s complex
     // entries exp(-2πi·j / 2^(s+1)) at float offset (2^s - 1) * 2.
+    // Split layout: per stage, all cosines then all sines. The kernel keeps
+    // real and imaginary parts in separate arrays so every butterfly term is a
+    // plain elementwise multiply — see the FFT section of psp-rt's kernels.
     let mut stage_twiddles = Vec::new();
     for stage in 0..num_stages {
         let half_size = 1usize << stage;
+        let start = stage_twiddles.len();
         for j in 0..half_size {
             let angle = -2.0 * std::f64::consts::PI * (j as f64) / (2.0 * half_size as f64);
             stage_twiddles.push(angle.cos() as f32);
+        }
+        for j in 0..half_size {
+            let angle = -2.0 * std::f64::consts::PI * (j as f64) / (2.0 * half_size as f64);
             stage_twiddles.push(angle.sin() as f32);
         }
+        // Pad so the next stage starts 4-float aligned; the kernel loads these
+        // with `lv.q` and the natural packing lands at 8 mod 16 bytes.
+        let block = psp_rt::kernels::stage_tw_block(stage);
+        stage_twiddles.resize(start + block, 0.0);
     }
+    debug_assert_eq!(stage_twiddles.len(), psp_rt::kernels::stage_tw_len(n));
     let stage_tw_id =
         append_constant_f32(model, allocs, vec![stage_twiddles.len()], &stage_twiddles);
 
@@ -1247,6 +1269,9 @@ fn lower_rfft(
     for k in 1..n_complex {
         let angle = 2.0 * std::f64::consts::PI * (k as f64) / (n as f64);
         unpack_twiddles.push(angle.cos() as f32);
+    }
+    for k in 1..n_complex {
+        let angle = 2.0 * std::f64::consts::PI * (k as f64) / (n as f64);
         unpack_twiddles.push(-(angle.sin() as f32));
     }
     let unpack_tw_id =
@@ -1275,6 +1300,13 @@ mod tests {
     use super::*;
     use crate::ir::graph::{DType, Graph, TensorKind};
     use crate::ir::psp::{Conv2dParams, FullyConnectedParams, PspModel};
+
+    /// Shadows `super::lower` so the tests below (none of which exercise weight
+    /// streaming) keep reading as `lower(&mut model)`. An explicit item wins
+    /// over the `use super::*` glob.
+    fn lower(model: &mut PspModel) -> Result<CodegenPlan, String> {
+        super::lower(model, &std::collections::HashSet::new())
+    }
 
     /// Helper: build a minimal model with one Conv2d op for VFPU testing.
     /// Input: [1, H, W, CI], Filter: [CO, KH, KW, CI], Output: [1, OH, OW, CO]
@@ -1496,6 +1528,55 @@ mod tests {
         });
         let total = wbytes + if has_bias { n * 4 } else { 0 };
         PspModel { graph, model_data: vec![0u8; total] }
+    }
+
+    /// Single-op RFFT model — the other caller of `append_constant_f32`.
+    fn make_rfft_model(frames: usize, n: usize) -> PspModel {
+        let mut graph = Graph::new();
+        let input = graph.add_tensor(vec![frames, n], DType::F32, TensorKind::Input);
+        graph.inputs.push(input);
+        let output = graph.add_tensor(vec![frames, n / 2 + 1], DType::F32, TensorKind::Output);
+        graph.outputs.push(output);
+        graph.ops.push(PspOp::Rfft {
+            input,
+            output,
+            fft_length: n,
+        });
+        PspModel { graph, model_data: Vec::new() }
+    }
+
+    #[test]
+    fn lower_is_append_only() {
+        // `generate_code` rolls a speculative lowering back by truncating
+        // `model_data` and `graph.tensors` to their prior lengths. That is only
+        // exact if lowering appends and never rewrites — these are the two
+        // paths that append (repacked VFPU weights, FFT twiddles).
+        for mut model in [make_fc_model(511, 1025, 96, false), make_rfft_model(4, 512)] {
+            let data_before = model.model_data.clone();
+            let tensors_before = model.graph.tensors.len();
+
+            let first = lower(&mut model).unwrap();
+            assert!(
+                model.model_data.len() > data_before.len(),
+                "expected this model to append constants, or it tests nothing"
+            );
+            assert_eq!(
+                &model.model_data[..data_before.len()],
+                &data_before[..],
+                "lowering rewrote pre-existing model_data"
+            );
+            let data_after_first = model.model_data.clone();
+
+            model.model_data.truncate(data_before.len());
+            model.graph.tensors.truncate(tensors_before);
+
+            let second = lower(&mut model).unwrap();
+            assert_eq!(first, second, "re-lowering after rollback changed the plan");
+            assert_eq!(
+                model.model_data, data_after_first,
+                "rollback left duplicated appended constants behind"
+            );
+        }
     }
 
     #[test]

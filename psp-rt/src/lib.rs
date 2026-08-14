@@ -137,6 +137,16 @@ macro_rules! __module_impl {
             /// See never-return-0 convention documented on `psp_rt::module!`.
             const PSP_RT_NO_RESIDENT: i32 = 1;
             const PSP_RT_PANIC_STATUS: i32 = -1_i32; // 0xFFFF_FFFF as u32 — psplink_connection::load::PANIC_SENTINEL
+            /// `app_main` overran its budget and was killed.
+            const PSP_RT_TIMEOUT_STATUS: i32 = 2;
+            /// Wall-clock budget for `app_main`. Generous — the slowest thing
+            /// in-tree is ~30 s — because the only cost of a high limit is how
+            /// long you wait on a genuinely hung run.
+            const PSP_RT_TIMEOUT_SECS: u32 = 240;
+
+            /// Set by `main_thread` just before it returns; read by
+            /// `module_start` after the wait.
+            static mut APP_STATUS: i32 = PSP_RT_TIMEOUT_STATUS;
 
             #[no_mangle]
             extern "C" fn module_start(argc_bytes: usize, argv: *mut c_void) -> isize {
@@ -173,6 +183,12 @@ macro_rules! __module_impl {
                     // both the clean and the panic path so repeated `ld`s
                     // can't exhaust the pool.
                     $crate::mem::free_all();
+                    // Publish the status here rather than relying on
+                    // `sceKernelWaitThreadEnd`'s return value, whose meaning
+                    // (thread exit status vs plain 0/-errno) differs between
+                    // references. Reading it back from a static makes the
+                    // panic sentinel reach the host deterministically.
+                    unsafe { APP_STATUS = status };
                     status
                 }
 
@@ -189,7 +205,32 @@ macro_rules! __module_impl {
                     );
 
                     ::psp::sys::sceKernelStartThread(id, argc_bytes, argv);
-                    ::psp::sys::sceKernelWaitThreadEnd(id, core::ptr::null_mut()) as isize
+
+                    // Bounded wait. Blocking `module_start` is what makes `ld`
+                    // completion meaningful (see the macro docs), but it also
+                    // makes psplink's shell thread hostage to this one: a hung
+                    // or faulted `app_main` leaves `ld` outstanding forever,
+                    // which neither `reset` nor a USB reset can clear — only
+                    // physically power-cycling the PSP. A timeout on the wait
+                    // itself needs no second thread and does not depend on the
+                    // scheduler preempting a thread spinning in a tight loop.
+                    let mut timeout_us: u32 = PSP_RT_TIMEOUT_SECS * 1_000_000;
+                    let waited = ::psp::sys::sceKernelWaitThreadEnd(id, &mut timeout_us);
+
+                    if waited < 0 {
+                        // Timed out (or the wait itself failed) — the worker may
+                        // still be running, and unloading the module out from
+                        // under a live thread would fault. Kill it first.
+                        $crate::dprintln!(
+                            "\npsp-rt: app_main exceeded {} s, terminating",
+                            PSP_RT_TIMEOUT_SECS
+                        );
+                        ::psp::sys::sceKernelTerminateDeleteThread(id);
+                        $crate::mem::free_all();
+                        return PSP_RT_TIMEOUT_STATUS as isize;
+                    }
+
+                    APP_STATUS as isize
                 }
             }
         }

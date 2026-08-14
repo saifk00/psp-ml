@@ -75,12 +75,74 @@ fn run_benchmark(
     let mut op_ticks = [0u64; generated::NUM_OPS];
 
     let start = get_tick();
+    #[cfg(not(feature = "hwprofile"))]
     generated::forward_timed(input, output, &mut op_ticks, get_tick);
+    // Hardware-counter pass. The generated `forward_profiled` brackets every
+    // sub-op with the Allegrex profiler MMIO (clear -> enable -> kernel ->
+    // disable -> read), which needs the psp_ml_kernel plugin installed or the
+    // counters read zero.
+    #[cfg(feature = "hwprofile")]
+    {
+        static mut PROFILE: [psp_rt::profiler::OpProfileStats; generated::NUM_OPS] =
+            [psp_rt::profiler::OpProfileStats::zero(); generated::NUM_OPS];
+        generated::forward_profiled(
+            input,
+            output,
+            &mut op_ticks,
+            unsafe { &mut *core::ptr::addr_of_mut!(PROFILE) },
+            get_tick,
+        );
+        report_hw_profile(unsafe { &*core::ptr::addr_of!(PROFILE) }, &op_ticks);
+    }
     let elapsed_ticks = get_tick() - start;
 
     let total_us = (elapsed_ticks * 1_000_000) / tick_res;
 
     BenchResult { total_us, op_ticks }
+}
+
+/// Print the ops that cost the most CPU cycles, with the counters that say why.
+///
+/// Cycles rather than wall time because these come from the hardware counter
+/// and are immune to the timing drift that per-op tick accounting has had.
+#[cfg(feature = "hwprofile")]
+fn report_hw_profile(
+    profile: &[psp_rt::profiler::OpProfileStats; generated::NUM_OPS],
+    _op_ticks: &[u64; generated::NUM_OPS],
+) {
+    let total: u64 = profile.iter().map(|p| p.cpuck).sum();
+    psp_rt::dprintln!("");
+    psp_rt::dprintln!("=== hardware profile: {} total cpu cycles ===", total);
+    psp_rt::dprintln!("op  %cyc  Mcycles  i-miss  d-miss  cop0-stall  mem-stall  name");
+
+    // Selection sort over indices: no allocator, and 15 passes over 271 entries
+    // is nothing next to the inference itself.
+    let mut used = [false; generated::NUM_OPS];
+    for _ in 0..20 {
+        let mut best = usize::MAX;
+        for i in 0..generated::NUM_OPS {
+            if !used[i] && (best == usize::MAX || profile[i].cpuck > profile[best].cpuck) {
+                best = i;
+            }
+        }
+        if best == usize::MAX || profile[best].cpuck == 0 {
+            break;
+        }
+        used[best] = true;
+        let p = &profile[best];
+        let pct = if total > 0 { p.cpuck * 100 / total } else { 0 };
+        psp_rt::dprintln!(
+            "{:3} {:3}% {:8} {:7} {:7} {:11} {:10} {}",
+            best,
+            pct,
+            p.cpuck / 1_000_000,
+            p.i_miss,
+            p.d_miss,
+            p.copz,
+            p.memory,
+            generated::OP_NAMES[best]
+        );
+    }
 }
 
 // ============================================================================
@@ -254,15 +316,10 @@ fn write_results_to_buf(output: &[f32; OUTPUT_CLASSES], buf: &mut [u8]) -> usize
 
 #[cfg(not(feature = "local"))]
 fn get_tick() -> u64 {
-    // forward_timed calls this between ops; use it as a progress heartbeat so
-    // the host's per-event timeout never starves during a long inference.
-    static mut CALLS: u32 = 0;
-    unsafe {
-        CALLS += 1;
-        if CALLS % 64 == 0 {
-            psp_rt::dprint!(".");
-        }
-    }
+    // No heartbeat here. `forward_timed` calls this twice per sub-op, so a
+    // periodic USB print lands *inside* the timed region and is attributed to
+    // whichever op it interrupts. It existed to keep the host's per-event
+    // timeout fed back when inference took 20 s; at ~7 s it is pure overhead.
     let mut tick = 0u64;
     unsafe { sceRtcGetCurrentTick(&mut tick) };
     tick

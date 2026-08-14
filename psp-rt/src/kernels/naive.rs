@@ -88,95 +88,7 @@ pub fn conv2d_relu(
     }
 }
 
-/// 2D Max Pooling (NHWC, naive) with padding support
-///
-/// - `input`:  [N, H, W, C]
-/// - `padding`: [pad_top, pad_bottom, pad_left, pad_right]
-/// - `output`: [N, Ho, Wo, C]
-pub fn max_pool2d(
-    input: &[f32],
-    input_shape: [usize; 4],
-    kernel: [usize; 2],
-    stride: [usize; 2],
-    padding: [usize; 4],
-    output: &mut [f32],
-    output_shape: [usize; 4],
-) {
-    let [n, h, w, c] = input_shape;
-    let [kh, kw] = kernel;
-    let [sh, sw] = stride;
-    let [_, ho, wo, _] = output_shape;
-    let [pad_top, _, pad_left, _] = padding;
 
-    for batch in 0..n {
-        for oy in 0..ho {
-            for ox in 0..wo {
-                for ch in 0..c {
-                    let mut max_val = f32::NEG_INFINITY;
-                    for ky in 0..kh {
-                        for kx in 0..kw {
-                            let iy = (oy * sh + ky) as isize - pad_top as isize;
-                            let ix = (ox * sw + kx) as isize - pad_left as isize;
-                            if iy >= 0 && iy < h as isize && ix >= 0 && ix < w as isize {
-                                let in_idx = batch * (h * w * c) + (iy as usize) * (w * c) + (ix as usize) * c + ch;
-                                if input[in_idx] > max_val {
-                                    max_val = input[in_idx];
-                                }
-                            }
-                        }
-                    }
-                    let out_idx = batch * (ho * wo * c) + oy * (wo * c) + ox * c + ch;
-                    output[out_idx] = max_val;
-                }
-            }
-        }
-    }
-}
-
-/// 2D Average Pooling (NHWC, naive) with padding support
-///
-/// - `input`:  [N, H, W, C]
-/// - `padding`: [pad_top, pad_bottom, pad_left, pad_right]
-/// - `output`: [N, Ho, Wo, C]
-pub fn average_pool2d(
-    input: &[f32],
-    input_shape: [usize; 4],
-    kernel: [usize; 2],
-    stride: [usize; 2],
-    padding: [usize; 4],
-    output: &mut [f32],
-    output_shape: [usize; 4],
-) {
-    let [n, h, w, c] = input_shape;
-    let [kh, kw] = kernel;
-    let [sh, sw] = stride;
-    let [_, ho, wo, _] = output_shape;
-    let [pad_top, _, pad_left, _] = padding;
-
-    for batch in 0..n {
-        for oy in 0..ho {
-            for ox in 0..wo {
-                for ch in 0..c {
-                    let mut sum = 0.0f32;
-                    let mut count = 0usize;
-                    for ky in 0..kh {
-                        for kx in 0..kw {
-                            let iy = (oy * sh + ky) as isize - pad_top as isize;
-                            let ix = (ox * sw + kx) as isize - pad_left as isize;
-                            if iy >= 0 && iy < h as isize && ix >= 0 && ix < w as isize {
-                                let in_idx = batch * (h * w * c) + (iy as usize) * (w * c) + (ix as usize) * c + ch;
-                                sum += input[in_idx];
-                                count += 1;
-                            }
-                        }
-                    }
-                    let out_idx = batch * (ho * wo * c) + oy * (wo * c) + ox * c + ch;
-                    output[out_idx] = if count > 0 { sum / count as f32 } else { 0.0 };
-                }
-            }
-        }
-    }
-}
 
 /// Reshape (copy)
 pub fn reshape(input: &[f32], output: &mut [f32]) {
@@ -199,6 +111,19 @@ pub fn fully_connected(
     output: &mut [f32],
     out_features: usize,
 ) {
+    // Deliberately one row at a time. A 4-row form (four independent weight
+    // streams) measures 1.48x faster at BirdNET's exact classifier shape in
+    // isolation — 333 ms to 225 ms, `examples/gemv-bench` — but in situ it is
+    // 131 -> 133 Mcycles, i.e. nothing, while still taking the 105k extra
+    // misses the isolated run predicted. The misses arrived; the overlap did
+    // not. Same isolated-vs-in-context gap as `gemm_vfpu` (1270 vs 828
+    // MFLOP/s), and unexplained. Do not "optimise" this without an in-context
+    // hardware measurement.
+    //
+    // This is a GEMV (m=1): every weight is read exactly once, so its misses
+    // are compulsory — 423,360 measured against 417,408 unavoidable — and no
+    // blocking or tiling can reduce them. The lever is overlapping misses, not
+    // avoiding them.
     for o in 0..out_features {
         let mut sum = bias.map_or(0.0, |b| b[o]);
         for i in 0..in_features {
@@ -207,6 +132,7 @@ pub fn fully_connected(
         output[o] = sum;
     }
 }
+
 
 // ─── Element-wise binary ops ────────────────────────────────────
 
@@ -497,60 +423,6 @@ pub fn transpose(
     }
 }
 
-/// Depthwise 2D Convolution (NHWC, naive)
-///
-/// Each output channel depends only on the corresponding input channel.
-/// - `input`:  [N, H, W, C]
-/// - `filter`: [1, Kh, Kw, C]
-/// - `bias`:   [C]
-/// - `padding`: [pad_h, pad_w] - zero padding on each side
-/// - `output`: [N, Ho, Wo, C]
-pub fn depthwise_conv2d(
-    input: &[f32],
-    input_shape: [usize; 4],
-    filter: &[f32],
-    filter_shape: [usize; 4],
-    bias: Option<&[f32]>,
-    stride: [usize; 2],
-    padding: [usize; 4],
-    output: &mut [f32],
-    output_shape: [usize; 4],
-) {
-    let [n, h, w, c] = input_shape;
-    let [_, kh, kw, _] = filter_shape;
-    let [_, ho, wo, _] = output_shape;
-    let [sh, sw] = stride;
-    let [pad_top, _pad_bottom, pad_left, _pad_right] = padding;
-
-    for batch in 0..n {
-        for oy in 0..ho {
-            for ox in 0..wo {
-                for ch in 0..c {
-                    let mut sum = bias.map_or(0.0, |b| b[ch]);
-                    for ky in 0..kh {
-                        for kx in 0..kw {
-                            let iy_padded = oy * sh + ky;
-                            let ix_padded = ox * sw + kx;
-                            if iy_padded < pad_top || ix_padded < pad_left {
-                                continue;
-                            }
-                            let iy = iy_padded - pad_top;
-                            let ix = ix_padded - pad_left;
-                            if iy >= h || ix >= w {
-                                continue;
-                            }
-                            let in_idx = batch * (h * w * c) + iy * (w * c) + ix * c + ch;
-                            let f_idx = ky * (kw * c) + kx * c + ch;
-                            sum += input[in_idx] * filter[f_idx];
-                        }
-                    }
-                    let out_idx = batch * (ho * wo * c) + oy * (wo * c) + ox * c + ch;
-                    output[out_idx] = sum;
-                }
-            }
-        }
-    }
-}
 
 /// Zero-pad an NHWC tensor.
 ///
@@ -739,46 +611,6 @@ fn bit_reverse(mut x: usize, bits: usize) -> usize {
 ///
 /// `output` has N floats: N/2 complex pairs as [re0, im0, re1, im1, ...].
 /// Complex pair k (in bit-reversed order) = (input[2*br(k)], input[2*br(k)+1]).
-/// Batched real FFT over `frames` contiguous length-`n` frames.
-///
-/// `input` is `[frames, n]`, `output` is `[frames, n/2 + 1]` (real parts of
-/// the frequency bins, matching TFLite RFFT2D + CAST(complex→f32)). `scratch`
-/// holds one frame's packed complex data (`n` floats). `stage_twiddles` is
-/// the per-stage twiddle tables concatenated in stage order — stage `s` has
-/// `2^s` complex entries at float offset `(2^s - 1) * 2`.
-pub fn rfft_batch(
-    input: &[f32],
-    stage_twiddles: &[f32],
-    unpack_twiddles: &[f32],
-    scratch: &mut [f32],
-    output: &mut [f32],
-    n: usize,
-    frames: usize,
-) {
-    let n_complex = n / 2;
-    let out_bins = n_complex + 1;
-    let num_stages = n_complex.trailing_zeros() as usize;
-    for f in 0..frames {
-        let data = &mut scratch[..n];
-        rfft_pack(&input[f * n..(f + 1) * n], data, n);
-        for stage in 0..num_stages {
-            let half_size = 1usize << stage;
-            let tw_off = (half_size - 1) * 2;
-            fft_butterfly_stage(
-                data,
-                &stage_twiddles[tw_off..tw_off + half_size * 2],
-                n_complex,
-                half_size,
-            );
-        }
-        rfft_unpack(
-            data,
-            unpack_twiddles,
-            &mut output[f * out_bins..(f + 1) * out_bins],
-            n,
-        );
-    }
-}
 
 pub fn rfft_pack(input: &[f32], output: &mut [f32], n: usize) {
     let n_complex = n / 2;

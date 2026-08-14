@@ -16,6 +16,18 @@ use super::plan::GemmOperand;
 use super::tensor_expr::TensorExprWriter;
 
 pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
+    // Every timing slot must have a name and vice versa. When these drift, the
+    // per-op breakdown silently misattributes *everything* rather than
+    // failing — which is exactly what happened when `pack_weights` was added
+    // to the metadata and to only one of the three call renderers.
+    debug_assert_eq!(
+        expected_timing_slots(plan),
+        plan.ops
+            .iter()
+            .map(|op| op.sub_ops.len() + usize::from(has_scratch_load(op)))
+            .sum::<usize>(),
+        "timing slots and OP_NAMES are out of sync"
+    );
     let writer = TensorExprWriter::new(graph);
     let arena = plan.arena.as_ref();
 
@@ -316,7 +328,20 @@ fn render_op_with_timing(
     out: &mut Vec<TokenStream>,
 ) {
     let scratch = render_scratch(op, op_idx, writer, arena);
-    out.push(scratch);
+    if has_scratch_load(op) {
+        let i = *sub_op_idx;
+        *sub_op_idx += 1;
+        match mode {
+            TimingMode::Plain => out.push(scratch),
+            TimingMode::Timed | TimingMode::Profiled => out.push(quote! {
+                let __t0 = get_tick();
+                #scratch
+                op_ticks[#i] += get_tick() - __t0;
+            }),
+        }
+    } else {
+        out.push(scratch);
+    }
 
     for sub in &op.sub_ops {
         let calls: Vec<TokenStream> = sub
@@ -537,7 +562,18 @@ fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
             /// automatically when the module exits (clean or panicking).
             #[cfg(target_os = "psp")]
             pub fn init() {
-                use psp::sys::{sceIoClose, sceIoOpen, sceIoRead, IoOpenFlags};
+                use psp::sys::{
+                    sceIoClose, sceIoOpen, sceIoRead, sceKernelMaxFreeMemSize,
+                    sceKernelTotalFreeMemSize, IoOpenFlags,
+                };
+
+                // Probed before allocating so a failure names its own cause.
+                // Partition memory is not reclaimed when a module unloads, so a
+                // block leaked by an earlier run shows up here as a shrunken
+                // largest-free-block — and with the whole weight blob resident
+                // there is little slack to absorb one.
+                let max_block = unsafe { sceKernelMaxFreeMemSize() } as usize;
+                let total_free = unsafe { sceKernelTotalFreeMemSize() } as usize;
 
                 let mut alloc_err = 0u32;
                 let ptr = psp_rt::mem::alloc_partition(
@@ -547,8 +583,23 @@ fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
                 );
                 if ptr.is_null() {
                     psp_rt::dprintln!("FATAL: weight alloc failed (0x{:08X})", alloc_err);
+                    psp_rt::dprintln!(
+                        "  need {} B, largest free block {} B, short by {} B",
+                        WEIGHT_BYTES,
+                        max_block,
+                        WEIGHT_BYTES.saturating_sub(max_block)
+                    );
+                    psp_rt::dprintln!("  total free {} B", total_free);
+                    psp_rt::dprintln!("  a clean boot has ~55.7 MB contiguous; well below that");
+                    psp_rt::dprintln!("  means an earlier run leaked — power-cycle the PSP.");
                     panic!("weight alloc failed"); // surfaces as the panic exit sentinel
                 }
+                psp_rt::dprintln!(
+                    "Weights: {} B resident, {} B free block ({} B headroom)",
+                    WEIGHT_BYTES,
+                    max_block,
+                    max_block.saturating_sub(WEIGHT_BYTES)
+                );
 
                 let fd = unsafe {
                     sceIoOpen(
@@ -1500,9 +1551,22 @@ fn render_timed_calls(
     let mut entries = Vec::new();
 
     for (op_idx, op) in plan.ops.iter().enumerate() {
-        // Scratch setup is untimed
         let scratch = render_scratch(op, op_idx, writer, arena);
-        entries.push(scratch);
+        if has_scratch_load(op) {
+            // Weight repacking is real work:
+            // give it its own slot so the breakdown accounts for it. Must stay
+            // in lockstep with `render_op_metadata`, which emits a matching
+            // "pack_weights" name for exactly these ops.
+            let i = sub_op_idx;
+            sub_op_idx += 1;
+            entries.push(quote! {
+                let __t0 = get_tick();
+                #scratch
+                op_ticks[#i] += get_tick() - __t0;
+            });
+        } else {
+            entries.push(scratch);
+        }
 
         for sub in &op.sub_ops {
             let calls: Vec<TokenStream> = sub
@@ -1537,7 +1601,17 @@ fn render_profiled_calls(
 
     for (op_idx, op) in plan.ops.iter().enumerate() {
         let scratch = render_scratch(op, op_idx, writer, arena);
-        entries.push(scratch);
+        if has_scratch_load(op) {
+            let i = sub_op_idx;
+            sub_op_idx += 1;
+            entries.push(quote! {
+                let __t0 = get_tick();
+                #scratch
+                op_ticks[#i] += get_tick() - __t0;
+            });
+        } else {
+            entries.push(scratch);
+        }
 
         for sub in &op.sub_ops {
             let calls: Vec<TokenStream> = sub
@@ -1574,11 +1648,31 @@ fn render_profiled_calls(
 // Op metadata
 // ---------------------------------------------------------------------------
 
+/// Does this op do real work setting up its scratch (a weight repack or copy)?
+fn expected_timing_slots(plan: &CodegenPlan) -> usize {
+    plan.ops
+        .iter()
+        .map(|op| op.sub_ops.len() + usize::from(has_scratch_load(op)))
+        .sum()
+}
+
+pub(super) fn has_scratch_load(op: &OpPlan) -> bool {
+    op.scratch.iter().any(|s| s.load_from.is_some())
+}
+
 fn render_op_metadata(plan: &CodegenPlan) -> TokenStream {
     let names: Vec<&str> = plan
         .ops
         .iter()
-        .flat_map(|op| op.sub_ops.iter().map(|s| s.name.as_str()))
+        .flat_map(|op| {
+            let pack = if has_scratch_load(op) {
+                Some("pack_weights")
+            } else {
+                None
+            };
+            pack.into_iter()
+                .chain(op.sub_ops.iter().map(|s| s.name.as_str()))
+        })
         .collect();
     let num_ops = names.len();
     quote! {

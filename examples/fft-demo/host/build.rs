@@ -1,7 +1,10 @@
 //! Builds the sibling `device/` PSP crate into a `.prx` via the plain,
-//! unmodified `cargo psp`, then hands the resulting path to `main()` via
-//! `PRX_PATH`. Isolated `--target-dir` avoids lock contention with the
-//! outer `cargo build`'s own `target/`.
+//! unmodified `cargo psp` (community `cargo-psp` tool — no fork, nothing
+//! special here), then hands the resulting path to `main()` via
+//! `PRX_PATH`. Uses an isolated `--target-dir` (under `device/`, not
+//! shared with this crate's own `target/`) so this nested `cargo psp`
+//! invocation never contends for the build lock the outer `cargo build`
+//! already holds.
 
 use std::path::Path;
 use std::process::Command;
@@ -18,11 +21,6 @@ fn main() {
     if profile == "release" {
         cmd.arg("--release");
     }
-    let profiling = std::env::var("PSP_PROFILE").is_ok_and(|v| v != "0");
-    if profiling {
-        cmd.arg("--features").arg("hwprofile");
-    }
-
     cmd.arg("--target-dir").arg(&target_dir);
     cmd.current_dir(&device_dir);
 
@@ -33,7 +31,7 @@ fn main() {
     });
     assert!(status.success(), "cargo psp failed to build the device crate");
 
-    let prx_path = target_dir.join(format!("mipsel-sony-psp/{profile}/birdnet.prx"));
+    let prx_path = target_dir.join(format!("mipsel-sony-psp/{profile}/fft_demo.prx"));
     assert!(
         prx_path.exists(),
         "expected a prx at {} but it wasn't produced",
@@ -41,8 +39,6 @@ fn main() {
     );
 
     println!("cargo:rustc-env=PRX_PATH={}", prx_path.display());
-    println!("cargo:rerun-if-env-changed=PSP_PROFILE");
     println!("cargo:rerun-if-changed=../device/src");
     println!("cargo:rerun-if-changed=../device/Cargo.toml");
-    println!("cargo:rerun-if-changed=../mnist_cnn.tflite");
 }

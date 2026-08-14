@@ -55,6 +55,10 @@ fn main() {
 
     match outcome {
         LoadOutcome::Success => eprintln!("==> Done"),
+        LoadOutcome::TimedOut => {
+            eprintln!("==> Timed out: app_main exceeded its budget and was terminated");
+            std::process::exit(1);
+        }
         LoadOutcome::Panicked => {
             eprintln!("==> Program panicked");
             std::process::exit(1);

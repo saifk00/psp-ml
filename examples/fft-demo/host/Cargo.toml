@@ -1,0 +1,10 @@
+[package]
+name = "fft-demo-host"
+edition = "2021"
+
+[[bin]]
+name = "fft-demo-host"
+path = "src/main.rs"
+
+[dependencies]
+psplink-connection = { path = "../../../psplink-connection" }

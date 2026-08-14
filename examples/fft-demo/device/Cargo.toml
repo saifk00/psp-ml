@@ -1,0 +1,14 @@
+[package]
+name = "fft-demo"
+edition = "2021"
+
+[[bin]]
+name = "fft_demo"
+path = "src/main.rs"
+
+[dependencies]
+libm = "0.2"
+
+[target.'cfg(target_os = "psp")'.dependencies]
+psp = "0.3"
+psp-rt = { path = "../../../psp-rt" }

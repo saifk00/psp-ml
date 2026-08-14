@@ -741,6 +741,731 @@ pub fn gemm_bt_packed(
 }
 
 // ============================================================================
+// Real FFT
+// ============================================================================
+//
+// The complex data is held **de-interleaved** — all real parts, then all
+// imaginary parts — rather than as (re, im) pairs, so a radix-2 butterfly's
+// cross products (`tw_re*bot_im`, `tw_im*bot_re`) are plain elementwise
+// `vmul.q` on aligned quads: four butterflies per instruction group, 20
+// instructions for 4 butterflies.
+//
+// The alternative is to keep the interleaved layout and use operand prefixes
+// for the swizzle and negation, which the VFPU does support and rust-psp does
+// expose (bracket decoration, uppercase lanes: `vmul.q R200, R000[X,X,Z,Z],
+// R100[-Y,X,-W,Z]` — the assembler emits the `vpfxs`/`vpfxt` for you, one
+// cycle, no added latency). That is not worse, but it is not better either:
+// one quad holds 4 complex reals when split versus only 2 complex numbers
+// interleaved, so the extra cross-term instructions are exactly offset and
+// both land at 5 instructions per butterfly. Split wins on not needing a
+// layout-specific twiddle order in codegen.
+//
+// Stage 0 has a twiddle of 1, so it is pure add/sub on adjacent elements —
+// exactly `vbfy1.q`, measured on hardware (see `examples/fft-demo`) as:
+//
+//     vbfy1.q([a,b,c,d]) -> [a+b, a-b, c+d, c-d]
+//     vbfy2.q([a,b,c,d]) -> [a+c, b+d, a-c, b-d]
+//
+// Buffer layouts (sizes are unchanged from the interleaved version, so codegen
+// only had to change how it *orders* the twiddle constants):
+//   scratch:         [re(nc) | im(nc)]
+//   stage_twiddles:  per stage s, at offset 2*(2^s - 1): [re(2^s) | im(2^s)]
+//   unpack_twiddles: [re(nc-1) | im(nc-1)]
+
+/// Floats reserved for stage `s`'s twiddles: `2 * 2^s` rounded up to a
+/// multiple of 4 so each stage's real and imaginary runs stay 16-byte aligned
+/// for `lv.q`. psp-tc's `lower_rfft` emits blocks of exactly this size.
+pub const fn stage_tw_block(s: usize) -> usize {
+    let need = 2 * (1usize << s);
+    if need < 4 {
+        4
+    } else {
+        need
+    }
+}
+
+/// Total floats in the stage-twiddle constant for an `n`-point real FFT.
+pub const fn stage_tw_len(n: usize) -> usize {
+    let stages = (n / 2).trailing_zeros() as usize;
+    let mut total = 0;
+    let mut s = 0;
+    while s < stages {
+        total += stage_tw_block(s);
+        s += 1;
+    }
+    total
+}
+
+/// Bit-reversed pack of a real frame into split complex arrays.
+fn rfft_pack_split(input: &[f32], re: &mut [f32], im: &mut [f32], nc: usize) {
+    // Reversed-counter increment rather than reversing each index from
+    // scratch: the naive form costs log2(nc) shifts per element *per frame*
+    // (~5 M operations across BirdNET's 511 frames) to recompute the identical
+    // permutation every time. Carrying `rev` from one k to the next is O(1)
+    // amortised.
+    let mut rev = 0usize;
+    for k in 0..nc {
+        re[k] = input[2 * rev];
+        im[k] = input[2 * rev + 1];
+        let mut bit = nc >> 1;
+        while bit != 0 && rev & bit != 0 {
+            rev ^= bit;
+            bit >>= 1;
+        }
+        rev |= bit;
+    }
+}
+
+/// Stage 0: twiddle is 1, so each adjacent pair becomes (a+b, a-b).
+#[cfg(target_os = "psp")]
+fn fft_stage0(re: &mut [f32], im: &mut [f32], nc: usize) {
+    let quads = nc / 4;
+    if quads > 0 {
+        unsafe {
+            vfpu_asm!(
+                "2:",
+                "lv.q R000, 0({r})",
+                "lv.q R001, 0({i})",
+                "vbfy1.q R100, R000",
+                "vbfy1.q R101, R001",
+                "sv.q R100, 0({r})",
+                "sv.q R101, 0({i})",
+                "addiu {r}, {r}, 16",
+                "addiu {n}, {n}, -1",
+                "bnez {n}, 2b",
+                "addiu {i}, {i}, 16",
+                r = inout(reg) (re.as_mut_ptr()) => _,
+                i = inout(reg) (im.as_mut_ptr()) => _,
+                n = inout(reg) (quads) => _,
+                options(nostack),
+            );
+        }
+    }
+    for k in (quads * 4..nc).step_by(2) {
+        let (ar, ai, br, bi) = (re[k], im[k], re[k + 1], im[k + 1]);
+        re[k] = ar + br;
+        im[k] = ai + bi;
+        re[k + 1] = ar - br;
+        im[k + 1] = ai - bi;
+    }
+}
+
+#[cfg(not(target_os = "psp"))]
+fn fft_stage0(re: &mut [f32], im: &mut [f32], nc: usize) {
+    for k in (0..nc).step_by(2) {
+        let (ar, ai, br, bi) = (re[k], im[k], re[k + 1], im[k + 1]);
+        re[k] = ar + br;
+        im[k] = ai + bi;
+        re[k + 1] = ar - br;
+        im[k + 1] = ai - bi;
+    }
+}
+
+/// One radix-2 stage over four butterflies at a time.
+///
+/// # Safety
+/// `top`/`bot` are `half`-aligned indices into `re`/`im`; all pointers land on
+/// 16-byte boundaries because `half >= 4` and groups start at multiples of
+/// `2*half`.
+#[cfg(target_os = "psp")]
+#[inline(never)]
+unsafe fn fft_bfly4(
+    re: *mut f32,
+    im: *mut f32,
+    tw_re: *const f32,
+    tw_im: *const f32,
+    top: usize,
+    bot: usize,
+    count: usize,
+) {
+    let rt = re.add(top);
+    let rb = re.add(bot);
+    let it = im.add(top);
+    let ib = im.add(bot);
+    vfpu_asm!(
+        "2:",
+        "lv.q R000, 0({rb})",          // bot.re
+        "lv.q R001, 0({ib})",          // bot.im
+        "lv.q R100, 0({twr})",
+        "lv.q R101, 0({twi})",
+        "lv.q R200, 0({rt})",          // top.re
+        "lv.q R201, 0({it})",          // top.im
+        "vmul.q R300, R100, R000",     // tw_re*bot_re
+        "vmul.q R301, R101, R001",     // tw_im*bot_im
+        "vsub.q R300, R300, R301",     // t_re
+        "vmul.q R302, R100, R001",     // tw_re*bot_im
+        "vmul.q R303, R101, R000",     // tw_im*bot_re
+        "vadd.q R302, R302, R303",     // t_im
+        "vadd.q R400, R200, R300",
+        "vsub.q R401, R200, R300",
+        "vadd.q R402, R201, R302",
+        "vsub.q R403, R201, R302",
+        "sv.q R400, 0({rt})",
+        "sv.q R401, 0({rb})",
+        "sv.q R402, 0({it})",
+        "sv.q R403, 0({ib})",
+        "addiu {rt}, {rt}, 16",
+        "addiu {rb}, {rb}, 16",
+        "addiu {it}, {it}, 16",
+        "addiu {ib}, {ib}, 16",
+        "addiu {twr}, {twr}, 16",
+        "addiu {n}, {n}, -1",
+        "bnez {n}, 2b",
+        "addiu {twi}, {twi}, 16",
+        rt = inout(reg) (rt) => _,
+        rb = inout(reg) (rb) => _,
+        it = inout(reg) (it) => _,
+        ib = inout(reg) (ib) => _,
+        twr = inout(reg) (tw_re) => _,
+        twi = inout(reg) (tw_im) => _,
+        n = inout(reg) (count) => _,
+        options(nostack),
+    );
+}
+
+/// One radix-2 DIT stage on split arrays.
+fn fft_stage_split(
+    re: &mut [f32],
+    im: &mut [f32],
+    tw_re: &[f32],
+    tw_im: &[f32],
+    nc: usize,
+    half: usize,
+) {
+    let full = half * 2;
+    let mut base = 0;
+    while base < nc {
+        let mut j = 0;
+        #[cfg(target_os = "psp")]
+        if half >= 4 {
+            let quads = half / 4;
+            unsafe {
+                fft_bfly4(
+                    re.as_mut_ptr(),
+                    im.as_mut_ptr(),
+                    tw_re.as_ptr(),
+                    tw_im.as_ptr(),
+                    base,
+                    base + half,
+                    quads,
+                );
+            }
+            j = quads * 4;
+        }
+        while j < half {
+            let (t, b) = (base + j, base + j + half);
+            let (wr, wi) = (tw_re[j], tw_im[j]);
+            let t_re = wr * re[b] - wi * im[b];
+            let t_im = wr * im[b] + wi * re[b];
+            let (ur, ui) = (re[t], im[t]);
+            re[t] = ur + t_re;
+            im[t] = ui + t_im;
+            re[b] = ur - t_re;
+            im[b] = ui - t_im;
+            j += 1;
+        }
+        base += full;
+    }
+}
+
+/// Extract the real parts of a real-input FFT from the packed half-length
+/// complex transform. Same identity as the interleaved version, split inputs.
+fn rfft_unpack_split(
+    re: &[f32],
+    im: &[f32],
+    utw_re: &[f32],
+    utw_im: &[f32],
+    output: &mut [f32],
+    nc: usize,
+) {
+    output[0] = re[0] + im[0];
+    output[nc] = re[0] - im[0];
+    for k in 1..nc {
+        let conj = nc - k;
+        let a_re = 0.5 * (re[k] + re[conj]);
+        let b_re = 0.5 * (im[k] + im[conj]);
+        let b_im = -0.5 * (re[k] - re[conj]);
+        output[k] = a_re + (utw_re[k - 1] * b_re - utw_im[k - 1] * b_im);
+    }
+}
+
+/// Batched real FFT over `frames` contiguous length-`n` frames.
+///
+/// `input` is `[frames, n]`, `output` is `[frames, n/2 + 1]` (real parts of the
+/// frequency bins, matching TFLite RFFT2D + CAST(complex->f32)).
+#[allow(clippy::too_many_arguments)]
+pub fn rfft_batch(
+    input: &[f32],
+    stage_twiddles: &[f32],
+    unpack_twiddles: &[f32],
+    scratch: &mut [f32],
+    output: &mut [f32],
+    n: usize,
+    frames: usize,
+) {
+    let nc = n / 2;
+    let out_bins = nc + 1;
+    let stages = nc.trailing_zeros() as usize;
+    let (re, im) = scratch.split_at_mut(nc);
+    let (utw_re, utw_im) = unpack_twiddles.split_at(nc - 1);
+
+    for f in 0..frames {
+        rfft_pack_split(&input[f * n..(f + 1) * n], re, im, nc);
+        fft_stage0(re, im, nc);
+        // Stage blocks are padded to a multiple of 4 floats. The natural
+        // packing (block s at offset 2*(2^s - 1)) puts every stage's twiddles
+        // at byte offset 8 mod 16, so every `lv.q` of them would be
+        // misaligned — which the scalar host mirror cannot detect.
+        let mut off = stage_tw_block(0);
+        for s in 1..stages {
+            let half = 1usize << s;
+            fft_stage_split(
+                re,
+                im,
+                &stage_twiddles[off..off + half],
+                &stage_twiddles[off + half..off + 2 * half],
+                nc,
+                half,
+            );
+            off += stage_tw_block(s);
+        }
+        rfft_unpack_split(
+            re,
+            im,
+            utw_re,
+            utw_im,
+            &mut output[f * out_bins..(f + 1) * out_bins],
+            nc,
+        );
+    }
+}
+
+// ============================================================================
+// Depthwise convolution
+// ============================================================================
+//
+// Depthwise conv has *no* cross-channel contraction — output channel `c`
+// depends only on input channel `c` — so unlike a regular conv it cannot be
+// turned into a GEMM. What it does have, in NHWC, is the channel index as the
+// fastest-varying dimension, which makes the whole thing a contiguous vector
+// FMA once the loop nest is right:
+//
+//     out[oy,ox, 0..C] += in[iy,ix, 0..C] * filt[ky,kx, 0..C]
+//
+// The reference version loops channels *outside* the kernel taps, so every
+// single multiply-add re-derives two 4D indices (five integer multiplies) and
+// re-evaluates four boundary branches — measured at ~71 cycles per MAC, or
+// 9 MFLOP/s. Hoisting the tap bookkeeping to once per (output pixel, tap)
+// leaves a pure streaming FMA over C.
+
+/// `acc[i] += a[i] * b[i]` over `n` contiguous floats.
+///
+/// 4x unrolled: the per-iteration pointer bumps and branch cost as much as the
+/// arithmetic otherwise. All three pointers must be 16-byte aligned.
+#[cfg(target_os = "psp")]
+#[inline(never)]
+fn vfma_inplace(acc: &mut [f32], a: &[f32], b: &[f32], n: usize) {
+    let blocks = n / 16;
+    if blocks > 0 {
+        unsafe {
+            vfpu_asm!(
+                "2:",
+                "lv.q R000,  0({a})",
+                "lv.q R001, 16({a})",
+                "lv.q R002, 32({a})",
+                "lv.q R003, 48({a})",
+                "lv.q R100,  0({b})",
+                "lv.q R101, 16({b})",
+                "lv.q R102, 32({b})",
+                "lv.q R103, 48({b})",
+                "lv.q R200,  0({o})",
+                "lv.q R201, 16({o})",
+                "lv.q R202, 32({o})",
+                "lv.q R203, 48({o})",
+                "vmul.q R300, R000, R100",
+                "vmul.q R301, R001, R101",
+                "vmul.q R302, R002, R102",
+                "vmul.q R303, R003, R103",
+                "vadd.q R200, R200, R300",
+                "vadd.q R201, R201, R301",
+                "vadd.q R202, R202, R302",
+                "vadd.q R203, R203, R303",
+                "sv.q R200,  0({o})",
+                "sv.q R201, 16({o})",
+                "sv.q R202, 32({o})",
+                "sv.q R203, 48({o})",
+                "addiu {a}, {a}, 64",
+                "addiu {b}, {b}, 64",
+                "addiu {n}, {n}, -1",
+                "bnez {n}, 2b",
+                "addiu {o}, {o}, 64", // branch delay slot
+                a = inout(reg) (a.as_ptr()) => _,
+                b = inout(reg) (b.as_ptr()) => _,
+                o = inout(reg) (acc.as_mut_ptr()) => _,
+                n = inout(reg) (blocks) => _,
+                options(nostack),
+            );
+        }
+    }
+    for i in blocks * 16..n {
+        acc[i] += a[i] * b[i];
+    }
+}
+
+#[cfg(not(target_os = "psp"))]
+fn vfma_inplace(acc: &mut [f32], a: &[f32], b: &[f32], n: usize) {
+    for i in 0..n {
+        acc[i] += a[i] * b[i];
+    }
+}
+
+/// Depthwise 2D convolution (NHWC), depth_multiplier = 1.
+///
+/// - `input`:  [N, H, W, C]
+/// - `filter`: [1, Kh, Kw, C]
+/// - `bias`:   [C]
+/// - `padding`: [pad_top, pad_bottom, pad_left, pad_right]
+/// - `output`: [N, Ho, Wo, C]
+#[allow(clippy::too_many_arguments)]
+pub fn depthwise_conv2d(
+    input: &[f32],
+    input_shape: [usize; 4],
+    filter: &[f32],
+    filter_shape: [usize; 4],
+    bias: Option<&[f32]>,
+    stride: [usize; 2],
+    padding: [usize; 4],
+    output: &mut [f32],
+    output_shape: [usize; 4],
+) {
+    let [n, h, w, c] = input_shape;
+    let [_, kh, kw, _] = filter_shape;
+    let [_, ho, wo, _] = output_shape;
+    let [sh, sw] = stride;
+    let [pad_top, _pad_bottom, pad_left, _pad_right] = padding;
+
+    // Tap bases for one output pixel. 3x3 in practice; the bound keeps this
+    // stack-only and any larger kernel falls back to the scalar path.
+    const MAX_TAPS: usize = 64;
+    if kh * kw > MAX_TAPS {
+        depthwise_conv2d_ref(
+            input, input_shape, filter, filter_shape, bias, stride, padding, output, output_shape,
+        );
+        return;
+    }
+    let mut tap_in = [0usize; MAX_TAPS];
+    let mut tap_f = [0usize; MAX_TAPS];
+
+    // Channels outermost, in chunks, so the filter slice for a chunk stays
+    // resident across the pixel sweep. Swept on hardware over {64, 128, 256}:
+    // 128 wins, but only by ~7% — this kernel is bound by per-element issue
+    // cost in `vfma_inplace`, not by cache locality.
+    const CHUNK: usize = 128;
+
+    let mut c0 = 0;
+    while c0 < c {
+        let chunk = if c - c0 < CHUNK { c - c0 } else { CHUNK };
+        for batch in 0..n {
+            for oy in 0..ho {
+                for ox in 0..wo {
+                    let ntaps = collect_taps(
+                        &mut tap_in, &mut tap_f, h, w, c, kh, kw, sh, sw, pad_top, pad_left,
+                        batch, oy, ox,
+                    );
+                    let out_base = batch * (ho * wo * c) + oy * (wo * c) + ox * c + c0;
+                    let out_row = &mut output[out_base..out_base + chunk];
+                    match bias {
+                        Some(b) => out_row.copy_from_slice(&b[c0..c0 + chunk]),
+                        None => {
+                            for v in out_row.iter_mut() {
+                                *v = 0.0;
+                            }
+                        }
+                    }
+                    for t in 0..ntaps {
+                        let a = &input[tap_in[t] + c0..tap_in[t] + c0 + chunk];
+                        let f = &filter[tap_f[t] + c0..tap_f[t] + c0 + chunk];
+                        vfma_inplace(out_row, a, f, chunk);
+                    }
+                }
+            }
+        }
+        c0 += CHUNK;
+    }
+}
+
+/// `acc[i] = max(acc[i], a[i])` over `n` contiguous floats.
+#[cfg(target_os = "psp")]
+#[inline(never)]
+fn vmax_inplace(acc: &mut [f32], a: &[f32], n: usize) {
+    let quads = n / 4;
+    if quads > 0 {
+        unsafe {
+            vfpu_asm!(
+                "2:",
+                "lv.q R000, 0({a})",
+                "lv.q R100, 0({o})",
+                "vmax.q R100, R100, R000",
+                "sv.q R100, 0({o})",
+                "addiu {a}, {a}, 16",
+                "addiu {n}, {n}, -1",
+                "bnez {n}, 2b",
+                "addiu {o}, {o}, 16",
+                a = inout(reg) (a.as_ptr()) => _,
+                o = inout(reg) (acc.as_mut_ptr()) => _,
+                n = inout(reg) (quads) => _,
+                options(nostack),
+            );
+        }
+    }
+    for i in quads * 4..n {
+        if a[i] > acc[i] {
+            acc[i] = a[i];
+        }
+    }
+}
+
+#[cfg(not(target_os = "psp"))]
+fn vmax_inplace(acc: &mut [f32], a: &[f32], n: usize) {
+    for i in 0..n {
+        if a[i] > acc[i] {
+            acc[i] = a[i];
+        }
+    }
+}
+
+/// `acc[i] += a[i]` over `n` contiguous floats.
+#[cfg(target_os = "psp")]
+#[inline(never)]
+fn vadd_inplace(acc: &mut [f32], a: &[f32], n: usize) {
+    let quads = n / 4;
+    if quads > 0 {
+        unsafe {
+            vfpu_asm!(
+                "2:",
+                "lv.q R000, 0({a})",
+                "lv.q R100, 0({o})",
+                "vadd.q R100, R100, R000",
+                "sv.q R100, 0({o})",
+                "addiu {a}, {a}, 16",
+                "addiu {n}, {n}, -1",
+                "bnez {n}, 2b",
+                "addiu {o}, {o}, 16",
+                a = inout(reg) (a.as_ptr()) => _,
+                o = inout(reg) (acc.as_mut_ptr()) => _,
+                n = inout(reg) (quads) => _,
+                options(nostack),
+            );
+        }
+    }
+    for i in quads * 4..n {
+        acc[i] += a[i];
+    }
+}
+
+#[cfg(not(target_os = "psp"))]
+fn vadd_inplace(acc: &mut [f32], a: &[f32], n: usize) {
+    for i in 0..n {
+        acc[i] += a[i];
+    }
+}
+
+/// Collect the in-bounds taps for one output pixel as (input, filter) base
+/// offsets. Shared by depthwise conv and both pooling kernels — this is the
+/// bookkeeping that must not happen per channel.
+#[allow(clippy::too_many_arguments)]
+#[inline]
+fn collect_taps(
+    tap_in: &mut [usize],
+    tap_f: &mut [usize],
+    h: usize,
+    w: usize,
+    c: usize,
+    kh: usize,
+    kw: usize,
+    sh: usize,
+    sw: usize,
+    pad_top: usize,
+    pad_left: usize,
+    batch: usize,
+    oy: usize,
+    ox: usize,
+) -> usize {
+    let mut ntaps = 0;
+    for ky in 0..kh {
+        for kx in 0..kw {
+            let iy_padded = oy * sh + ky;
+            let ix_padded = ox * sw + kx;
+            if iy_padded < pad_top || ix_padded < pad_left {
+                continue;
+            }
+            let iy = iy_padded - pad_top;
+            let ix = ix_padded - pad_left;
+            if iy >= h || ix >= w {
+                continue;
+            }
+            tap_in[ntaps] = batch * (h * w * c) + iy * (w * c) + ix * c;
+            tap_f[ntaps] = ky * (kw * c) + kx * c;
+            ntaps += 1;
+        }
+    }
+    ntaps
+}
+
+/// 2D max pooling (NHWC). Same restructuring as `depthwise_conv2d`: the tap
+/// bookkeeping happens once per output pixel, leaving a contiguous `vmax` over
+/// channels.
+pub fn max_pool2d(
+    input: &[f32],
+    input_shape: [usize; 4],
+    kernel: [usize; 2],
+    stride: [usize; 2],
+    padding: [usize; 4],
+    output: &mut [f32],
+    output_shape: [usize; 4],
+) {
+    let [n, h, w, c] = input_shape;
+    let [kh, kw] = kernel;
+    let [sh, sw] = stride;
+    let [_, ho, wo, _] = output_shape;
+    let [pad_top, _, pad_left, _] = padding;
+
+    const MAX_TAPS: usize = 64;
+    let mut tap_in = [0usize; MAX_TAPS];
+    let mut tap_f = [0usize; MAX_TAPS];
+
+    for batch in 0..n {
+        for oy in 0..ho {
+            for ox in 0..wo {
+                let ntaps = if kh * kw <= MAX_TAPS {
+                    collect_taps(
+                        &mut tap_in, &mut tap_f, h, w, c, kh, kw, sh, sw, pad_top, pad_left,
+                        batch, oy, ox,
+                    )
+                } else {
+                    0
+                };
+                let out_base = batch * (ho * wo * c) + oy * (wo * c) + ox * c;
+                let out_row = &mut output[out_base..out_base + c];
+                if ntaps == 0 {
+                    for v in out_row.iter_mut() {
+                        *v = f32::NEG_INFINITY;
+                    }
+                    continue;
+                }
+                out_row.copy_from_slice(&input[tap_in[0]..tap_in[0] + c]);
+                for t in 1..ntaps {
+                    vmax_inplace(out_row, &input[tap_in[t]..tap_in[t] + c], c);
+                }
+            }
+        }
+    }
+}
+
+/// 2D average pooling (NHWC). Divides by the number of in-bounds taps, so
+/// padded edges average over fewer elements (matching TFLite).
+pub fn average_pool2d(
+    input: &[f32],
+    input_shape: [usize; 4],
+    kernel: [usize; 2],
+    stride: [usize; 2],
+    padding: [usize; 4],
+    output: &mut [f32],
+    output_shape: [usize; 4],
+) {
+    let [n, h, w, c] = input_shape;
+    let [kh, kw] = kernel;
+    let [sh, sw] = stride;
+    let [_, ho, wo, _] = output_shape;
+    let [pad_top, _, pad_left, _] = padding;
+
+    const MAX_TAPS: usize = 64;
+    let mut tap_in = [0usize; MAX_TAPS];
+    let mut tap_f = [0usize; MAX_TAPS];
+
+    for batch in 0..n {
+        for oy in 0..ho {
+            for ox in 0..wo {
+                let ntaps = if kh * kw <= MAX_TAPS {
+                    collect_taps(
+                        &mut tap_in, &mut tap_f, h, w, c, kh, kw, sh, sw, pad_top, pad_left,
+                        batch, oy, ox,
+                    )
+                } else {
+                    0
+                };
+                let out_base = batch * (ho * wo * c) + oy * (wo * c) + ox * c;
+                let out_row = &mut output[out_base..out_base + c];
+                if ntaps == 0 {
+                    for v in out_row.iter_mut() {
+                        *v = 0.0;
+                    }
+                    continue;
+                }
+                out_row.copy_from_slice(&input[tap_in[0]..tap_in[0] + c]);
+                for t in 1..ntaps {
+                    vadd_inplace(out_row, &input[tap_in[t]..tap_in[t] + c], c);
+                }
+                let inv = 1.0 / ntaps as f32;
+                for v in out_row.iter_mut() {
+                    *v *= inv;
+                }
+            }
+        }
+    }
+}
+
+/// Straightforward reference used for the oversized-kernel fallback and by
+/// tests. Correct but ~20x slower; see the module comment.
+#[allow(clippy::too_many_arguments)]
+pub fn depthwise_conv2d_ref(
+    input: &[f32],
+    input_shape: [usize; 4],
+    filter: &[f32],
+    filter_shape: [usize; 4],
+    bias: Option<&[f32]>,
+    stride: [usize; 2],
+    padding: [usize; 4],
+    output: &mut [f32],
+    output_shape: [usize; 4],
+) {
+    let [n, h, w, c] = input_shape;
+    let [_, kh, kw, _] = filter_shape;
+    let [_, ho, wo, _] = output_shape;
+    let [sh, sw] = stride;
+    let [pad_top, _pad_bottom, pad_left, _pad_right] = padding;
+
+    for batch in 0..n {
+        for oy in 0..ho {
+            for ox in 0..wo {
+                for ch in 0..c {
+                    let mut sum = bias.map_or(0.0, |b| b[ch]);
+                    for ky in 0..kh {
+                        for kx in 0..kw {
+                            let iy_padded = oy * sh + ky;
+                            let ix_padded = ox * sw + kx;
+                            if iy_padded < pad_top || ix_padded < pad_left {
+                                continue;
+                            }
+                            let iy = iy_padded - pad_top;
+                            let ix = ix_padded - pad_left;
+                            if iy >= h || ix >= w {
+                                continue;
+                            }
+                            let in_idx = batch * (h * w * c) + iy * (w * c) + ix * c + ch;
+                            let f_idx = ky * (kw * c) + kx * c + ch;
+                            sum += input[in_idx] * filter[f_idx];
+                        }
+                    }
+                    let out_idx = batch * (ho * wo * c) + oy * (wo * c) + ox * c + ch;
+                    output[out_idx] = sum;
+                }
+            }
+        }
+    }
+}
+
+// ============================================================================
 // Sigmoid / swish
 // ============================================================================
 //
@@ -1127,6 +1852,312 @@ mod gemm_tests {
                 got[i],
                 want[i]
             );
+        }
+    }
+}
+
+#[cfg(test)]
+mod depthwise_tests {
+    use super::*;
+    extern crate std;
+    use std::vec;
+    use std::vec::Vec;
+
+    fn fill(n: usize, seed: u32) -> Vec<f32> {
+        let mut s = seed | 1;
+        (0..n)
+            .map(|_| {
+                s = s.wrapping_mul(1664525).wrapping_add(1013904223);
+                ((s >> 8) as f32 / 8388608.0) - 1.0
+            })
+            .collect()
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn check(h: usize, w: usize, c: usize, kh: usize, kw: usize, sh: usize, sw: usize, pad: [usize; 4], with_bias: bool) {
+        let ho = (h + pad[0] + pad[1] - kh) / sh + 1;
+        let wo = (w + pad[2] + pad[3] - kw) / sw + 1;
+        let input = fill(h * w * c, 11);
+        let filter = fill(kh * kw * c, 22);
+        let bias = fill(c, 33);
+        let b = with_bias.then_some(&bias[..]);
+
+        let mut got = vec![f32::NAN; ho * wo * c];
+        let mut want = vec![f32::NAN; ho * wo * c];
+        depthwise_conv2d(&input, [1, h, w, c], &filter, [1, kh, kw, c], b, [sh, sw], pad, &mut got, [1, ho, wo, c]);
+        depthwise_conv2d_ref(&input, [1, h, w, c], &filter, [1, kh, kw, c], b, [sh, sw], pad, &mut want, [1, ho, wo, c]);
+
+        for i in 0..got.len() {
+            let scale = got[i].abs().max(want[i].abs()).max(1e-6);
+            assert!(
+                (got[i] - want[i]).abs() / scale < 1e-5,
+                "h={h} w={w} c={c} k={kh}x{kw} s={sh}x{sw} pad={pad:?} bias={with_bias}: \
+                 i={i} got={} want={}",
+                got[i],
+                want[i]
+            );
+        }
+    }
+
+    #[test]
+    fn birdnet_shapes() {
+        // The real depthwise layers: 3x3, SAME and strided, C a multiple of 16.
+        check(12, 32, 288, 3, 3, 1, 1, [1, 1, 1, 1], true);
+        check(14, 34, 864, 3, 3, 2, 2, [0, 0, 0, 0], true);
+        check(6, 16, 864, 3, 3, 1, 1, [1, 1, 1, 1], true);
+        check(3, 8, 1536, 3, 3, 1, 1, [1, 1, 1, 1], true);
+    }
+
+    #[test]
+    fn no_bias() {
+        check(6, 16, 288, 3, 3, 1, 1, [1, 1, 1, 1], false);
+    }
+
+    #[test]
+    fn channel_counts_not_multiples_of_the_vector_width() {
+        // Exercises the scalar tail of vfma_inplace.
+        for c in [1, 3, 4, 7, 16, 17, 20, 33] {
+            check(5, 5, c, 3, 3, 1, 1, [1, 1, 1, 1], true);
+        }
+    }
+
+    #[test]
+    fn asymmetric_padding_and_strides() {
+        check(7, 7, 32, 3, 3, 2, 2, [1, 1, 1, 1], true);
+        check(8, 8, 32, 3, 3, 1, 2, [0, 1, 0, 1], true);
+        check(5, 9, 48, 1, 1, 1, 1, [0, 0, 0, 0], false);
+    }
+}
+
+#[cfg(test)]
+mod pool_tests {
+    use super::*;
+    extern crate std;
+    use std::vec;
+    use std::vec::Vec;
+
+    fn fill(n: usize, seed: u32) -> Vec<f32> {
+        let mut s = seed | 1;
+        (0..n)
+            .map(|_| {
+                s = s.wrapping_mul(1664525).wrapping_add(1013904223);
+                ((s >> 8) as f32 / 8388608.0) - 1.0
+            })
+            .collect()
+    }
+
+    /// Reference: channel loop outside the taps, exactly as TFLite specifies.
+    fn pool_ref(
+        input: &[f32],
+        (h, w, c): (usize, usize, usize),
+        (kh, kw): (usize, usize),
+        (sh, sw): (usize, usize),
+        pad: [usize; 4],
+        (ho, wo): (usize, usize),
+        is_max: bool,
+    ) -> Vec<f32> {
+        let mut out = vec![0.0f32; ho * wo * c];
+        for oy in 0..ho {
+            for ox in 0..wo {
+                for ch in 0..c {
+                    let mut acc = if is_max { f32::NEG_INFINITY } else { 0.0 };
+                    let mut count = 0usize;
+                    for ky in 0..kh {
+                        for kx in 0..kw {
+                            let iy = (oy * sh + ky) as isize - pad[0] as isize;
+                            let ix = (ox * sw + kx) as isize - pad[2] as isize;
+                            if iy >= 0 && iy < h as isize && ix >= 0 && ix < w as isize {
+                                let v = input[(iy as usize) * (w * c) + (ix as usize) * c + ch];
+                                if is_max {
+                                    if v > acc {
+                                        acc = v;
+                                    }
+                                } else {
+                                    acc += v;
+                                }
+                                count += 1;
+                            }
+                        }
+                    }
+                    out[oy * (wo * c) + ox * c + ch] = if is_max {
+                        acc
+                    } else if count > 0 {
+                        acc / count as f32
+                    } else {
+                        0.0
+                    };
+                }
+            }
+        }
+        out
+    }
+
+    fn check(h: usize, w: usize, c: usize, kh: usize, kw: usize, sh: usize, sw: usize, pad: [usize; 4]) {
+        let ho = (h + pad[0] + pad[1] - kh) / sh + 1;
+        let wo = (w + pad[2] + pad[3] - kw) / sw + 1;
+        let input = fill(h * w * c, 55);
+
+        for is_max in [true, false] {
+            let want = pool_ref(&input, (h, w, c), (kh, kw), (sh, sw), pad, (ho, wo), is_max);
+            let mut got = vec![f32::NAN; ho * wo * c];
+            if is_max {
+                max_pool2d(&input, [1, h, w, c], [kh, kw], [sh, sw], pad, &mut got, [1, ho, wo, c]);
+            } else {
+                average_pool2d(&input, [1, h, w, c], [kh, kw], [sh, sw], pad, &mut got, [1, ho, wo, c]);
+            }
+            for i in 0..got.len() {
+                let scale = got[i].abs().max(want[i].abs()).max(1e-6);
+                assert!(
+                    (got[i] - want[i]).abs() / scale < 1e-5,
+                    "max={is_max} h={h} w={w} c={c} k={kh}x{kw} s={sh}x{sw} pad={pad:?}: \
+                     i={i} got={} want={}",
+                    got[i],
+                    want[i]
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn birdnet_shapes() {
+        // [1,48,1,24] with a 1x2 filter, the shapes actually in the graph
+        check(48, 2, 24, 1, 2, 1, 2, [0, 0, 0, 0]);
+        check(24, 8, 288, 2, 2, 2, 2, [0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn padding_averages_over_valid_taps_only() {
+        check(5, 5, 16, 3, 3, 1, 1, [1, 1, 1, 1]);
+        check(7, 7, 32, 3, 3, 2, 2, [1, 1, 1, 1]);
+    }
+
+    #[test]
+    fn channel_tails() {
+        for c in [1, 3, 7, 17, 33] {
+            check(5, 5, c, 2, 2, 1, 1, [0, 0, 0, 0]);
+        }
+    }
+}
+
+#[cfg(test)]
+mod rfft_tests {
+    use super::*;
+    extern crate std;
+    use std::vec;
+    use std::vec::Vec;
+
+    /// Twiddles in the same split layout psp-tc emits.
+    fn twiddles(n: usize) -> (Vec<f32>, Vec<f32>) {
+        let nc = n / 2;
+        let stages = nc.trailing_zeros() as usize;
+        let mut stage = Vec::new();
+        for s in 0..stages {
+            let half = 1usize << s;
+            let start = stage.len();
+            for j in 0..half {
+                let a = -2.0 * core::f64::consts::PI * j as f64 / (2.0 * half as f64);
+                stage.push(a.cos() as f32);
+            }
+            for j in 0..half {
+                let a = -2.0 * core::f64::consts::PI * j as f64 / (2.0 * half as f64);
+                stage.push(a.sin() as f32);
+            }
+            stage.resize(start + stage_tw_block(s), 0.0);
+        }
+        let mut unpack = Vec::new();
+        for k in 1..nc {
+            let a = 2.0 * core::f64::consts::PI * k as f64 / n as f64;
+            unpack.push(a.cos() as f32);
+        }
+        for k in 1..nc {
+            let a = 2.0 * core::f64::consts::PI * k as f64 / n as f64;
+            unpack.push(-(a.sin() as f32));
+        }
+        (stage, unpack)
+    }
+
+    /// Oracle: real-input DFT in f64, keeping only the real parts.
+    fn dft_real(x: &[f32], n: usize) -> Vec<f32> {
+        (0..=n / 2)
+            .map(|k| {
+                let mut acc = 0.0f64;
+                for (t, &v) in x.iter().enumerate().take(n) {
+                    acc += v as f64
+                        * (-2.0 * core::f64::consts::PI * (k * t % n) as f64 / n as f64).cos();
+                }
+                acc as f32
+            })
+            .collect()
+    }
+
+    fn check(n: usize, frames: usize) {
+        let mut s = 12345u32;
+        let input: Vec<f32> = (0..n * frames)
+            .map(|_| {
+                s = s.wrapping_mul(1664525).wrapping_add(1013904223);
+                ((s >> 8) as f32 / 8388608.0) - 1.0
+            })
+            .collect();
+        let (stage, unpack) = twiddles(n);
+        // Dirty scratch: the arena is reused and never re-zeroed.
+        let mut scratch = vec![7.5f32; n];
+        let mut out = vec![f32::NAN; (n / 2 + 1) * frames];
+
+        rfft_batch(&input, &stage, &unpack, &mut scratch, &mut out, n, frames);
+
+        for f in 0..frames {
+            let want = dft_real(&input[f * n..(f + 1) * n], n);
+            let bins = n / 2 + 1;
+            let rms = (want.iter().map(|v| (*v as f64) * (*v as f64)).sum::<f64>()
+                / bins as f64)
+                .sqrt()
+                .max(1e-9) as f32;
+            for k in 0..bins {
+                let d = (out[f * bins + k] - want[k]).abs();
+                assert!(
+                    d / rms < 1e-4,
+                    "n={n} frame={f} bin={k}: got {} want {} (rms {rms})",
+                    out[f * bins + k],
+                    want[k]
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn birdnet_sizes() {
+        // The two real sizes in the graph, a couple of frames each.
+        check(2048, 2);
+        check(1024, 2);
+    }
+
+    /// The bug the scalar host mirror structurally cannot catch: every stage's
+    /// twiddle run is loaded with `lv.q`, so it must start 4-float aligned.
+    /// The natural packing (offset `2*(2^s - 1)`) is 2 mod 4 for every stage.
+    #[test]
+    fn stage_twiddle_runs_are_quad_aligned() {
+        for n in [64usize, 128, 1024, 2048] {
+            let nc = n / 2;
+            let stages = nc.trailing_zeros() as usize;
+            let mut off = stage_tw_block(0);
+            for s in 1..stages {
+                let half = 1usize << s;
+                // Only stages wide enough for the vector path issue `lv.q`;
+                // narrower ones fall to the scalar loop.
+                if half >= 4 {
+                    assert_eq!(off % 4, 0, "n={n} stage={s}: tw_re at float {off}");
+                    assert_eq!((off + half) % 4, 0, "n={n} stage={s}: tw_im misaligned");
+                }
+                off += stage_tw_block(s);
+            }
+            assert_eq!(off, stage_tw_len(n), "n={n}: block sizes must tile the buffer");
+        }
+    }
+
+    #[test]
+    fn small_sizes() {
+        for n in [8, 16, 32, 64, 128] {
+            check(n, 3);
         }
     }
 }

@@ -52,6 +52,8 @@ fn cmd_compile(args: &[String]) {
     let mut out_dir: Option<PathBuf> = None;
     let mut dump_ir = false;
     let mut stream_batch: Option<(usize, usize)> = None;
+    let mut resident_budget: Option<usize> = None;
+    let mut residency: Option<usize> = None;
 
     let mut i = 0;
     while i < args.len() {
@@ -85,6 +87,17 @@ fn cmd_compile(args: &[String]) {
                 });
                 stream_batch = Some((start, end));
             }
+            "--residency" => {
+                i += 1;
+                let val = args.get(i).unwrap_or_else(|| {
+                    eprintln!("--residency requires a candidate index");
+                    process::exit(1);
+                });
+                residency = Some(val.parse().unwrap_or_else(|_| {
+                    eprintln!("--residency must be a candidate index");
+                    process::exit(1);
+                }));
+            }
             "--help" | "-h" => {
                 eprintln!("Usage: psp-tc compile <model.tflite> [-o <dir>] [--dump-ir]");
                 eprintln!();
@@ -94,6 +107,7 @@ fn cmd_compile(args: &[String]) {
                 eprintln!("  -o, --out <DIR>           Output directory (default: current directory)");
                 eprintln!("  --dump-ir                 Print IR graph after each pipeline stage");
                 eprintln!("  --stream-batch START:END  Process batch frames one at a time (op indices)");
+                eprintln!("  --residency N             Force weight-residency candidate N (0 keeps");
                 process::exit(0);
             }
             _ => {
@@ -122,7 +136,7 @@ fn cmd_compile(args: &[String]) {
         process::exit(1);
     });
 
-    let generated = generate_code(&mut psp_model, stream_batch).unwrap_or_else(|err| {
+    let generated = generate_code(&mut psp_model, stream_batch, residency, resident_budget).unwrap_or_else(|err| {
         eprintln!("Error: {err}");
         process::exit(1);
     });

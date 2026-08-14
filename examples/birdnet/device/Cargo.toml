@@ -8,6 +8,7 @@ name = "birdnet"
 path = "src/main.rs"
 
 [features]
+hwprofile = []
 default = []
 local = []
 

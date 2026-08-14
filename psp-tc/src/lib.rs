@@ -30,7 +30,7 @@ pub fn compile_tflite(
     let mut psp_model = parse::tflite::to_psp_ir(data, false)
         .map_err(|err| format!("error lowering to IR: {err}"))?;
 
-    let generated = codegen::generate_code(&mut psp_model, stream_batch)
+    let generated = codegen::generate_code(&mut psp_model, stream_batch, None, None)
         .map_err(|err| format!("codegen error: {err}"))?;
 
     let weights_path = out_dir.join("weights.bin");

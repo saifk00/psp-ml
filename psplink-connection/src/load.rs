@@ -17,6 +17,11 @@ use std::time::Duration;
 /// since both sides need to agree on the same bit pattern.
 pub const PANIC_SENTINEL: u32 = 0xFFFF_FFFF;
 
+/// `psp_rt::module!` returns this when `app_main` overran its wall-clock
+/// budget and the runtime killed it. Both sides must agree on the value; see
+/// `PSP_RT_TIMEOUT_STATUS` in psp-rt.
+pub const TIMEOUT_SENTINEL: u32 = 2;
+
 /// How long `load_program` waits for a single event (stdout chunk or the
 /// completion marker) before giving up. Loading a large debug PRX over
 /// hostfs can legitimately take tens of seconds — see this session's own
@@ -29,6 +34,10 @@ pub enum LoadOutcome {
     Success,
     /// `app_main` panicked (caught by `catch_unwind` in `psp_rt::module!`).
     Panicked,
+    /// `app_main` ran past its budget and `psp_rt::module!` terminated it.
+    /// Without that bound a hang would leave `ld` outstanding forever and
+    /// lock up psplink until the PSP is physically power-cycled.
+    TimedOut,
     /// psplink's shell couldn't dispatch the `ld` command at all.
     ShellError(u32),
     /// `sceKernelLoadModule`/`sceKernelStartModule` failed before the
@@ -75,6 +84,7 @@ fn outcome_for(marker: ShellMarker) -> LoadOutcome {
         // psp_rt::module!'s doc comment for the full chain.
         ShellMarker::Success(0) => LoadOutcome::Success,
         ShellMarker::Success(PANIC_SENTINEL) => LoadOutcome::Panicked,
+        ShellMarker::Success(TIMEOUT_SENTINEL) => LoadOutcome::TimedOut,
         ShellMarker::Success(other) => LoadOutcome::KernelError(other),
         ShellMarker::Error(v) => LoadOutcome::ShellError(v),
     }
