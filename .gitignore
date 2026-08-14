@@ -8,10 +8,16 @@ scrap
 .vscode
 models/
 benchmarks.json
+# Kernel-check results, written by `test-kernels` on both host and device.
+test-results.json
 meminfo.txt
 birdnet.txt
 results.txt
 out.log
+
+# yes. im sorry.
+CLAUDE.md
+docs/
 
 examples/birdnet/results.txt
 examples/birdnet/golden.json

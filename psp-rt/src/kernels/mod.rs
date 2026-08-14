@@ -5,6 +5,8 @@
 //! - `naive`: Reference implementations that work on any target.
 //! - Root module: Optimized VFPU-accelerated kernels (PSP uses VFPU, host uses scalar fallbacks).
 
+pub mod checks;
+
 pub mod naive;
 
 #[cfg(target_os = "psp")]

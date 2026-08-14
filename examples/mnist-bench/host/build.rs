@@ -15,6 +15,9 @@ fn main() {
 
     let mut cmd = Command::new("cargo");
     cmd.arg("+nightly").arg("psp");
+    // The device crate defaults to its `local` (host) feature so a bare
+    // `cargo test` can build it; the real device build must opt out.
+    cmd.arg("--no-default-features");
     if profile == "release" {
         cmd.arg("--release");
     }

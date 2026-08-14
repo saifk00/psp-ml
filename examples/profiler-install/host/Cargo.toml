@@ -1,0 +1,10 @@
+[package]
+name = "profiler-install-host"
+edition = "2021"
+
+[[bin]]
+name = "profiler-install-host"
+path = "src/main.rs"
+
+[dependencies]
+psplink-connection = { path = "../../../psplink-connection" }

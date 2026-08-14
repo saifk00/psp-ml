@@ -34,7 +34,7 @@ fn main() {
     });
     assert!(status.success(), "cargo psp failed to build the device crate");
 
-    let prx_path = target_dir.join(format!("mipsel-sony-psp/{profile}/profiler-demo.prx"));
+    let prx_path = target_dir.join(format!("mipsel-sony-psp/{profile}/profiler-install.prx"));
     assert!(
         prx_path.exists(),
         "expected a prx at {} but it wasn't produced",

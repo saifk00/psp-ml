@@ -1,0 +1,11 @@
+[package]
+name = "profiler-install"
+edition = "2021"
+
+[[bin]]
+name = "profiler-install"
+path = "src/main.rs"
+
+[target.'cfg(target_os = "psp")'.dependencies]
+psp = "0.3"
+psp-rt = { path = "../../../psp-rt" }

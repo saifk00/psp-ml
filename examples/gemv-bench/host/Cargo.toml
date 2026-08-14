@@ -1,0 +1,10 @@
+[package]
+name = "gemv-bench-host"
+edition = "2021"
+
+[[bin]]
+name = "gemv-bench-host"
+path = "src/main.rs"
+
+[dependencies]
+psplink-connection = { path = "../../../psplink-connection" }

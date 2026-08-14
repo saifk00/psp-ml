@@ -1,0 +1,11 @@
+[package]
+name = "gemv-bench"
+edition = "2021"
+
+[[bin]]
+name = "gemv-bench"
+path = "src/main.rs"
+
+[target.'cfg(target_os = "psp")'.dependencies]
+psp = "0.3"
+psp-rt = { path = "../../../psp-rt" }

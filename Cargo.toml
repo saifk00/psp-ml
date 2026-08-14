@@ -20,9 +20,21 @@ members = [
     "examples/roofline/host",
     "examples/fc-bench/device",
     "examples/fc-bench/host",
+    "examples/fft-demo/device",
+    "examples/fft-demo/host",
+    "examples/profiler-install/device",
+    "examples/profiler-install/host",
+    "examples/kernel-test/host",
+    "examples/gemv-bench/device",
+    "examples/gemv-bench/host",
 ]
+# What a bare `cargo test` / `cargo build` covers: everything that needs no
+# hardware and no gitignored assets. birdnet is excluded only because its
+# device build.rs needs `models/birdnet/*.tflite`, which is not in the repo.
 default-members = [
     "psp-rt",
+    "psp-tc",
+    "psplink-connection",
     "examples/mnist-bench/device",
     "examples/mnist-bench/host",
 ]
