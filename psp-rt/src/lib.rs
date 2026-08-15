@@ -12,6 +12,7 @@
 // micro-kernel is ~70 instructions in a single block, well past the default 128.
 #![recursion_limit = "1024"]
 
+pub mod device_test;
 pub mod kernels;
 pub mod mem;
 pub mod print;

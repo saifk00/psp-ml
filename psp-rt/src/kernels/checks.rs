@@ -3,16 +3,49 @@
 //!
 //! Each check is a pure predicate over the kernels, so the same list runs two
 //! ways: `cargo test -p psp-rt` exercises the scalar fallbacks on the host,
-//! and `psp-rt`'s `test-kernels` binary runs the identical list on hardware
+//! and `cargo test -p device-tests` runs the identical list on hardware
 //! against the real VFPU assembly. Keeping one source of truth is the point —
 //! a check that only exists in the device binary never runs in CI, and one
 //! that only exists as a `#[test]` never sees the assembly it is meant to
-//! validate.
+//! validate. See `crate::device_test` for the registry.
 
+use crate::device_test::device_checks;
 use crate::kernels;
 use crate::kernels::naive;
 
 const EPS: f32 = 1e-4;
+
+/// 16-byte-aligned storage for a check's buffers.
+///
+/// A plain `[f32; N]` local gets whatever alignment the frame layout happens
+/// to hand it, and that is not good enough for the kernels that load with
+/// `lv.q`. `matmul_bt_tiled` and `gemm_bt_packed` require alignment outright —
+/// only as a `debug_assert!`, so a release device build gets a **CPU fault**
+/// instead, which is not a Rust panic, does not unwind, and locks psplink up
+/// until the PSP is power-cycled. Others (`pow_const`, `swish`, `logistic`)
+/// silently take their scalar fallback when unaligned, so an unaligned check
+/// passes without ever running the instructions it exists to validate.
+///
+/// Either way the host suite is blind to it: alignment only matters on device.
+///
+/// Derefs to a slice, so a check body reads as ordinary array code and only
+/// the declaration marks the guarantee. Don't copy the array back out — a
+/// `let x = aligned.0;` hands the copy whatever alignment its own slot has.
+#[repr(align(16))]
+struct Aligned<const N: usize>([f32; N]);
+
+impl<const N: usize> core::ops::Deref for Aligned<N> {
+    type Target = [f32];
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<const N: usize> core::ops::DerefMut for Aligned<N> {
+    fn deref_mut(&mut self) -> &mut [f32] {
+        &mut self.0
+    }
+}
 
 fn approx_eq(a: &[f32], b: &[f32]) -> bool {
     if a.len() != b.len() {
@@ -153,15 +186,15 @@ fn test_matmul_bt_tiled() -> bool {
     // Pre-padded: A[8,8] @ B[4,8]^T = C[8,4]
     // m_tiles=2, k_tiles=2, n_tiles=1
     // Fill with sequential values, compare against matmul_bt
-    let mut a = [0.0f32; 64];
+    let mut a = Aligned([0.0f32; 64]);
     for i in 0..64 { a[i] = (i as f32) * 0.1; }
-    let mut b = [0.0f32; 32];
+    let mut b = Aligned([0.0f32; 32]);
     for i in 0..32 { b[i] = (i as f32) * 0.05 + 0.01; }
 
     let mut c_ref = [0.0f32; 32];
     kernels::matmul_bt(&a, &b, &mut c_ref, 8, 8, 4);
 
-    let mut c_tiled = [0.0f32; 32];
+    let mut c_tiled = Aligned([0.0f32; 32]);
     kernels::matmul_bt_tiled(&a, &b, &mut c_tiled, 2, 2, 1);
 
     approx_eq(&c_tiled, &c_ref)
@@ -170,15 +203,15 @@ fn test_matmul_bt_tiled() -> bool {
 fn test_matmul_bt_tiled_large() -> bool {
     // A[16,20] @ B[8,20]^T = C[16,8]
     // m_tiles=4, k_tiles=5, n_tiles=2
-    let mut a = [0.0f32; 320];
+    let mut a = Aligned([0.0f32; 320]);
     for i in 0..320 { a[i] = ((i % 17) as f32) * 0.1 - 0.8; }
-    let mut b = [0.0f32; 160];
+    let mut b = Aligned([0.0f32; 160]);
     for i in 0..160 { b[i] = ((i % 13) as f32) * 0.07 - 0.4; }
 
     let mut c_ref = [0.0f32; 128];
     kernels::matmul_bt(&a, &b, &mut c_ref, 16, 20, 8);
 
-    let mut c_tiled = [0.0f32; 128];
+    let mut c_tiled = Aligned([0.0f32; 128]);
     kernels::matmul_bt_tiled(&a, &b, &mut c_tiled, 4, 5, 2);
 
     approx_eq(&c_tiled, &c_ref)
@@ -335,7 +368,7 @@ fn test_conv2d_via_im2col_vs_naive() -> bool {
     let m_padded = ((gemm_m + 3) / 4) * 4; // = 36 (already aligned)
     let n_padded = ((co + 3) / 4) * 4; // = 4 (already aligned)
 
-    let mut im2col_buf = [0.0f32; 720]; // 36 * 20
+    let mut im2col_buf = Aligned([0.0f32; 720]); // 36 * 20
     kernels::im2col_padded(
         &input,
         [1, h, w, ci],
@@ -348,7 +381,7 @@ fn test_conv2d_via_im2col_vs_naive() -> bool {
 
     // Step 2: Pad weights [Co, K] → [Co, K_padded]
     // Filter is [Co, Kh, Kw, Ci] = [4, 18] row-major
-    let mut weights_padded = [0.0f32; 80]; // 4 * 20
+    let mut weights_padded = Aligned([0.0f32; 80]); // 4 * 20
     for row in 0..co {
         for col in 0..gemm_k {
             weights_padded[row * k_padded + col] = filter[row * gemm_k + col];
@@ -359,7 +392,7 @@ fn test_conv2d_via_im2col_vs_naive() -> bool {
     let m_tiles = m_padded / 4;
     let k_tiles = k_padded / 4;
     let n_tiles = n_padded / 4;
-    let mut output_vfpu = [0.0f32; 144]; // 36 * 4
+    let mut output_vfpu = Aligned([0.0f32; 144]); // 36 * 4
     kernels::matmul_bt_tiled(
         &im2col_buf,
         &weights_padded,
@@ -375,12 +408,6 @@ fn test_conv2d_via_im2col_vs_naive() -> bool {
 
     approx_eq(&output_vfpu, &output_naive)
 }
-
-// ============================================================================
-// Test runner
-// ============================================================================
-
-type TestFn = fn() -> bool;
 
 /// Explicit zero-pad + VALID conv must equal the kernel's own padding.
 ///
@@ -401,11 +428,14 @@ fn test_depthwise_padding_matches_explicit_pad() -> bool {
     const WO: usize = (W + 2 - K) / S + 1;
     const CMAX: usize = 20;
 
-    let mut inp = [0.0f32; H * W * CMAX];
-    let mut filt = [0.0f32; K * K * CMAX];
-    let mut padded = [0.0f32; (H + 2) * (W + 2) * CMAX];
-    let mut a = [0.0f32; HO * WO * CMAX];
-    let mut b = [0.0f32; HO * WO * CMAX];
+    // `depthwise_conv2d` reaches `vfma_inplace`, which uses `lv.q` unguarded
+    // once a chunk is 16 wide. Every slice it takes starts at a multiple of `c`
+    // floats, so aligning these five bases aligns all of them.
+    let mut inp = Aligned([0.0f32; H * W * CMAX]);
+    let mut filt = Aligned([0.0f32; K * K * CMAX]);
+    let mut padded = Aligned([0.0f32; (H + 2) * (W + 2) * CMAX]);
+    let mut a = Aligned([0.0f32; HO * WO * CMAX]);
+    let mut b = Aligned([0.0f32; HO * WO * CMAX]);
 
     for c in [4usize, 16, 20] {
         for (i, v) in inp[..H * W * c].iter_mut().enumerate() {
@@ -455,19 +485,16 @@ fn test_pow_const_matches_libm() -> bool {
 
     // `pow_const` falls back to the scalar `libm` path unless both buffers are
     // 16-byte aligned, which would make this test pass on device without ever
-    // running the instruction it is here to check.
-    #[repr(align(16))]
-    struct A<const M: usize>([f32; M]);
-
+    // running the instruction it is here to check — so both stay in `Aligned`
+    // for the whole check. Copying one out into a bare `[f32; N]` local is
+    // enough to lose the alignment and the coverage with it.
     // Non-negative inputs, including the 0 that a squared base reaches.
-    let mut inp = A([0.0f32; N]);
+    let mut inp = Aligned([0.0f32; N]);
     for i in 0..N {
-        inp.0[i] = (i as f32) * 0.37;
+        inp[i] = (i as f32) * 0.37;
     }
-    let inp = inp.0;
-    let mut got = A([0.0f32; N]);
-    let got = &mut got.0;
-    kernels::pow_const(&inp, got, C);
+    let mut got = Aligned([0.0f32; N]);
+    kernels::pow_const(&inp, &mut got, C);
     for i in 0..N {
         let want = libm::powf(inp[i], C);
         let d = if got[i] > want { got[i] - want } else { want - got[i] };
@@ -480,10 +507,10 @@ fn test_pow_const_matches_libm() -> bool {
 
     // A negative base with a non-integer exponent must be NaN, not a finite
     // value derived from log2(|x|).
-    let neg = A([-1.0f32, -2.5, -8.0, -0.5]);
-    let mut out = A([0.0f32; 4]);
-    kernels::pow_const(&neg.0, &mut out.0, C);
-    for v in out.0.iter() {
+    let neg = Aligned([-1.0f32, -2.5, -8.0, -0.5]);
+    let mut out = Aligned([0.0f32; 4]);
+    kernels::pow_const(&neg, &mut out, C);
+    for v in out.iter() {
         if !v.is_nan() {
             return false;
         }
@@ -491,40 +518,24 @@ fn test_pow_const_matches_libm() -> bool {
     true
 }
 
-/// Build the runner's table and a `#[test]` per check from one list, so adding
-/// a check cannot silently skip either runner.
-macro_rules! checks {
-    ($($name:ident),* $(,)?) => {
-        /// Every check, as `(name, predicate)`.
-        pub const CHECKS: &[(&str, fn() -> bool)] = &[
-            $((stringify!($name), $name)),*
-        ];
-
-        #[cfg(test)]
-        mod tests {
-            $(
-                #[test]
-                fn $name() {
-                    assert!(super::$name(), concat!(stringify!($name), " failed"));
-                }
-            )*
-        }
-    };
+device_checks! {
+    // Every kernel has a scalar fallback in the same signature, so the whole
+    // suite is meaningful on both runners.
+    shared: [
+        test_relu,
+        test_bias_add,
+        test_matmul_bt_identity,
+        test_matmul_bt_known,
+        test_matmul_bt_non_aligned,
+        test_matmul_bt_tiled,
+        test_matmul_bt_tiled_large,
+        test_im2col_simple,
+        test_im2col_with_padding,
+        test_im2col_padded_vs_im2col,
+        test_conv2d_via_im2col_vs_naive,
+        test_depthwise_padding_matches_explicit_pad,
+        test_pow_const_matches_libm,
+    ],
+    device: [],
 }
-
-checks!(
-    test_relu,
-    test_bias_add,
-    test_matmul_bt_identity,
-    test_matmul_bt_known,
-    test_matmul_bt_non_aligned,
-    test_matmul_bt_tiled,
-    test_matmul_bt_tiled_large,
-    test_im2col_simple,
-    test_im2col_with_padding,
-    test_im2col_padded_vs_im2col,
-    test_conv2d_via_im2col_vs_naive,
-    test_depthwise_padding_matches_explicit_pad,
-    test_pow_const_matches_libm,
-);
 

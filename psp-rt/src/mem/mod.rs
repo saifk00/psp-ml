@@ -9,6 +9,8 @@
 //!
 //! Single-threaded by design (the `module!` main thread); not Sync.
 
+pub mod checks;
+
 #[cfg(target_os = "psp")]
 mod imp {
     use psp::sys::{
@@ -16,7 +18,10 @@ mod imp {
         SceSysMemBlockTypes, SceUid,
     };
 
-    const MAX_BLOCKS: usize = 16;
+    /// How many live blocks the registry can track at once.
+    pub const MAX_BLOCKS: usize = 16;
+    /// `err` value when the registry is full — not a kernel error code.
+    pub const ERR_REGISTRY_FULL: u32 = 0xDEAD_0010;
     static mut UIDS: [SceUid; MAX_BLOCKS] = [SceUid(-1); MAX_BLOCKS];
     static mut COUNT: usize = 0;
 
@@ -28,7 +33,7 @@ mod imp {
         unsafe {
             if COUNT >= MAX_BLOCKS {
                 if let Some(e) = err {
-                    *e = 0xDEAD_0010; // registry full — raise MAX_BLOCKS
+                    *e = ERR_REGISTRY_FULL; // registry full — raise MAX_BLOCKS
                 }
                 return core::ptr::null_mut();
             }
@@ -64,7 +69,7 @@ mod imp {
 }
 
 #[cfg(target_os = "psp")]
-pub use imp::{alloc_partition, free_all};
+pub use imp::{alloc_partition, free_all, ERR_REGISTRY_FULL, MAX_BLOCKS};
 
 /// Host stub: partition memory doesn't exist off-PSP.
 #[cfg(not(target_os = "psp"))]

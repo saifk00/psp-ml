@@ -8,13 +8,15 @@ name = "psp_rt"
 path = "src/lib.rs"
 
 [[bin]]
-name = "test-kernels"
-path = "src/bin/test-kernels.rs"
-required-features = ["test-kernels"]
+name = "device-tests"
+path = "src/bin/device-tests.rs"
+required-features = ["device-tests"]
 
 [features]
 default = []
-test-kernels = []
+# The on-device check runner. Gated so a plain build doesn't produce it; the
+# `device-tests` crate's build script turns it on.
+device-tests = []
 local = []
 # Restores the pre-fix behaviour (worker thread left dormant) so the ~260 KB
 # per-`ld` leak can be measured against the fix. Diagnostic only.
