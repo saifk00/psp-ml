@@ -22,6 +22,10 @@ docs/
 examples/birdnet/results.txt
 examples/birdnet/golden.json
 
+# Written to the host0: mount by device/build.rs when TOPK prunes the
+# classifier; lets birdnet-host project golden.json onto the kept classes.
+examples/birdnet/kept_indices.txt
+
 # forward_debug tensor taps (~97 MB per run; regenerate with BIRDNET_TAP=1)
 examples/birdnet/device/tap/
 
@@ -34,3 +38,4 @@ kernel-plugin/*.elf
 kernel-plugin/*.prx
 kernel-plugin/*.S
 kernel-plugin/*.a
+__pycache__/

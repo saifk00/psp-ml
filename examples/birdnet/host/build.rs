@@ -26,6 +26,16 @@ fn main() {
         cmd.arg("--features").arg("hwprofile");
     }
 
+    // Forward the species-pruning knobs to the device build, which is what
+    // actually invokes prune_classifier.py. Cargo would pass these through
+    // anyway, but being explicit keeps the contract visible from the host side.
+    for var in ["TOPK", "BIRDNET_REGION", "BIRDNET_BBOX", "BIRDNET_PYTHON"] {
+        if let Ok(val) = std::env::var(var) {
+            cmd.env(var, val);
+        }
+        println!("cargo:rerun-if-env-changed={var}");
+    }
+
     cmd.arg("--target-dir").arg(&target_dir);
     cmd.current_dir(&device_dir);
 
@@ -47,5 +57,8 @@ fn main() {
     println!("cargo:rerun-if-env-changed=PSP_PROFILE");
     println!("cargo:rerun-if-changed=../device/src");
     println!("cargo:rerun-if-changed=../device/Cargo.toml");
-    println!("cargo:rerun-if-changed=../mnist_cnn.tflite");
+    // Without this, editing the device build script does not re-run `cargo
+    // psp`, so the staged weights.bin and the .prx can drift apart.
+    println!("cargo:rerun-if-changed=../device/build.rs");
+    println!("cargo:rerun-if-changed=../prune_classifier.py");
 }

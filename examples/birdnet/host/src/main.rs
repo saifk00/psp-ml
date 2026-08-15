@@ -1,8 +1,9 @@
 //! Host runner for `birdnet`. `build.rs` cross-compiled the sibling
 //! `device/` crate into a `.prx` and handed us its path via `PRX_PATH`.
 //! `host0:` is mounted to the birdnet/ example root, which holds
-//! `weights.bin` (published by the device build) — the device loads its
-//! resident weights and streams the classifier from there — and receives
+//! `weights.bin` (copied here at deploy time from beside the .prx, so blob
+//! and code always agree) — the device loads its resident weights and
+//! streams the classifier from there — and receives
 //! the device's `results.txt`/`benchmarks.json`. After the run, the device
 //! scores are verified against the Python/TFLite golden (`golden.json`).
 
@@ -22,13 +23,42 @@ fn main() {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     let mount_dir = Path::new(manifest_dir).join("..");
 
-    if !mount_dir.join("weights.bin").exists() {
+    // Publish the weight blob staged beside this exact .prx. Doing the copy
+    // here, at deploy time, is what guarantees blob and .prx agree: the device
+    // reads exactly WEIGHT_BYTES from host0:/weights.bin without validating the
+    // file, so a blob left behind by a *different* build of this crate (an
+    // unpruned 42.8 MB one against a TOPK .prx wanting 17.8 MB) is read
+    // happily and silently computed on at wrong offsets. Both come from
+    // prx_dir, so they cannot disagree.
+    let staged_weights = prx_dir.join("weights.bin");
+    if !staged_weights.exists() {
         eprintln!(
-            "error: {} missing — the device build should have published it",
-            mount_dir.join("weights.bin").display()
+            "error: {} missing — the device build should have staged it",
+            staged_weights.display()
         );
         std::process::exit(1);
     }
+    std::fs::copy(&staged_weights, mount_dir.join("weights.bin")).unwrap_or_else(|e| {
+        eprintln!("error: failed to publish weights.bin to the host0: mount: {e}");
+        std::process::exit(1);
+    });
+    eprintln!(
+        "==> Published weights.bin ({} bytes) from {}",
+        std::fs::metadata(&staged_weights).map(|m| m.len()).unwrap_or(0),
+        prx_dir.display()
+    );
+
+    // Same for the pruned-class index map: copy it when this build produced
+    // one, and clear any stale copy when it did not, so the golden projection
+    // can never be applied to an unpruned run.
+    let staged_kept = prx_dir.join("kept_indices.txt");
+    if staged_kept.exists() {
+        std::fs::copy(&staged_kept, mount_dir.join("kept_indices.txt"))
+            .expect("failed to publish kept_indices.txt");
+    } else {
+        let _ = std::fs::remove_file(mount_dir.join("kept_indices.txt"));
+    }
+
     for stale in ["benchmarks.json", "results.txt"] {
         let _ = std::fs::remove_file(mount_dir.join(stale));
     }
@@ -115,6 +145,26 @@ fn verify_against_golden(mount_dir: &Path) {
         .split(',')
         .map(|v| v.trim().parse::<f32>().unwrap())
         .collect();
+
+    // With a pruned classifier (TOPK) the device emits one score per surviving
+    // species, while golden.json still holds all 6522. Project golden onto the
+    // kept classes so the check stays meaningful instead of being skipped.
+    // Reported indices are then pruned-model indices, matching the device.
+    let golden = match std::fs::read_to_string(mount_dir.join("kept_indices.txt")) {
+        Ok(s) => {
+            let kept: Vec<usize> = s
+                .lines()
+                .filter(|l| !l.trim().is_empty())
+                .map(|l| l.trim().parse::<usize>().expect("malformed kept_indices.txt"))
+                .collect();
+            println!(
+                "    pruned model: projecting golden onto {} kept classes",
+                kept.len()
+            );
+            kept.iter().map(|&i| golden[i]).collect::<Vec<f32>>()
+        }
+        Err(_) => golden,
+    };
 
     assert_eq!(device.len(), golden.len(), "score count mismatch");
 
