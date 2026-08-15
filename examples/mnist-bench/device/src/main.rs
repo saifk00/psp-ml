@@ -299,7 +299,7 @@ fn get_tick() -> u64 {
 
 #[cfg(not(feature = "local"))]
 fn app_main() {
-    psp::enable_home_button();
+    psp_rt::enable_home_button();
 
     let (cpu0, bus0) = unsafe {
         (scePowerGetCpuClockFrequencyInt(), scePowerGetBusClockFrequencyInt())

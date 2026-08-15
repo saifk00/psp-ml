@@ -21,6 +21,12 @@ fn main() {
     // The device crate defaults to its `local` (host) feature so a bare
     // `cargo test` can build it; the real device build must opt out.
     cmd.arg("--no-default-features");
+    // PSP_LEAK_THREAD=1 builds the deliberately-leaking variant, to measure the
+    // thread-reaping fix against the behaviour it replaced.
+    if std::env::var("PSP_LEAK_THREAD").is_ok_and(|v| v != "0") {
+        cmd.arg("--features").arg("psp-rt/leak-thread");
+    }
+    println!("cargo:rerun-if-env-changed=PSP_LEAK_THREAD");
     if profile == "release" {
         cmd.arg("--release");
     }

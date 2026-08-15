@@ -16,6 +16,9 @@ required-features = ["test-kernels"]
 default = []
 test-kernels = []
 local = []
+# Restores the pre-fix behaviour (worker thread left dormant) so the ~260 KB
+# per-`ld` leak can be measured against the fix. Diagnostic only.
+leak-thread = []
 
 [dependencies]
 libm = "0.2"

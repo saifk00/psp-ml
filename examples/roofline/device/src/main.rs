@@ -307,7 +307,7 @@ fn scalar_fma(iters: usize) -> f32 {
 // ============================================================================
 
 fn app_main() {
-    psp::enable_home_button();
+    psp_rt::enable_home_button();
 
     let tick_res = unsafe { sceRtcGetTickResolution() } as u64;
     assert!(tick_res == 1_000_000, "unexpected tick resolution");

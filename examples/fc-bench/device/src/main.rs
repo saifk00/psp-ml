@@ -176,7 +176,7 @@ fn run_naive(a: &[f32], b: &[f32], c: &mut [f32], m: usize, k: usize, n: usize) 
 }
 
 fn app_main() {
-    psp::enable_home_button();
+    psp_rt::enable_home_button();
     // psplink boots at 222/111 MHz.
     unsafe { scePowerSetClockFrequency(333, 333, 166) };
     let cpu = unsafe { scePowerGetCpuClockFrequencyInt() };
@@ -363,7 +363,8 @@ fn app_main() {
                 while kt0 < kt_total {
                     let ktc = if kt_total - kt0 < ktc_max { kt_total - kt0 } else { ktc_max };
                     let t = tick();
-                    psp_rt::kernels::pack_a_block(a, ap, m, k, m0, mb_count, kt0 * 4, ktc);
+                    // A is contiguous here, so its leading dimension is k.
+                    psp_rt::kernels::pack_a_block(a, ap, m, k, k, m0, mb_count, kt0 * 4, ktc);
                     t_pack += tick() - t;
                     let t = tick();
                     for nb in 0..nb_total {
@@ -405,7 +406,7 @@ fn app_main() {
                 *v = 0.0;
             }
             let t0 = tick();
-            gemm_bt_packed(a, bp, c, ap, cp, m, k, n, mc, kc);
+            gemm_bt_packed(a, k, bp, c, ap, cp, m, k, n, mc, kc);
             let us = tick() - t0;
             let ppm = error_ppm(c, c_ref);
             let name: &str = match (mc, kc) {

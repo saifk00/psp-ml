@@ -139,7 +139,7 @@ fn format_results(passed: u32, failed: u32, results: &[bool; NUM_TESTS]) -> Json
 
 #[cfg(not(feature = "local"))]
 fn app_main() {
-    psp::enable_home_button();
+    psp_rt::enable_home_button();
 
     psp_rt::dprintln!("psp-rt Kernel Tests");
     psp_rt::dprintln!("====================");

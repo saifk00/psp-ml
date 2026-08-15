@@ -36,7 +36,7 @@ const BUF_BYTES: usize = 64 * 1024;
 static mut BUF: [u8; BUF_BYTES] = [0; BUF_BYTES];
 
 fn app_main() {
-    psp::enable_home_button();
+    psp_rt::enable_home_button();
 
     dprintln!("=== Profiler plugin installer ===");
 

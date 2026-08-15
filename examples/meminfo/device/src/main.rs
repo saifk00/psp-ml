@@ -12,7 +12,7 @@ use psp_rt::dprintln;
 psp_rt::module!("meminfo", 1, 0);
 
 fn app_main() {
-    psp::enable_home_button();
+    psp_rt::enable_home_button();
 
     let total_free = unsafe { sceKernelTotalFreeMemSize() };
     let max_block = unsafe { sceKernelMaxFreeMemSize() };

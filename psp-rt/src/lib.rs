@@ -17,6 +17,104 @@ pub mod mem;
 pub mod print;
 pub mod profiler;
 
+/// Thread id of the home-button watcher, so it can be reaped at exit.
+///
+/// `psp::enable_home_button` discards it, which is why this crate has its own.
+#[cfg(target_os = "psp")]
+static mut HOME_BUTTON_THID: ::psp::sys::SceUid = ::psp::sys::SceUid(-1);
+
+/// Enable exiting a running app with the HOME button.
+///
+/// Same behaviour as `psp::enable_home_button`, but it remembers the watcher
+/// thread so `module!` can reap it. Upstream's version creates a thread with a
+/// 4 KiB stack whose body ends in `sceKernelSleepThreadCB()` — it never
+/// returns, so it is never deleted, and its stack leaks on every `ld`. That is
+/// the entire 4,096 B residual left after the worker-thread fix.
+///
+/// Device crates should call this instead of `psp::enable_home_button`.
+#[cfg(target_os = "psp")]
+pub fn enable_home_button() {
+    use ::psp::sys;
+    use core::{ffi::c_void, ptr};
+
+    unsafe extern "C" fn exit_thread(_args: usize, _argp: *mut c_void) -> i32 {
+        unsafe extern "C" fn exit_callback(_a1: i32, _a2: i32, _arg: *mut c_void) -> i32 {
+            unsafe { sys::sceKernelExitGame() };
+            0
+        }
+        unsafe {
+            let cb = sys::sceKernelCreateCallback(
+                &b"exit_callback\0"[0],
+                exit_callback,
+                ptr::null_mut(),
+            );
+            sys::sceKernelRegisterExitCallback(cb);
+            // Blocks forever waiting for the callback, so this thread has to be
+            // terminated rather than joined.
+            sys::sceKernelSleepThreadCB();
+        }
+        0
+    }
+
+    unsafe {
+        let id = sys::sceKernelCreateThread(
+            &b"exit_thread\0"[0],
+            exit_thread,
+            32,
+            0x1000,
+            sys::ThreadAttributes::empty(),
+            ptr::null_mut(),
+        );
+        if id.0 >= 0 {
+            HOME_BUTTON_THID = id;
+            sys::sceKernelStartThread(id, 0, ptr::null_mut());
+        }
+    }
+}
+
+/// Reap the threads `module!` is responsible for.
+///
+/// A PSP thread that returns from its entry point goes *dormant*, not away —
+/// its stack stays allocated until `sceKernelDeleteThread`. Two threads were
+/// leaking this way on every `ld`, for a measured 266,240 B per load
+/// independent of module size
+///
+/// | thread | stack | reaped by |
+/// |---|---|---|
+/// | `module!`'s worker | 262,144 B | `sceKernelDeleteThread` (dormant) |
+/// | `enable_home_button`'s watcher | 4,096 B | `sceKernelTerminateDeleteThread` |
+///
+/// The watcher has to be *terminated* rather than deleted: its body ends in
+/// `sceKernelSleepThreadCB()`, so it never becomes dormant on its own.
+///
+/// `dormant` says whether the worker exited by itself. On the timeout path it
+/// is still running and must be terminated instead.
+///
+/// The `leak-thread` feature restores the old behaviour so the leak can be
+/// measured against the fix on hardware. The feature gate is *here* and not in
+/// the `module!` body because `#[cfg(feature = ...)]` inside a `macro_rules!`
+/// is evaluated in the crate the macro expands into, which would silently test
+/// the device crate's features instead.
+#[doc(hidden)]
+#[cfg(target_os = "psp")]
+pub fn __reap_threads(worker: ::psp::sys::SceUid, dormant: bool) {
+    #[cfg(not(feature = "leak-thread"))]
+    unsafe {
+        if dormant {
+            ::psp::sys::sceKernelDeleteThread(worker);
+        } else {
+            ::psp::sys::sceKernelTerminateDeleteThread(worker);
+        }
+        // Harmless if the watcher was never started.
+        if HOME_BUTTON_THID.0 >= 0 {
+            ::psp::sys::sceKernelTerminateDeleteThread(HOME_BUTTON_THID);
+            HOME_BUTTON_THID = ::psp::sys::SceUid(-1);
+        }
+    }
+    #[cfg(feature = "leak-thread")]
+    let _ = (worker, dormant);
+}
+
 /// Declare a PSP module.
 ///
 /// Generates a `psp_main()` that calls your `app_main()` function, and the
@@ -225,10 +323,15 @@ macro_rules! __module_impl {
                             "\npsp-rt: app_main exceeded {} s, terminating",
                             PSP_RT_TIMEOUT_SECS
                         );
-                        ::psp::sys::sceKernelTerminateDeleteThread(id);
+                        $crate::__reap_threads(id, false);
                         $crate::mem::free_all();
                         return PSP_RT_TIMEOUT_STATUS as isize;
                     }
+
+                    // The worker has ended but is only dormant; reap it and the
+                    // home-button watcher or their stacks leak. `APP_STATUS` is
+                    // module .bss, not thread stack, so it outlives them.
+                    $crate::__reap_threads(id, true);
 
                     APP_STATUS as isize
                 }

@@ -346,7 +346,7 @@ fn write_file(path: &[u8], data: &[u8]) {
 
 #[cfg(not(feature = "local"))]
 fn app_main() {
-    psp::enable_home_button();
+    psp_rt::enable_home_button();
 
     // Run at full clock: psplink boots at 222/111 MHz (measured by
     // examples/roofline; 333/166 is a 1.5x speedup).

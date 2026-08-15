@@ -171,7 +171,7 @@ fn bit_reverse(mut x: usize, bits: usize) -> usize {
 }
 
 fn app_main() {
-    psp::enable_home_button();
+    psp_rt::enable_home_button();
     unsafe { scePowerSetClockFrequency(333, 333, 166) };
     let tick_res = unsafe { sceRtcGetTickResolution() } as u64;
     assert!(tick_res == 1_000_000);

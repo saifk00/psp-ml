@@ -7,7 +7,7 @@ use psp_rt::profiler::{ProfileClear, ProfileDisable, ProfileEnable, ProfileGetRe
 psp_rt::module!("profiler_demo", 1, 0);
 
 fn app_main() {
-    psp::enable_home_button();
+    psp_rt::enable_home_button();
     dprintln!("=== psp-rt profiler demo ===");
 
     // Clear and enable hardware profiler
