@@ -385,39 +385,110 @@ type TestFn = fn() -> bool;
 /// Explicit zero-pad + VALID conv must equal the kernel's own padding.
 ///
 /// `ir::fuse` rewrites `Pad`+`Conv` into a single padded conv, so the two
-/// formulations have to agree exactly. Shaped like BirdNET's 4th depthwise
-/// ([1,6,16,C] stride 2, 3x3), which is where the equivalence was first
-/// questioned.
+/// formulations have to agree *exactly* — adding a zero tap is exact in IEEE
+/// 754, so this is a bit-equality check, not an approximate one.
+///
+/// Shaped like BirdNET's 4th depthwise ([1,6,16,C] stride 2, 3x3). The channel
+/// counts matter: `depthwise_conv2d` hands `vfma_inplace` a chunk of `C`, and
+/// that takes the `lv.q` path only for `chunk >= 16` (`blocks = n / 16`). C=4
+/// exercises the scalar tail only, C=16 the vector path only, C=20 both.
 fn test_depthwise_padding_matches_explicit_pad() -> bool {
     const H: usize = 6;
     const W: usize = 16;
-    const C: usize = 4;
     const K: usize = 3;
     const S: usize = 2;
     const HO: usize = (H + 2 - K) / S + 1;
     const WO: usize = (W + 2 - K) / S + 1;
+    const CMAX: usize = 20;
 
-    let mut inp = [0.0f32; H * W * C];
-    for (i, v) in inp.iter_mut().enumerate() {
-        *v = ((i * 37 % 101) as f32 / 50.0) - 1.0;
+    let mut inp = [0.0f32; H * W * CMAX];
+    let mut filt = [0.0f32; K * K * CMAX];
+    let mut padded = [0.0f32; (H + 2) * (W + 2) * CMAX];
+    let mut a = [0.0f32; HO * WO * CMAX];
+    let mut b = [0.0f32; HO * WO * CMAX];
+
+    for c in [4usize, 16, 20] {
+        for (i, v) in inp[..H * W * c].iter_mut().enumerate() {
+            *v = ((i * 37 % 101) as f32 / 50.0) - 1.0;
+        }
+        for (i, v) in filt[..K * K * c].iter_mut().enumerate() {
+            *v = ((i * 17 % 61) as f32 / 30.0) - 1.0;
+        }
+
+        naive::pad(
+            &inp[..H * W * c], [1, H, W, c],
+            &mut padded[..(H + 2) * (W + 2) * c], [1, H + 2, W + 2, c],
+            [[0, 0], [1, 1], [1, 1], [0, 0]],
+        );
+        kernels::depthwise_conv2d(
+            &padded[..(H + 2) * (W + 2) * c], [1, H + 2, W + 2, c],
+            &filt[..K * K * c], [1, K, K, c],
+            None, [S, S], [0, 0, 0, 0],
+            &mut a[..HO * WO * c], [1, HO, WO, c],
+        );
+        kernels::depthwise_conv2d(
+            &inp[..H * W * c], [1, H, W, c],
+            &filt[..K * K * c], [1, K, K, c],
+            None, [S, S], [1, 1, 1, 1],
+            &mut b[..HO * WO * c], [1, HO, WO, c],
+        );
+
+        if a[..HO * WO * c] != b[..HO * WO * c] {
+            return false;
+        }
     }
-    let mut filt = [0.0f32; K * K * C];
-    for (i, v) in filt.iter_mut().enumerate() {
-        *v = ((i * 17 % 61) as f32 / 30.0) - 1.0;
+    true
+}
+
+/// `pow_const` must agree with `libm::powf`, and must *not* silently produce a
+/// plausible number for a negative base.
+///
+/// `ir::fuse` rewrites `Pow` with a scalar exponent into `PowConst` on the
+/// argument that `vlog2` of a negative is NaN, so a non-integer exponent over a
+/// possibly-negative base diverges loudly rather than quietly — `libm::powf` is
+/// NaN there too. That is a claim about the hardware, and the host mirror of
+/// `pow_const` uses `libm::powf`, so only the device runner can actually test
+/// it. If this fails on device, the fusion guard in `fuse_pow_const` is unsound.
+fn test_pow_const_matches_libm() -> bool {
+    const N: usize = 32;
+    const C: f32 = 0.2199; // BirdNET's spectrogram compression exponent
+
+    // `pow_const` falls back to the scalar `libm` path unless both buffers are
+    // 16-byte aligned, which would make this test pass on device without ever
+    // running the instruction it is here to check.
+    #[repr(align(16))]
+    struct A<const M: usize>([f32; M]);
+
+    // Non-negative inputs, including the 0 that a squared base reaches.
+    let mut inp = A([0.0f32; N]);
+    for i in 0..N {
+        inp.0[i] = (i as f32) * 0.37;
+    }
+    let inp = inp.0;
+    let mut got = A([0.0f32; N]);
+    let got = &mut got.0;
+    kernels::pow_const(&inp, got, C);
+    for i in 0..N {
+        let want = libm::powf(inp[i], C);
+        let d = if got[i] > want { got[i] - want } else { want - got[i] };
+        // vlog2/vexp2 are hardware approximations; scale the bound by the value.
+        let tol = 1e-3 * if want > 1.0 { want } else { 1.0 };
+        if !(d <= tol) {
+            return false;
+        }
     }
 
-    let mut padded = [0.0f32; (H + 2) * (W + 2) * C];
-    naive::pad(&inp, [1, H, W, C], &mut padded, [1, H + 2, W + 2, C],
-               [[0, 0], [1, 1], [1, 1], [0, 0]]);
-    let mut a = [0.0f32; HO * WO * C];
-    kernels::depthwise_conv2d(&padded, [1, H + 2, W + 2, C], &filt, [1, K, K, C],
-        None, [S, S], [0, 0, 0, 0], &mut a, [1, HO, WO, C]);
-
-    let mut b = [0.0f32; HO * WO * C];
-    kernels::depthwise_conv2d(&inp, [1, H, W, C], &filt, [1, K, K, C],
-        None, [S, S], [1, 1, 1, 1], &mut b, [1, HO, WO, C]);
-
-    approx_eq(&a, &b)
+    // A negative base with a non-integer exponent must be NaN, not a finite
+    // value derived from log2(|x|).
+    let neg = A([-1.0f32, -2.5, -8.0, -0.5]);
+    let mut out = A([0.0f32; 4]);
+    kernels::pow_const(&neg.0, &mut out.0, C);
+    for v in out.0.iter() {
+        if !v.is_nan() {
+            return false;
+        }
+    }
+    true
 }
 
 /// Build the runner's table and a `#[test]` per check from one list, so adding
@@ -454,5 +525,6 @@ checks!(
     test_im2col_padded_vs_im2col,
     test_conv2d_via_im2col_vs_naive,
     test_depthwise_padding_matches_explicit_pad,
+    test_pow_const_matches_libm,
 );
 

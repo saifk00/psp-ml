@@ -30,11 +30,15 @@ pub fn to_psp_ir(model_data: Vec<u8>, dump_ir: bool) -> Result<PspModel, String>
         eprintln!("=== IR: after infer_shapes ===\n{}", dump::dump(&model));
     }
     const_fold::fold(&mut model);
+    if dump_ir {
+        eprintln!("=== IR: after const_fold ===\n{}", dump::dump(&model));
+    }
+
     // Needs folded constants (Pad amounts) and inferred shapes, so it runs
     // here rather than with the other fusions.
     fuse::fuse_late(&mut model);
     if dump_ir {
-        eprintln!("=== IR: after const_fold ===\n{}", dump::dump(&model));
+        eprintln!("=== IR: after late fusion ===\n{}", dump::dump(&model));
     }
 
     // IO planning; some models dont entirely fit in main memory (~54MB of user memory with high RAM enabled)

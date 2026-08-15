@@ -54,7 +54,10 @@ fn fuse_pad_conv(model: &mut PspModel) -> usize {
     let mut folds: HashMap<TensorId, (TensorId, [usize; 4])> = HashMap::new();
     for op in &model.graph.ops {
         let PspOp::Pad { input, paddings, output } = op else { continue };
-        if use_count.get(output) != Some(&1) {
+        // One consumer, and not exported: `use_count` only counts op inputs, so
+        // a Pad feeding both a conv and the model's output would otherwise lose
+        // its only producer.
+        if use_count.get(output) != Some(&1) || model.graph.outputs.contains(output) {
             continue;
         }
         let Some(p) = read_pad_amounts(model, *paddings) else { continue };
@@ -68,15 +71,26 @@ fn fuse_pad_conv(model: &mut PspModel) -> usize {
         return 0;
     }
 
+    // NOTE: `infer_shapes` treats any nonzero conv padding as SAME and
+    // re-derives it from the input shape. The padding written here is by
+    // construction *not* SAME — that is why TFLite emitted a separate Pad — so
+    // this pass must stay after the last `infer` call. Moving it earlier, or
+    // adding a second inference pass, would silently rewrite the fold to SAME:
+    // same output shape, different tap alignment, wrong numbers, no error.
     let mut fused = 0;
-    let mut consumed: Vec<TensorId> = Vec::new();
+    // The *padded* tensors whose consumer took over the padding. Keying this on
+    // the Pad's source instead would delete every Pad sharing that source, even
+    // ones whose own consumer was skipped — their output would then never be
+    // written and the consumer would read an uninitialised arena slot.
+    let mut fused_pads: Vec<TensorId> = Vec::new();
     for op in &mut model.graph.ops {
         let (input, params) = match op {
             PspOp::Conv2d { input, params, .. } => (input, params),
             PspOp::DepthwiseConv2d { input, params, .. } => (input, params),
             _ => continue,
         };
-        let Some(&(src, pad)) = folds.get(input) else { continue };
+        let padded = *input;
+        let Some(&(src, pad)) = folds.get(&padded) else { continue };
         // Adding to a conv that already pads would need the two to compose;
         // not worth the risk for a case that does not occur.
         if params.pad_top != 0 || params.pad_bottom != 0 || params.pad_left != 0 || params.pad_right != 0 {
@@ -87,24 +101,46 @@ fn fuse_pad_conv(model: &mut PspModel) -> usize {
         params.pad_bottom = pad[1];
         params.pad_left = pad[2];
         params.pad_right = pad[3];
-        consumed.push(src);
+        fused_pads.push(padded);
         fused += 1;
     }
     if fused == 0 {
         return 0;
     }
 
-    // Drop the Pad ops whose consumer took over the padding.
-    let folded: Vec<TensorId> = folds
-        .iter()
-        .filter(|(_, (src, _))| consumed.contains(src))
-        .map(|(out, _)| *out)
-        .collect();
+    // Drop exactly the Pad ops whose consumer took over the padding.
     model.graph.ops.retain(|op| match op {
-        PspOp::Pad { output, .. } => !folded.contains(output),
+        PspOp::Pad { output, .. } => !fused_pads.contains(output),
         _ => true,
     });
     fused
+}
+
+/// Read a single-element F32 constant, if it is one.
+fn read_f32_const(model: &PspModel, tid: TensorId) -> Option<f32> {
+    use super::graph::TensorKind;
+    let TensorKind::Constant { offset, len } = model.graph.tensor(tid).kind else {
+        return None;
+    };
+    let b = model.model_data.get(offset..offset + len)?;
+    if b.len() != 4 {
+        return None;
+    }
+    Some(f32::from_le_bytes(b.try_into().ok()?))
+}
+
+/// Whether `tid` is produced by an op that cannot emit a negative value.
+///
+/// Deliberately narrow: a self-multiply is the only form needed today, and a
+/// wrong answer here turns into NaN on device that no host check would catch.
+fn is_non_negative(model: &PspModel, tid: TensorId) -> bool {
+    use super::psp::BinaryOp;
+    model.graph.ops.iter().any(|op| match op {
+        PspOp::ElementWise { op: BinaryOp::Mul, input_a, input_b, output } => {
+            *output == tid && input_a == input_b
+        }
+        _ => false,
+    })
 }
 
 /// Read a `[4,2]` INT32 padding constant, if it is one.
@@ -134,9 +170,20 @@ fn read_pad_amounts(model: &PspModel, paddings: TensorId) -> Option<[[usize; 2];
 /// VFPU ops over four lanes. Worth 200 ms on BirdNET's two spectrogram
 /// compression ops.
 ///
-/// Requires `x >= 0` (log2 of a negative is NaN). Both BirdNET sites are fed by
-/// a square, but that is not checkable here, so the kernel documents it and the
-/// scalar tail uses `libm::powf`, which agrees for non-negative inputs.
+/// `vlog2` of a negative is NaN, so this only fires where that cannot silently
+/// disagree with `libm::powf`:
+///
+/// - **Non-integer exponent** — `powf(x, c)` is NaN for `x < 0` there too, so
+///   both paths agree *provided* `vlog2` of a negative is also NaN. That is
+///   asserted by `test_pow_const_matches_libm` in `kernels::checks`, which runs
+///   on device against the real instruction.
+/// - **Provably non-negative base** — currently a self-multiply (`x * x`),
+///   which is what BirdNET's two spectrogram-compression sites are fed by.
+///
+/// Without this guard the divergence is invisible to every check we have: the
+/// host mirror of `pow_const` uses `libm::powf`, so `cargo test`, `--features
+/// local` and the `BIRDNET_TAP` diff would all pass while the device produced
+/// NaN. Widen it only alongside a device-side check.
 fn fuse_pow_const(model: &mut PspModel) -> usize {
     use super::graph::TensorKind;
     use super::psp::BinaryOp;
@@ -155,6 +202,16 @@ fn fuse_pow_const(model: &mut PspModel) -> usize {
             continue;
         }
         if !matches!(t.kind, TensorKind::Constant { .. }) {
+            continue;
+        }
+        let Some(c) = read_f32_const(model, b) else { continue };
+        // x^0 is the one case a non-negative base does not rescue: libm gives
+        // 1.0 at x == 0, the VFPU gives 2^(0 * -inf) = 2^NaN = NaN, and a
+        // self-multiply base hits 0 routinely.
+        if c == 0.0 {
+            continue;
+        }
+        if c.fract() == 0.0 && !is_non_negative(model, a) {
             continue;
         }
         model.graph.ops[i] = PspOp::PowConst { input: a, exponent: b, output };
@@ -531,35 +588,141 @@ mod tests {
         assert_eq!(fuse_pad_conv(&mut model), 0);
     }
 
-    /// Pow with a 1-element constant exponent becomes PowConst; a tensor
-    /// exponent stays an ordinary elementwise Pow.
+    fn f32_bytes(v: f32) -> Vec<u8> {
+        v.to_le_bytes().to_vec()
+    }
+
+    /// The PowConst rewrite must not fire where `vlog2` could disagree with
+    /// `libm::powf` — i.e. an integer exponent over a base that might be
+    /// negative. That divergence is device-only, so no host check would see it.
     #[test]
-    fn scalar_exponent_pow_becomes_pow_const() {
-        for (n, expect) in [(1usize, true), (8usize, false)] {
+    fn pow_const_only_fires_where_the_vfpu_path_cannot_diverge() {
+        // (exponent, base is a square, should fuse)
+        let cases = [
+            (0.2199f32, false, true),  // non-integer: powf is NaN for x<0 too
+            (2.0f32, false, false),    // integer, base not provably >= 0
+            (3.0f32, true, true),      // integer, but base is x*x
+        ];
+        for (exp, squared, expect) in cases {
+            let data = f32_bytes(exp);
             let mut g = Graph::<PspOp>::new();
             let x = g.add_tensor(vec![1, 8], DType::F32, TensorKind::Input);
             g.inputs.push(x);
             let e = g.add_tensor(
-                vec![n],
+                vec![1],
                 DType::F32,
-                TensorKind::Constant { offset: 0, len: n * 4 },
+                TensorKind::Constant { offset: 0, len: 4 },
             );
             let o = g.add_tensor(vec![1, 8], DType::F32, TensorKind::Output);
             g.outputs.push(o);
+            let base = if squared {
+                let sq = g.add_tensor(vec![1, 8], DType::F32, TensorKind::Intermediate);
+                g.ops.push(PspOp::ElementWise {
+                    op: BinaryOp::Mul,
+                    input_a: x,
+                    input_b: x,
+                    output: sq,
+                });
+                sq
+            } else {
+                x
+            };
             g.ops.push(PspOp::ElementWise {
                 op: BinaryOp::Pow,
-                input_a: x,
+                input_a: base,
                 input_b: e,
                 output: o,
             });
 
-            let mut model = PspModel { graph: g, model_data: vec![0u8; n * 4] };
-            assert_eq!(fuse_pow_const(&mut model), expect as usize, "n={n}");
-            assert_eq!(
-                matches!(model.graph.ops[0], PspOp::PowConst { .. }),
-                expect,
-                "n={n}"
-            );
+            let mut model = PspModel { graph: g, model_data: data };
+            let n = fuse_pow_const(&mut model);
+            assert_eq!(n, expect as usize, "exp={exp} squared={squared}");
         }
+    }
+
+    /// A multi-element exponent is an ordinary elementwise Pow.
+    #[test]
+    fn tensor_exponent_pow_is_left_alone() {
+        let mut g = Graph::<PspOp>::new();
+        let x = g.add_tensor(vec![1, 8], DType::F32, TensorKind::Input);
+        g.inputs.push(x);
+        let e = g.add_tensor(vec![8], DType::F32, TensorKind::Constant { offset: 0, len: 32 });
+        let o = g.add_tensor(vec![1, 8], DType::F32, TensorKind::Output);
+        g.outputs.push(o);
+        g.ops.push(PspOp::ElementWise { op: BinaryOp::Pow, input_a: x, input_b: e, output: o });
+        let mut model = PspModel { graph: g, model_data: vec![0u8; 32] };
+        assert_eq!(fuse_pow_const(&mut model), 0);
+    }
+
+    /// Two Pads sharing one source: folding the first must not delete the
+    /// second, whose consumer still needs its output.
+    #[test]
+    fn folding_one_pad_does_not_delete_its_sibling() {
+        let data = pad_bytes([[0, 0], [1, 1], [1, 1], [0, 0]]);
+        let mut g = Graph::<PspOp>::new();
+        let x = g.add_tensor(vec![1, 6, 16, 4], DType::F32, TensorKind::Input);
+        g.inputs.push(x);
+        let pads = g.add_tensor(
+            vec![4, 2],
+            DType::I32,
+            TensorKind::Constant { offset: 0, len: data.len() },
+        );
+        let w = g.add_tensor(vec![1, 3, 3, 4], DType::F32, TensorKind::Constant { offset: 0, len: 4 });
+
+        // Pad #1 -> a conv with no padding of its own: foldable.
+        let p1 = g.add_tensor(vec![1, 8, 18, 4], DType::F32, TensorKind::Intermediate);
+        let o1 = g.add_tensor(vec![1, 3, 8, 4], DType::F32, TensorKind::Output);
+        // Pad #2 -> a conv that already pads: must be left intact.
+        let p2 = g.add_tensor(vec![1, 8, 18, 4], DType::F32, TensorKind::Intermediate);
+        let o2 = g.add_tensor(vec![1, 3, 8, 4], DType::F32, TensorKind::Output);
+        g.outputs.push(o1);
+        g.outputs.push(o2);
+
+        g.ops.push(PspOp::Pad { input: x, paddings: pads, output: p1 });
+        g.ops.push(PspOp::DepthwiseConv2d {
+            input: p1, weights: w, bias: None, output: o1, params: conv_params(),
+        });
+        g.ops.push(PspOp::Pad { input: x, paddings: pads, output: p2 });
+        let mut already = conv_params();
+        already.pad_top = 1;
+        g.ops.push(PspOp::DepthwiseConv2d {
+            input: p2, weights: w, bias: None, output: o2, params: already,
+        });
+
+        let mut model = PspModel { graph: g, model_data: data };
+        assert_eq!(fuse_pad_conv(&mut model), 1);
+
+        let pads_left: Vec<TensorId> = model.graph.ops.iter().filter_map(|op| match op {
+            PspOp::Pad { output, .. } => Some(*output),
+            _ => None,
+        }).collect();
+        assert_eq!(pads_left, vec![p2], "the un-fused Pad must survive to write p2");
+    }
+
+    /// A padded tensor that is also a model output still needs its producer.
+    #[test]
+    fn a_pad_that_is_a_graph_output_is_not_folded() {
+        let data = pad_bytes([[0, 0], [1, 1], [1, 1], [0, 0]]);
+        let mut g = Graph::<PspOp>::new();
+        let x = g.add_tensor(vec![1, 6, 16, 4], DType::F32, TensorKind::Input);
+        g.inputs.push(x);
+        let pads = g.add_tensor(
+            vec![4, 2],
+            DType::I32,
+            TensorKind::Constant { offset: 0, len: data.len() },
+        );
+        let p = g.add_tensor(vec![1, 8, 18, 4], DType::F32, TensorKind::Output);
+        let w = g.add_tensor(vec![1, 3, 3, 4], DType::F32, TensorKind::Constant { offset: 0, len: 4 });
+        let o = g.add_tensor(vec![1, 3, 8, 4], DType::F32, TensorKind::Output);
+        g.outputs.push(p);
+        g.outputs.push(o);
+        g.ops.push(PspOp::Pad { input: x, paddings: pads, output: p });
+        g.ops.push(PspOp::DepthwiseConv2d {
+            input: p, weights: w, bias: None, output: o, params: conv_params(),
+        });
+
+        let mut model = PspModel { graph: g, model_data: data };
+        assert_eq!(fuse_pad_conv(&mut model), 0);
+        assert!(model.graph.ops.iter().any(|op| matches!(op, PspOp::Pad { .. })));
     }
 }
