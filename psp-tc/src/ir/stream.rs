@@ -101,6 +101,7 @@ fn is_batch_independent(model: &PspModel, op: &PspOp) -> bool {
         | PspOp::DepthwiseConv2d { .. }
         | PspOp::Pool2d { .. }
         | PspOp::ElementWise { .. }
+        | PspOp::PowConst { .. }
         | PspOp::UnaryElementWise { .. }
         | PspOp::FakeQuant { .. }
         | PspOp::Dequantize { .. }

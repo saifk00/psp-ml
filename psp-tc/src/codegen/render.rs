@@ -1087,6 +1087,14 @@ fn render_kernel_call(
             quote! { reshape(#input_expr, #output_expr); }
         }
 
+        KernelCall::PowConst { input, exponent, output } => {
+            let in_expr = writer.read(*input);
+            let exp_expr = writer.read(*exponent);
+            let out_expr = writer.write(*output);
+            // The exponent is a one-element constant tensor; pass the value.
+            quote! { pow_const(#in_expr, #out_expr, #exp_expr[0]); }
+        }
+
         KernelCall::Swish { input, output } => {
             let in_expr = writer.read(*input);
             let out_expr = writer.write(*output);

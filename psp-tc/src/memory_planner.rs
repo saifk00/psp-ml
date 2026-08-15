@@ -18,7 +18,13 @@ pub fn swap_analysis(model: &PspModel) -> Vec<usize> {
         running += op
             .const_tensors()
             .iter()
-            .map(|&tid| model.graph.tensor(tid).size_bytes())
+            .map(|&tid| {
+                let sz = model.graph.tensor(tid).size_bytes();
+                if sz > 0 {
+                    println!("constant tensor with size: {} (op {})", sz, op)
+                }
+                sz
+            })
             .sum::<usize>();
         cumulative.push(running);
     }

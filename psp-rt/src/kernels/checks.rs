@@ -382,6 +382,44 @@ fn test_conv2d_via_im2col_vs_naive() -> bool {
 
 type TestFn = fn() -> bool;
 
+/// Explicit zero-pad + VALID conv must equal the kernel's own padding.
+///
+/// `ir::fuse` rewrites `Pad`+`Conv` into a single padded conv, so the two
+/// formulations have to agree exactly. Shaped like BirdNET's 4th depthwise
+/// ([1,6,16,C] stride 2, 3x3), which is where the equivalence was first
+/// questioned.
+fn test_depthwise_padding_matches_explicit_pad() -> bool {
+    const H: usize = 6;
+    const W: usize = 16;
+    const C: usize = 4;
+    const K: usize = 3;
+    const S: usize = 2;
+    const HO: usize = (H + 2 - K) / S + 1;
+    const WO: usize = (W + 2 - K) / S + 1;
+
+    let mut inp = [0.0f32; H * W * C];
+    for (i, v) in inp.iter_mut().enumerate() {
+        *v = ((i * 37 % 101) as f32 / 50.0) - 1.0;
+    }
+    let mut filt = [0.0f32; K * K * C];
+    for (i, v) in filt.iter_mut().enumerate() {
+        *v = ((i * 17 % 61) as f32 / 30.0) - 1.0;
+    }
+
+    let mut padded = [0.0f32; (H + 2) * (W + 2) * C];
+    naive::pad(&inp, [1, H, W, C], &mut padded, [1, H + 2, W + 2, C],
+               [[0, 0], [1, 1], [1, 1], [0, 0]]);
+    let mut a = [0.0f32; HO * WO * C];
+    kernels::depthwise_conv2d(&padded, [1, H + 2, W + 2, C], &filt, [1, K, K, C],
+        None, [S, S], [0, 0, 0, 0], &mut a, [1, HO, WO, C]);
+
+    let mut b = [0.0f32; HO * WO * C];
+    kernels::depthwise_conv2d(&inp, [1, H, W, C], &filt, [1, K, K, C],
+        None, [S, S], [1, 1, 1, 1], &mut b, [1, HO, WO, C]);
+
+    approx_eq(&a, &b)
+}
+
 /// Build the runner's table and a `#[test]` per check from one list, so adding
 /// a check cannot silently skip either runner.
 macro_rules! checks {
@@ -415,47 +453,6 @@ checks!(
     test_im2col_with_padding,
     test_im2col_padded_vs_im2col,
     test_conv2d_via_im2col_vs_naive,
+    test_depthwise_padding_matches_explicit_pad,
 );
 
-#[cfg(test)]
-mod adhoc {
-    use super::*;
-    extern crate std;
-    use std::vec;
-    use std::vec::Vec;
-    /// Explicit zero-pad + VALID conv must equal the kernel's own padding.
-    /// Shape is BirdNET's 4th depthwise: [1,6,16,C] stride 2, 3x3.
-    #[test]
-    fn depthwise_own_padding_matches_explicit_pad() {
-        for c in [1usize, 4, 128, 1536] {
-            let (h, w, k, s) = (6usize, 16usize, 3usize, 2usize);
-            let (ho, wo) = ((h + 2 - k) / s + 1, (w + 2 - k) / s + 1);
-            let mut inp = vec![0.0f32; h * w * c];
-            for (i, v) in inp.iter_mut().enumerate() {
-                *v = ((i * 37 % 101) as f32 / 50.0) - 1.0;
-            }
-            let mut filt = vec![0.0f32; k * k * c];
-            for (i, v) in filt.iter_mut().enumerate() {
-                *v = ((i * 17 % 61) as f32 / 30.0) - 1.0;
-            }
-
-            // A: explicit pad, then VALID
-            let mut padded = vec![0.0f32; (h + 2) * (w + 2) * c];
-            naive::pad(&inp, [1, h, w, c], &mut padded, [1, h + 2, w + 2, c],
-                       [[0, 0], [1, 1], [1, 1], [0, 0]]);
-            let mut a = vec![0.0f32; ho * wo * c];
-            kernels::depthwise_conv2d(&padded, [1, h + 2, w + 2, c], &filt, [1, k, k, c],
-                None, [s, s], [0, 0, 0, 0], &mut a, [1, ho, wo, c]);
-
-            // B: kernel's own padding
-            let mut b = vec![0.0f32; ho * wo * c];
-            kernels::depthwise_conv2d(&inp, [1, h, w, c], &filt, [1, k, k, c],
-                None, [s, s], [1, 1, 1, 1], &mut b, [1, ho, wo, c]);
-
-            let bad: Vec<usize> = (0..a.len()).filter(|&i| a[i] != b[i]).collect();
-            assert!(bad.is_empty(),
-                "c={c}: {} of {} differ, first at {} ({} vs {})",
-                bad.len(), a.len(), bad[0], a[bad[0]], b[bad[0]]);
-        }
-    }
-}

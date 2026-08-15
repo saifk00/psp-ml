@@ -300,6 +300,7 @@ pub enum KernelCall {
     },
     /// `out = x * sigmoid(x)`, computed 4 lanes at a time on the VFPU.
     Swish { input: TensorId, output: TensorId },
+    PowConst { input: TensorId, exponent: TensorId, output: TensorId },
     /// Snap f32 values to an int8 quantization grid (TFLite QUANTIZE
     /// simulated in f32).
     FakeQuant {

@@ -539,6 +539,17 @@ fn lower_ops(
                 }],
             },
 
+            PspOp::PowConst { input, exponent, output } => OpPlan {
+                scratch: vec![],
+                sub_ops: vec![SubOpPlan {
+                    name: "pow_const".into(),
+                    kernels: vec![KernelCall::PowConst {
+                        input: *input,
+                        exponent: *exponent,
+                        output: *output,
+                    }],
+                }],
+            },
             PspOp::Swish { input, output } => OpPlan {
                 scratch: vec![],
                 sub_ops: vec![SubOpPlan {

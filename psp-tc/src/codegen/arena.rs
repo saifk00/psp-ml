@@ -113,6 +113,11 @@ pub fn extract_tensor_refs(kernel: &KernelCall) -> Vec<TensorRef> {
             refs.push(r(*input));
             refs.push(w(*output));
         }
+        KernelCall::PowConst { input, exponent, output } => {
+            refs.push(r(*input));
+            refs.push(r(*exponent));
+            refs.push(w(*output));
+        }
         KernelCall::Swish { input, output } => {
             refs.push(r(*input));
             refs.push(w(*output));

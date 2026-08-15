@@ -386,6 +386,7 @@ pub fn infer(model: &mut PspModel) {
             | PspOp::Softmax { input, output }
             | PspOp::FakeQuant { input, output }
             | PspOp::Dequantize { input, output }
+            | PspOp::PowConst { input, output, .. }
             | PspOp::Swish { input, output }
             | PspOp::ReverseV2 { input, output, .. } => {
                 let shape = model.graph.tensor(*input).shape.clone();

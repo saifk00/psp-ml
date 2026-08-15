@@ -118,6 +118,11 @@ pub enum PspOp {
     /// `Logistic` + `Mul` pair; TFLite has no opcode for it.
     Swish { input: TensorId, output: TensorId },
 
+    /// `out = in ^ c` for a single-element constant exponent `c`, produced by
+    /// `ir::fuse` from a `Pow` whose second operand is a scalar constant.
+    /// Lowers to a VFPU `vlog2`/`vexp2` pair instead of `libm::powf`.
+    PowConst { input: TensorId, exponent: TensorId, output: TensorId },
+
     // ─── Quantization ops (rewritten to f32 semantics by ir::quant) ─────
     /// TFLite QUANTIZE, simulated in f32: snap each value to its int8
     /// quantization grid, `out = (clamp(round(x/s) + z) - z) * s`.
@@ -445,6 +450,9 @@ impl std::fmt::Display for PspOp {
             PspOp::FakeQuant { input, output } => {
                 write!(f, "FakeQuant(t{} → t{})", input, output)
             }
+            PspOp::PowConst { input, exponent, output } => {
+                write!(f, "PowConst(t{} ^ t{} → t{})", input, exponent, output)
+            }
             PspOp::Swish { input, output } => {
                 write!(f, "Swish(t{} → t{})", input, output)
             }
@@ -634,6 +642,7 @@ impl std::fmt::Display for ReduceOp {
 impl PspOp {
     pub fn inputs(&self) -> Vec<TensorId> {
         match self {
+            PspOp::PowConst { input, exponent, .. } => vec![*input, *exponent],
             PspOp::Conv2d {
                 input,
                 weights,
@@ -760,6 +769,7 @@ impl PspOp {
             | PspOp::Cast { output, .. }
             | PspOp::FakeQuant { output, .. }
             | PspOp::Dequantize { output, .. }
+            | PspOp::PowConst { output, .. }
             | PspOp::Swish { output, .. }
             | PspOp::Pad { output, .. }
             | PspOp::Transpose { output, .. }
@@ -790,6 +800,11 @@ impl PspOp {
             }
         };
         match self {
+            PspOp::PowConst { input, exponent, output } => {
+                r(input);
+                r(exponent);
+                r(output);
+            }
             PspOp::Conv2d {
                 input,
                 weights,
