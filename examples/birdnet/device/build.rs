@@ -12,6 +12,18 @@ fn main() {
     });
     println!("cargo:rerun-if-changed={}", model.display());
 
+    // Prototyping hook: swap in a hand-edited `generated.rs` to measure a
+    // codegen optimisation before implementing it in psp-tc. The model is still
+    // compiled above, so `weights.bin` and the blob layout stay consistent —
+    // only the emitted code is replaced, and it must match that same blob.
+    if let Ok(over) = std::env::var("BIRDNET_GENERATED_OVERRIDE") {
+        std::fs::copy(&over, Path::new(&out_dir).join("generated.rs"))
+            .unwrap_or_else(|e| panic!("failed to apply {over}: {e}"));
+        println!("cargo:warning=using hand-edited generated.rs from {over}");
+        println!("cargo:rerun-if-changed={over}");
+    }
+    println!("cargo:rerun-if-env-changed=BIRDNET_GENERATED_OVERRIDE");
+
     // The 3 s cardinal window chosen by models/birdnet_reference.py — using
     // its exact i16 samples (and the same i16/32768.0 conversion) makes the
     // model input bit-identical to the Python golden run.

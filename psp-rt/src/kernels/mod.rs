@@ -1482,11 +1482,67 @@ pub fn depthwise_conv2d_ref(
 // measured bound.
 
 #[cfg(target_os = "psp")]
+static NEG_LOG2_E: Align16F4 = Align16F4([-core::f32::consts::LOG2_E; 4]);
+
+#[cfg(target_os = "psp")]
 #[repr(align(16))]
 struct Align16F4([f32; 4]);
 
+/// `out[i] = in[i].powf(c)` for a compile-time-constant exponent.
+///
+/// `x^c = 2^(c * log2 x)`, which the VFPU does 4 lanes at a time with
+/// `vlog2.q` + `vmul.q` + `vexp2.q`. The alternative is `libm::powf` per
+/// element, measured at ~678 cycles each on BirdNET's spectrogram compression.
+///
+/// Inputs must be **non-negative** — `log2` of a negative is NaN. BirdNET's
+/// two call sites are fed by a square, so that holds there; the scalar tail and
+/// the host fallback use `libm::powf`, which agrees for x >= 0.
+///
+/// `vlog2`/`vexp2` are hardware approximations, so this is *not* bit-identical
+/// to `libm::powf` — same trade already accepted for `logistic`/`swish`.
 #[cfg(target_os = "psp")]
-static NEG_LOG2_E: Align16F4 = Align16F4([-core::f32::consts::LOG2_E; 4]);
+#[inline(never)]
+pub fn pow_const(input: &[f32], output: &mut [f32], exponent: f32) {
+    let n = core::cmp::min(input.len(), output.len());
+    let aligned = input.as_ptr() as usize % 16 == 0 && output.as_ptr() as usize % 16 == 0;
+    let quads = if aligned { n / 4 } else { 0 };
+    if quads > 0 {
+        // Broadcast the exponent to all four lanes.
+        let c4 = Align16F4([exponent; 4]);
+        unsafe {
+            vfpu_asm!(
+                "lv.q R700, 0({c})",
+                "2:",
+                "lv.q R000, 0({i})",
+                "vlog2.q R001, R000",        // log2 x
+                "vmul.q R002, R001, R700",   // c * log2 x
+                "vexp2.q R003, R002",        // 2^(c log2 x) = x^c
+                "sv.q R003, 0({o})",
+                "addiu {i}, {i}, 16",
+                "addiu {n}, {n}, -1",
+                "bnez {n}, 2b",
+                "addiu {o}, {o}, 16",        // branch delay slot
+                c = in(reg) (c4.0.as_ptr()),
+                i = inout(reg) (input.as_ptr()) => _,
+                o = inout(reg) (output.as_mut_ptr()) => _,
+                n = inout(reg) (quads) => _,
+                options(nostack),
+            );
+        }
+    }
+    for i in quads * 4..n {
+        output[i] = libm::powf(input[i], exponent);
+    }
+}
+
+/// Scalar mirror for host builds.
+#[cfg(not(target_os = "psp"))]
+pub fn pow_const(input: &[f32], output: &mut [f32], exponent: f32) {
+    let n = core::cmp::min(input.len(), output.len());
+    for i in 0..n {
+        output[i] = libm::powf(input[i], exponent);
+    }
+}
 
 /// `out[i] = in[i] * sigmoid(in[i])` (swish / SiLU).
 #[cfg(target_os = "psp")]
