@@ -1,0 +1,27 @@
+cardinal_3s.wav is a 3-second window cut from a xeno-canto recording by
+models/birdnet_reference.py. It is redistributed here under the source
+recording's licence.
+
+  XC468176 -- Northern Cardinal (Cardinalis cardinalis), song
+  (c) Giuseppe Speranza -- https://xeno-canto.org/468176
+  Central Park, New York, New York County, New York, United States
+  (40.7824, -73.963), 2019-04-09 15:25
+  bird seen: yes, playback used: no, also audible: House Sparrow
+  Licence: CC BY-NC-SA 4.0 -- https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+CC BY-NC-SA 4.0 is the same licence as the BirdNET model this example runs, so
+it adds no restriction the example did not already carry. Non-commercial, and
+derivatives must keep the same terms.
+
+Why this fixture: the previous cardinal.wav was not a Northern Cardinal.
+BirdNET scores it 0.0096 for Northern Cardinal and calls it Pyrrhuloxia at
+0.66, while it scores three independent ground-truth cardinal recordings
+0.38 / 0.70 / 0.84. Every stage of this example -- TFLite reference, psp-tc
+codegen, device -- agreed with each other on that file; they were faithfully
+reproducing a wrong answer, so nothing downstream could have caught it.
+On this fixture the model returns Northern Cardinal at 0.84, with House
+Sparrow second, matching the recordist's own notes.
+
+To point the reference runner at a different recording:
+
+    BIRDNET_WAV=/path/to/some.wav uv run models/birdnet_reference.py

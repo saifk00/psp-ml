@@ -16,7 +16,9 @@ mod generated {
 }
 
 const INPUT_SAMPLES: usize = 144000;
-const OUTPUT_CLASSES: usize = 6522;
+// 6522 for the full model, or the surviving species count when TOPK is set.
+// Emitted by build.rs so it always matches the model psp-tc actually compiled.
+include!(concat!(env!("OUT_DIR"), "/classes.rs"));
 const TOP_K: usize = 5;
 
 // Audio pre-converted to f32 by build.rs (avoids 562KB stack allocation)
@@ -30,7 +32,9 @@ fn audio_input() -> &'static [f32; INPUT_SAMPLES] {
 }
 
 // BirdNET species labels, one per line, index-aligned with the output vector.
-static LABELS: &str = include_str!("../../../../models/birdnet/labels/en_us.txt");
+// build.rs writes either the full en_us.txt or the pruned subset, so this stays
+// aligned with OUTPUT_CLASSES.
+static LABELS: &str = include_str!(concat!(env!("OUT_DIR"), "/labels.txt"));
 
 fn label(index: usize) -> &'static str {
     LABELS.lines().nth(index).unwrap_or("?")
