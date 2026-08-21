@@ -17,6 +17,7 @@ pub mod kernels;
 pub mod mem;
 pub mod print;
 pub mod profiler;
+pub mod vme;
 
 /// Thread id of the home-button watcher, so it can be reaped at exit.
 ///

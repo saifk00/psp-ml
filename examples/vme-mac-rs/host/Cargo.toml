@@ -1,0 +1,10 @@
+[package]
+name = "vme-mac-rs-host"
+edition = "2021"
+
+[[bin]]
+name = "vme-mac-rs-host"
+path = "src/main.rs"
+
+[dependencies]
+psplink-connection = { path = "../../../psplink-connection" }

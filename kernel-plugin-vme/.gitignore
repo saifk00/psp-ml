@@ -1,0 +1,9 @@
+/.deps/
+*.o
+vendor/*.o
+*.elf
+*.SFO
+*.prx
+psp_vme_kernel.S
+psp_vme_kernel_stub.o
+libpsp_vme_kernel.a

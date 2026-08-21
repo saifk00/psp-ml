@@ -27,6 +27,8 @@ members = [
     "examples/profiler-install/host",
     "examples/gemv-bench/device",
     "examples/gemv-bench/host",
+    "examples/vme-mac-rs/device",
+    "examples/vme-mac-rs/host",
 ]
 # What a bare `cargo test` / `cargo build` covers: everything that needs no
 # hardware and no gitignored assets. birdnet is excluded only because its
