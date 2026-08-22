@@ -5,7 +5,7 @@
 mod events;
 mod load;
 
-pub use events::{PspEvent, ShellMarker};
+pub use events::{PspEvent, ShellFramer, ShellMarker};
 pub use load::LoadOutcome;
 
 use std::os::raw::{c_int, c_void};

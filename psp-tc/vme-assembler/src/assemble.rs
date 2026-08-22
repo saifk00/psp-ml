@@ -62,6 +62,57 @@ impl MachineImage {
     pub fn context_words(&self) -> [u32; CTX_WORDS] {
         std::array::from_fn(|i| self.word(CTX_OFFSET + 4 * i))
     }
+
+    /// Unpack all eight buffers -- the shape a VME run's output is compared
+    /// in, whether it came from the RTL (`vme-emu-sys`) or the real block.
+    pub fn result(&self) -> VmeResult {
+        VmeResult {
+            top: std::array::from_fn(|i| self.read_buffer(TOP[i])),
+            base: std::array::from_fn(|i| self.read_buffer(BASE[i])),
+        }
+    }
+
+    /// Wrap raw image bytes (must be exactly [`IMAGE_SIZE`]).
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, String> {
+        if bytes.len() != IMAGE_SIZE {
+            return Err(format!("image is {} bytes, expected {}", bytes.len(), IMAGE_SIZE));
+        }
+        Ok(MachineImage { bytes })
+    }
+}
+
+const TOP: [Buffer; 4] = [Buffer::Top0, Buffer::Top1, Buffer::Top2, Buffer::Top3];
+const BASE: [Buffer; 4] = [Buffer::Base0, Buffer::Base1, Buffer::Base2, Buffer::Base3];
+
+/// The unpacked buffers after a run: `top[n]` / `base[n]` hold TOP_n /
+/// BASE_n, 2048 signed samples each.  Results of a run land in the BASE
+/// bank (PEn writes BASE_n); the TOP bank comes back as staged.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VmeResult {
+    pub top: [Vec<i32>; 4],
+    pub base: [Vec<i32>; 4],
+}
+
+impl VmeResult {
+    /// Build from 16384 words in wire order TOP_0..TOP_3 then BASE_0..BASE_3.
+    pub fn from_words(words: &[i32]) -> Result<Self, String> {
+        if words.len() != 8 * BUFFER_WORDS {
+            return Err(format!("expected {} words, got {}", 8 * BUFFER_WORDS, words.len()));
+        }
+        let chunk = |i: usize| words[i * BUFFER_WORDS..(i + 1) * BUFFER_WORDS].to_vec();
+        Ok(VmeResult {
+            top: std::array::from_fn(|i| chunk(i)),
+            base: std::array::from_fn(|i| chunk(4 + i)),
+        })
+    }
+
+    pub fn buffer(&self, b: Buffer) -> &[i32] {
+        if b.is_top() {
+            &self.top[b.lane()]
+        } else {
+            &self.base[b.lane()]
+        }
+    }
 }
 
 /// Check a configuration for assembly: source/operation completeness, field

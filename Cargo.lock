@@ -297,6 +297,7 @@ dependencies = [
  "quote",
  "serde_json",
  "syn",
+ "vme-assembler",
 ]
 
 [[package]]
@@ -433,6 +434,45 @@ dependencies = [
 [[package]]
 name = "vme-assembler"
 version = "0.1.0"
+
+[[package]]
+name = "vme-conformance"
+version = "0.0.0"
+dependencies = [
+ "psp",
+ "psp-rt",
+]
+
+[[package]]
+name = "vme-conformance-host"
+version = "0.0.0"
+dependencies = [
+ "psplink-connection",
+ "vme-assembler",
+ "vme-emu-sys",
+]
+
+[[package]]
+name = "vme-emu-sys"
+version = "0.1.0"
+dependencies = [
+ "vme-assembler",
+]
+
+[[package]]
+name = "vme-install"
+version = "0.0.0"
+dependencies = [
+ "psp",
+ "psp-rt",
+]
+
+[[package]]
+name = "vme-install-host"
+version = "0.0.0"
+dependencies = [
+ "psplink-connection",
+]
 
 [[package]]
 name = "vme-mac-rs"

@@ -5,6 +5,7 @@ members = [
     "psp-tc",
     "psp-tc/vme-assembler",
     "usbhostfs-sys",
+    "vme-emu-sys",
     "psplink-connection",
     "device-tests",
     "audio-recorder",
@@ -30,6 +31,10 @@ members = [
     "examples/gemv-bench/host",
     "examples/vme-mac-rs/device",
     "examples/vme-mac-rs/host",
+    "examples/vme-conformance/device",
+    "examples/vme-conformance/host",
+    "examples/vme-install/device",
+    "examples/vme-install/host",
 ]
 # What a bare `cargo test` / `cargo build` covers: everything that needs no
 # hardware and no gitignored assets. birdnet is excluded only because its

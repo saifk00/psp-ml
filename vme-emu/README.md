@@ -63,7 +63,11 @@ VCD is still written.
 
 Images are built by hand or, much more comfortably, by the
 `vme-assembler` crate in `psp-tc/vme-assembler/`, which also derives the
-cycle skews from the timing model below.
+cycle skews from the timing model below. To run images from Rust without
+the binary, `vme-emu-sys/` links this same RTL (Verilated, no VCD) into
+the process: `vme_emu_sys::vme_emu(&MachineImage) -> VmeResult`. Inspect
+any image with `cargo run -p psp-tc --bin vme-dump -- image.bin`, and diff
+the RTL against the real VME with `cargo run -p vme-conformance-host`.
 
 The testbench drives the array exactly the way `me-core-lib` drives the real
 one: it stores a full context word-by-word through the live context window

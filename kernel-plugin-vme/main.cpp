@@ -24,7 +24,7 @@ extern "C" {
 #include "vendor/vme-ext.h"      /* VME_TOP_BUFF0_WOFF / VME_BASE_BUFFER_0 / ... */
 }
 
-PSP_MODULE_INFO("psp_vme_kernel", 0x1006, 1, 0);
+PSP_MODULE_INFO("psp_vme_kernel", 0x1006, 1, 1);
 PSP_NO_CREATE_MAIN_THREAD();
 
 /* ---- shared job contract (must match the Rust side, next milestone) ------ */
@@ -49,7 +49,23 @@ typedef struct {
   u32 readback_woff;             /* word offset within that ring            */
   u32 ctx[VME_CTX_WORDS];        /* the datapath program (vme_asm! output)  */
   u32 data[VME_DATA_WORDS];      /* input words referenced by stage[]       */
+  /* --- appended in v1.1 (offsets of everything above are unchanged) ----- */
+  u32 image_mode;                /* 1 = run a full machine image instead    */
+  u32 image_addr;                /* uncached-user address of the 1 MB image */
 } VmeJob;
+
+/* Machine-image geometry (matches vme-emu / vme-assembler): byte offset =
+ * VME address - 0x4400_0000. BASE buffers at 0x0, TOP at 0x20000, context
+ * at 0xF8000. One buffer = 0x2000 bytes = 2048 words. */
+#define IMG_BASE_OFF   0x00000u
+#define IMG_TOP_OFF    0x20000u
+#define IMG_CTX_OFF    0xF8000u
+#define IMG_BUF_WORDS  2048u
+
+/* Capability marker: VmeInit leaves this in image_addr so user code can tell
+ * a v1.1 plugin (image mode present, job block big enough) from a v1.0 one
+ * before touching the appended fields. Must match psp-rt's vme::IMAGE_CAPS. */
+#define VME_JOB_CAPS_IMAGE 0x564D4531u   /* "VME1" */
 
 /* Uncached-user pointer to the job, in the USER partition so user mode can
  * touch it. Set on the main CPU before the ME boots; read by the ME from this
@@ -108,20 +124,49 @@ extern "C" void meLibOnProcess(void) {
       vmeLibEnable();
       vmeLibWipe();
 
-      for (u32 i = 0; i < job->n_stage; i++) {
-        vmeLibMemoryToRingBuffer((void*)&job->data[job->stage[i].src_word],
-                                 job->stage[i].ring_woff,
-                                 job->stage[i].count);
+      if (job->image_mode) {
+        /* Full machine image: stage all eight buffers, load the context
+         * from its mapped offset, run, read every buffer back into the
+         * image. The image lives in uncached user memory, same DMA-source
+         * class as job->data. */
+        u8* const img = (u8*)job->image_addr;
+        for (u32 b = 0; b < 4; b++) {
+          vmeLibMemoryToRingBuffer(img + IMG_TOP_OFF + b * 0x2000,
+                                   VME_TOP_BUFF0_WOFF + 0x800 * b, IMG_BUF_WORDS);
+          vmeLibMemoryToRingBuffer(img + IMG_BASE_OFF + b * 0x2000,
+                                   VME_BASE_BUFF0_WOFF + 0x800 * b, IMG_BUF_WORDS);
+        }
+
+        meCoreMemcpy(ctxbuf, img + IMG_CTX_OFF, VME_CTX_WORDS * 4);
+        meCoreDcacheWritebackRange(ctxbuf, VME_CTX_WORDS * 4);
+
+        vmeLibStart();
+        vmeLibLoadCustomContext(ctxbuf);
+        vmeLibFinish();
+
+        for (u32 b = 0; b < 4; b++) {
+          vmeLibRingBufferToMemory(VME_TOP_BUFF0_WOFF + 0x800 * b,
+                                   img + IMG_TOP_OFF + b * 0x2000, IMG_BUF_WORDS);
+          vmeLibRingBufferToMemory(VME_BASE_BUFF0_WOFF + 0x800 * b,
+                                   img + IMG_BASE_OFF + b * 0x2000, IMG_BUF_WORDS);
+        }
+        job->result = 0;
+      } else {
+        for (u32 i = 0; i < job->n_stage; i++) {
+          vmeLibMemoryToRingBuffer((void*)&job->data[job->stage[i].src_word],
+                                   job->stage[i].ring_woff,
+                                   job->stage[i].count);
+        }
+
+        meCoreMemcpy(ctxbuf, (void*)job->ctx, VME_CTX_WORDS * 4);
+        meCoreDcacheWritebackRange(ctxbuf, VME_CTX_WORDS * 4);
+
+        vmeLibStart();
+        vmeLibLoadCustomContext(ctxbuf);
+        vmeLibFinish();
+
+        job->result = hw(job->readback_base + job->readback_woff * 4);
       }
-
-      meCoreMemcpy(ctxbuf, (void*)job->ctx, VME_CTX_WORDS * 4);
-      meCoreDcacheWritebackRange(ctxbuf, VME_CTX_WORDS * 4);
-
-      vmeLibStart();
-      vmeLibLoadCustomContext(ctxbuf);
-      vmeLibFinish();
-
-      job->result = hw(job->readback_base + job->readback_woff * 4);
       vmeLibDisable();
 
       last = job->seq;
@@ -147,6 +192,7 @@ extern "C" int VmeInit(void) {
   u32 aligned = (base + 63) & ~63u;
   g_job = (volatile VmeJob*)(UNCACHED_USER_MASK | aligned);
   memset((void*)g_job, 0, sizeof(VmeJob));
+  g_job->image_addr = VME_JOB_CAPS_IMAGE;   /* capability marker, see above */
 
   int tid = meCoreGetTableIdFromWitnessWord();
   if (tid < 2) { return -6; }         /* only t2img/og validated upstream */

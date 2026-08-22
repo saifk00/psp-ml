@@ -32,8 +32,19 @@ Verified: **builds clean** against our `./pspdev` (psp-gcc 15.2.0) into
 | `VmeShutdown() -> i32` | free the shared job. |
 | `VmeSelfTest() -> i32` | fill the job with the proven int MAC (weights `1..8`, inputs `2`), run it, return the result. **Expected: 72.** Lets us validate the whole path on hardware before the Rust assembler exists. |
 
-The `VmeJob` struct at the top of `main.cpp` is the contract the Rust side will
-mirror. `buildMacContextInto` is the C prototype of what `vme_asm!` emits.
+The `VmeJob` struct at the top of `main.cpp` is the contract the Rust side
+(`psp_rt::vme`) mirrors. `buildMacContextInto` is the C prototype of what
+`vme_asm!` emits.
+
+**v1.1 adds machine-image mode**: two fields appended to `VmeJob`
+(`image_mode`, `image_addr`) switch the runner to executing a full 1 MB
+machine image (vme-emu / vme-assembler format) — the ME stages all eight ring
+buffers from the image, loads the context from its mapped offset (0xF8000),
+runs, and reads every buffer back into the image. `VmeInit` leaves a
+capability marker (`0x564D4531`, "VME1") in `image_addr` so user code can
+detect an old plugin before touching the appended fields
+(`psp_rt::vme::Job::has_image_mode`). Used by `examples/vme-conformance` to
+diff real silicon against the RTL in `vme-emu/`.
 
 ## Build
 

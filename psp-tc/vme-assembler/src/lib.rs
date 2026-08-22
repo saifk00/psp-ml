@@ -27,7 +27,7 @@ pub mod timing;
 #[cfg(test)]
 mod tests;
 
-pub use assemble::{context_words, generate_config, validate, MachineImage};
+pub use assemble::{context_words, generate_config, validate, MachineImage, VmeResult};
 pub use config::{
     AguParams, Buffer, BufferInit, BufferSlot, Fu, FunctionalUnit, Operation, Pe,
     ProcessingElement, Replay, Source, Transform, VmeConfig, BUFFER_WORDS,
