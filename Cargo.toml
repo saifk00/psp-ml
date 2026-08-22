@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "psp-rt",
     "psp-tc",
+    "psp-tc/vme-assembler",
     "usbhostfs-sys",
     "psplink-connection",
     "device-tests",
@@ -36,6 +37,7 @@ members = [
 default-members = [
     "psp-rt",
     "psp-tc",
+    "psp-tc/vme-assembler",
     "psplink-connection",
     "examples/mnist-bench/device",
     "examples/mnist-bench/host",

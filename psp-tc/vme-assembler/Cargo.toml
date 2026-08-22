@@ -1,0 +1,7 @@
+[package]
+name = "vme-assembler"
+version = "0.1.0"
+edition = "2021"
+description = "Configure the PSP's Virtual Mobile Engine as an object, then assemble it into a machine image for vme-emu (and eventually the real block)"
+
+[dependencies]
