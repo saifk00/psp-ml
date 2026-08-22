@@ -1,19 +1,12 @@
-# psp-ml
+# Inference for the PlayStation Portable
 
-Talk to a live PSP from ordinary Rust, and run real ML inference on it when you want to.
+An AOT tflite compiler and psplink-compatibly connection library in rust. Two pieces:
 
-This repo is two things, built to work together but genuinely useful apart:
-
-- **A native Rust connection to a live PSP.** No `usbhostfs_pc` subprocess, no TCP bridge, no
-  shelling out to `pspsh` and screen-scraping its output. `PSPConnection::connect(...)` gets you a
-  live USB link to a device running psplink; `load_program(...)` deploys a PRX, streams its
-  stdout back to you as it runs, and blocks until the program has *actually* finished — not just
-  "the kernel says it loaded." A PSP binary behaves like any other Rust program you `cargo run`.
+- **A native Rust connection to a live PSP.** Run psplink on the device, and launch programs from ordinary rust and read the PSP's stdout
 - **A TFLite → Rust AOT compiler.** `psp-tc` reads a `.tflite` model and generates Rust inference
   code — VFPU-accelerated conv2d/pooling/fully-connected kernels, static memory planning, no heap,
   no interpreter — that you link into your own PSP crate from a normal `build.rs`. Currently runs
-  MNIST at 99% accuracy in ~15ms/image and BirdNET hybrid quantized int8/fp16 in about 6.5sec / audio clip
-## Status: Experimental
+  MNIST at 99% accuracy in ~15ms/image and BirdNET (hybrid) quantized int8/fp16 in about 5.6sec / audio clip
 
 ## Quick start
 
@@ -27,9 +20,7 @@ afterward. No separate build/install/run steps.
 
 ## The USB connection, on its own
 
-The usual PSP homebrew loop is: build a PRX, spin up `usbhostfs_pc`, connect with `pspsh`, `ld`
-the PRX, then eyeball the screen or squint at raw shell output to guess whether it's actually
-done. Here, an entire `host/main.rs` is:
+Instead of having to launch `usbhostfs_pc` in a separate shell, compile your PRX, then launch with `pspsh -e`, set up a `PSPConnection` in rust:
 
 ```rust
 let conn = PSPConnection::connect(prx_dir, prx_dir, Default::default())?;
@@ -46,8 +37,7 @@ match outcome {
 ```
 
 `load_program` streams stdout live and only returns once psplink's shell channel reports the
-module's thread has actually exited — a real completion signal, not a load acknowledgement. A
-live PSP is just another target you can drive from ordinary, synchronous Rust.
+module's thread has actually exited (a real completion signal, not a load acknowledgement).
 
 ## The compiler, on its own
 
