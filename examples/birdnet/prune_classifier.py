@@ -143,10 +143,7 @@ def build_keep_indices(
 # Bounding boxes as (lat_min, lat_max, lon_min, lon_max).
 #
 # `eastern-na` is deliberately tight: Great Lakes / Northeast / Mid-Atlantic
-# down to Georgia. An earlier, wider box (lon -100) reached south Texas and let
-# southwestern species through with high scores -- Pyrrhuloxia at 0.74, which is
-# a near neighbour of Northern Cardinal and duly showed up as a false top-1.
-# Under this box it scores 0.0003. Widen only if you mean it.
+# down to Georgia.
 REGIONS = {
     "eastern-na": (32.0, 50.0, -88.0, -72.0),
     "eastern-na-wide": (25.0, 50.0, -100.0, -60.0),
