@@ -30,6 +30,8 @@ members = [
     "examples/gemv-bench/host",
     "examples/vme-mac-rs/device",
     "examples/vme-mac-rs/host",
+    "examples/birdnet-stft-benchmark/device",
+    "examples/birdnet-stft-benchmark/host",
 ]
 # What a bare `cargo test` / `cargo build` covers: everything that needs no
 # hardware and no gitignored assets. birdnet is excluded only because its

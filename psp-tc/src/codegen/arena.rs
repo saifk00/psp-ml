@@ -154,6 +154,22 @@ pub fn extract_tensor_refs(kernel: &KernelCall) -> Vec<TensorRef> {
             refs.push(r(*unpack_twiddles));
             refs.push(w(*output));
         }
+        KernelCall::RfftStridedBatch {
+            input,
+            window,
+            stage_twiddles,
+            unpack_twiddles,
+            output,
+            ..
+        } => {
+            refs.push(r(*input));
+            if let Some(w_id) = window {
+                refs.push(r(*w_id));
+            }
+            refs.push(r(*stage_twiddles));
+            refs.push(r(*unpack_twiddles));
+            refs.push(w(*output));
+        }
         KernelCall::RfftPack { input, .. } => {
             refs.push(r(*input));
             // output is ScratchId

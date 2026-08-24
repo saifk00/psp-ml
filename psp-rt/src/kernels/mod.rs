@@ -818,6 +818,30 @@ fn rfft_pack_split(input: &[f32], re: &mut [f32], im: &mut [f32], nc: usize) {
     }
 }
 
+/// `rfft_pack_split` with a window multiply folded into the pack. Each source
+/// sample is multiplied by the matching window coefficient exactly once, so
+/// the result is bit-identical to materialising `input[i] * window[i]` first
+/// and packing that (the dense gather+mul path this replaces).
+fn rfft_pack_split_windowed(
+    input: &[f32],
+    window: &[f32],
+    re: &mut [f32],
+    im: &mut [f32],
+    nc: usize,
+) {
+    let mut rev = 0usize;
+    for k in 0..nc {
+        re[k] = input[2 * rev] * window[2 * rev];
+        im[k] = input[2 * rev + 1] * window[2 * rev + 1];
+        let mut bit = nc >> 1;
+        while bit != 0 && rev & bit != 0 {
+            rev ^= bit;
+            bit >>= 1;
+        }
+        rev |= bit;
+    }
+}
+
 /// Stage 0: twiddle is 1, so each adjacent pair becomes (a+b, a-b).
 #[cfg(target_os = "psp")]
 fn fft_stage0(re: &mut [f32], im: &mut [f32], nc: usize) {
@@ -991,6 +1015,46 @@ fn rfft_unpack_split(
     }
 }
 
+/// One frame of the real FFT: pack (optionally windowed), butterfly stages,
+/// unpack. Shared by `rfft_batch` and `rfft_strided_batch`.
+#[allow(clippy::too_many_arguments)]
+fn rfft_frame_split(
+    frame: &[f32],
+    window: Option<&[f32]>,
+    stage_twiddles: &[f32],
+    utw_re: &[f32],
+    utw_im: &[f32],
+    re: &mut [f32],
+    im: &mut [f32],
+    out_row: &mut [f32],
+    nc: usize,
+    stages: usize,
+) {
+    match window {
+        Some(w) => rfft_pack_split_windowed(frame, w, re, im, nc),
+        None => rfft_pack_split(frame, re, im, nc),
+    }
+    fft_stage0(re, im, nc);
+    // Stage blocks are padded to a multiple of 4 floats. The natural
+    // packing (block s at offset 2*(2^s - 1)) puts every stage's twiddles
+    // at byte offset 8 mod 16, so every `lv.q` of them would be
+    // misaligned — which the scalar host mirror cannot detect.
+    let mut off = stage_tw_block(0);
+    for s in 1..stages {
+        let half = 1usize << s;
+        fft_stage_split(
+            re,
+            im,
+            &stage_twiddles[off..off + half],
+            &stage_twiddles[off + half..off + 2 * half],
+            nc,
+            half,
+        );
+        off += stage_tw_block(s);
+    }
+    rfft_unpack_split(re, im, utw_re, utw_im, out_row, nc);
+}
+
 /// Batched real FFT over `frames` contiguous length-`n` frames.
 ///
 /// `input` is `[frames, n]`, `output` is `[frames, n/2 + 1]` (real parts of the
@@ -1012,32 +1076,70 @@ pub fn rfft_batch(
     let (utw_re, utw_im) = unpack_twiddles.split_at(nc - 1);
 
     for f in 0..frames {
-        rfft_pack_split(&input[f * n..(f + 1) * n], re, im, nc);
-        fft_stage0(re, im, nc);
-        // Stage blocks are padded to a multiple of 4 floats. The natural
-        // packing (block s at offset 2*(2^s - 1)) puts every stage's twiddles
-        // at byte offset 8 mod 16, so every `lv.q` of them would be
-        // misaligned — which the scalar host mirror cannot detect.
-        let mut off = stage_tw_block(0);
-        for s in 1..stages {
-            let half = 1usize << s;
-            fft_stage_split(
-                re,
-                im,
-                &stage_twiddles[off..off + half],
-                &stage_twiddles[off + half..off + 2 * half],
-                nc,
-                half,
-            );
-            off += stage_tw_block(s);
-        }
-        rfft_unpack_split(
-            re,
-            im,
+        rfft_frame_split(
+            &input[f * n..(f + 1) * n],
+            None,
+            stage_twiddles,
             utw_re,
             utw_im,
+            re,
+            im,
             &mut output[f * out_bins..(f + 1) * out_bins],
             nc,
+            stages,
+        );
+    }
+}
+
+/// Windowed STFT over strided views of a 1D signal: frame `f` is the slice
+/// `input[f*hop .. f*hop + n]`, multiplied elementwise by `window` (if given)
+/// during the bit-reversal pack, then real-FFT'd into row `f` of `output`
+/// (`[frames, n/2 + 1]`, real parts of the frequency bins).
+///
+/// This replaces the dense-gather STFT frontend — materialising every
+/// (overlapping) window as a `[frames, n]` matrix plus its `[frames, n]`
+/// index constant — with reads straight from the signal, so no intermediate
+/// larger than the `n`-float scratch exists. Because the window multiply and
+/// the FFT are the same f32 operations in the same order, the output is
+/// bit-identical to `gather` + `mul` + `rfft_batch`.
+#[allow(clippy::too_many_arguments)]
+pub fn rfft_strided_batch(
+    input: &[f32],
+    window: Option<&[f32]>,
+    stage_twiddles: &[f32],
+    unpack_twiddles: &[f32],
+    scratch: &mut [f32],
+    output: &mut [f32],
+    n: usize,
+    hop: usize,
+    frames: usize,
+) {
+    assert!(
+        (frames - 1) * hop + n <= input.len(),
+        "rfft_strided_batch: {} frames of {} at hop {} overrun input len {}",
+        frames,
+        n,
+        hop,
+        input.len()
+    );
+    let nc = n / 2;
+    let out_bins = nc + 1;
+    let stages = nc.trailing_zeros() as usize;
+    let (re, im) = scratch.split_at_mut(nc);
+    let (utw_re, utw_im) = unpack_twiddles.split_at(nc - 1);
+
+    for f in 0..frames {
+        rfft_frame_split(
+            &input[f * hop..f * hop + n],
+            window,
+            stage_twiddles,
+            utw_re,
+            utw_im,
+            re,
+            im,
+            &mut output[f * out_bins..(f + 1) * out_bins],
+            nc,
+            stages,
         );
     }
 }
@@ -2217,5 +2319,68 @@ mod rfft_tests {
         for n in [8, 16, 32, 64, 128] {
             check(n, 3);
         }
+    }
+
+    /// The contract `rfft_strided_batch` exists to honour: bit-identical to
+    /// materialising every overlapping window (the dense gather), multiplying
+    /// by the window, and running `rfft_batch` on the result.
+    fn check_strided(n: usize, hop: usize, frames: usize, windowed: bool) {
+        let n_samples = (frames - 1) * hop + n + 3; // a few trailing samples
+        let mut s = 99u32;
+        let mut rand = || {
+            s = s.wrapping_mul(1664525).wrapping_add(1013904223);
+            ((s >> 8) as f32 / 8388608.0) - 1.0
+        };
+        let samples: Vec<f32> = (0..n_samples).map(|_| rand()).collect();
+        let window: Option<Vec<f32>> = windowed.then(|| (0..n).map(|_| rand()).collect());
+        let (stage, unpack) = twiddles(n);
+        let bins = n / 2 + 1;
+
+        // Dense reference: gather + window multiply + rfft_batch.
+        let mut dense = vec![0.0f32; frames * n];
+        for f in 0..frames {
+            for j in 0..n {
+                let w = window.as_ref().map_or(1.0, |w| w[j]);
+                dense[f * n + j] = samples[f * hop + j] * w;
+            }
+        }
+        let mut scratch = vec![7.5f32; n];
+        let mut want = vec![f32::NAN; bins * frames];
+        rfft_batch(&dense, &stage, &unpack, &mut scratch, &mut want, n, frames);
+
+        let mut scratch = vec![-3.25f32; n];
+        let mut got = vec![f32::NAN; bins * frames];
+        rfft_strided_batch(
+            &samples,
+            window.as_deref(),
+            &stage,
+            &unpack,
+            &mut scratch,
+            &mut got,
+            n,
+            hop,
+            frames,
+        );
+
+        for (i, (g, w)) in got.iter().zip(want.iter()).enumerate() {
+            assert!(
+                g.to_bits() == w.to_bits(),
+                "n={n} hop={hop} frames={frames} windowed={windowed} elem {i}: {g} != {w}"
+            );
+        }
+    }
+
+    #[test]
+    fn strided_matches_dense_small() {
+        check_strided(16, 5, 4, true);
+        check_strided(32, 32, 3, false); // hop == n: identical to rfft_batch
+        check_strided(64, 7, 6, true); // heavily overlapping windows
+    }
+
+    #[test]
+    fn strided_matches_dense_birdnet_shapes() {
+        // The real branches, a handful of frames: L=2048 hop=278, L=1024 hop=280.
+        check_strided(2048, 278, 5, true);
+        check_strided(1024, 280, 5, true);
     }
 }

@@ -518,6 +518,80 @@ fn test_pow_const_matches_libm() -> bool {
     true
 }
 
+fn test_rfft_strided_matches_dense() -> bool {
+    // Windows overlap (hop < n), so the strided kernel reads each sample
+    // through several frames — on device the butterfly stages and stage-0
+    // `vbfy1.q` run for real, which the host mirror never exercises.
+    const N: usize = 32;
+    const NC: usize = N / 2;
+    const HOP: usize = 9;
+    const FRAMES: usize = 4;
+    const BINS: usize = NC + 1;
+    const N_SAMPLES: usize = (FRAMES - 1) * HOP + N;
+
+    // Twiddles in the split layout psp-tc emits (see `lower_rfft`). Both the
+    // stage runs and the scratch are loaded with `lv.q`, hence `Aligned`.
+    let mut stage = Aligned([0.0f32; kernels::stage_tw_len(N)]);
+    let stages = NC.trailing_zeros() as usize;
+    let mut off = 0usize;
+    for s in 0..stages {
+        let half = 1usize << s;
+        for j in 0..half {
+            let a = -2.0 * core::f64::consts::PI * j as f64 / (2.0 * half as f64);
+            stage[off + j] = libm::cos(a) as f32;
+            stage[off + half + j] = libm::sin(a) as f32;
+        }
+        off += kernels::stage_tw_block(s);
+    }
+    let mut unpack = Aligned([0.0f32; (NC - 1) * 2]);
+    for k in 1..NC {
+        let a = 2.0 * core::f64::consts::PI * k as f64 / N as f64;
+        unpack[k - 1] = libm::cos(a) as f32;
+        unpack[NC - 1 + k - 1] = -(libm::sin(a) as f32);
+    }
+
+    let mut samples = Aligned([0.0f32; N_SAMPLES]);
+    for i in 0..N_SAMPLES {
+        samples[i] = libm::sinf(i as f32 * 0.7) + 0.25 * (i as f32 % 5.0);
+    }
+    let mut window = Aligned([0.0f32; N]);
+    for j in 0..N {
+        window[j] = 0.5 - 0.5 * libm::cosf(2.0 * core::f32::consts::PI * j as f32 / N as f32);
+    }
+
+    // Dense reference: materialise every window, multiply, rfft_batch.
+    let mut dense = Aligned([0.0f32; FRAMES * N]);
+    for f in 0..FRAMES {
+        for j in 0..N {
+            dense[f * N + j] = samples[f * HOP + j] * window[j];
+        }
+    }
+    let mut scratch = Aligned([7.5f32; N]);
+    let mut want = Aligned([0.0f32; FRAMES * BINS]);
+    kernels::rfft_batch(&dense, &stage, &unpack, &mut scratch, &mut want, N, FRAMES);
+
+    let mut scratch = Aligned([-3.25f32; N]);
+    let mut got = Aligned([0.0f32; FRAMES * BINS]);
+    kernels::rfft_strided_batch(
+        &samples,
+        Some(&window),
+        &stage,
+        &unpack,
+        &mut scratch,
+        &mut got,
+        N,
+        HOP,
+        FRAMES,
+    );
+
+    for i in 0..FRAMES * BINS {
+        if got[i].to_bits() != want[i].to_bits() {
+            return false;
+        }
+    }
+    true
+}
+
 device_checks! {
     // Every kernel has a scalar fallback in the same signature, so the whole
     // suite is meaningful on both runners.
@@ -535,6 +609,7 @@ device_checks! {
         test_conv2d_via_im2col_vs_naive,
         test_depthwise_padding_matches_explicit_pad,
         test_pow_const_matches_libm,
+        test_rfft_strided_matches_dense,
     ],
     device: [],
 }

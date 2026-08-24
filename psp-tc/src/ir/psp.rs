@@ -236,6 +236,21 @@ pub enum PspOp {
         output: TensorId,
         fft_length: usize,
     },
+
+    /// Windowed STFT over strided views of a 1D signal (`PspModelBuilder`
+    /// graphs). Frame `f` is `input[f*hop .. f*hop + fft_length]`, multiplied
+    /// elementwise by the constant `window` (if any), real-FFT'd into row `f`
+    /// of `output` (`[n_windows, fft_length/2 + 1]`, real parts — the same
+    /// contract as `Rfft`). Replaces the dense gather frontend: no
+    /// `[n_windows, fft_length]` index constant or window matrix ever exists.
+    StridedViewStft {
+        input: TensorId,
+        window: Option<TensorId>,
+        output: TensorId,
+        fft_length: usize,
+        hop: usize,
+        n_windows: usize,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -583,6 +598,25 @@ impl std::fmt::Display for PspOp {
             } => {
                 write!(f, "Rfft(t{} → t{}; n={})", input, output, fft_length)
             }
+            PspOp::StridedViewStft {
+                input,
+                window,
+                output,
+                fft_length,
+                hop,
+                n_windows,
+            } => {
+                write!(
+                    f,
+                    "StridedViewStft(t{}{} → t{}; n={} hop={} windows={})",
+                    input,
+                    window.map_or(String::new(), |w| format!(", t{w}")),
+                    output,
+                    fft_length,
+                    hop,
+                    n_windows
+                )
+            }
         }
     }
 }
@@ -690,6 +724,10 @@ impl PspOp {
             | PspOp::Dequantize { input, .. }
             | PspOp::Swish { input, .. }
             | PspOp::Rfft { input, .. } => vec![*input],
+            PspOp::StridedViewStft { input, window, .. } => match window {
+                Some(w) => vec![*input, *w],
+                None => vec![*input],
+            },
             PspOp::Pad {
                 input, paddings, ..
             } => vec![*input, *paddings],
@@ -775,7 +813,8 @@ impl PspOp {
             | PspOp::Transpose { output, .. }
             | PspOp::ReverseV2 { output, .. }
             | PspOp::Rfft2d { output, .. }
-            | PspOp::Rfft { output, .. } => *output,
+            | PspOp::Rfft { output, .. }
+            | PspOp::StridedViewStft { output, .. } => *output,
             PspOp::SplitV { .. } => panic!("SplitV has multiple outputs; use outputs()"),
         }
     }
@@ -853,6 +892,16 @@ impl PspOp {
             | PspOp::Swish { input, output }
             | PspOp::Rfft { input, output, .. } => {
                 r(input);
+                r(output);
+            }
+            PspOp::StridedViewStft {
+                input,
+                window,
+                output,
+                ..
+            } => {
+                r(input);
+                r_opt(window);
                 r(output);
             }
             PspOp::ElementWise {

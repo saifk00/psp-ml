@@ -107,7 +107,7 @@ pub struct Generated {
 /// off the budget available for the weight blob.
 fn generated_static_bytes(plan: &plan::CodegenPlan) -> usize {
     plan.arena.as_ref().map_or(0, |a| a.arena_size_floats) * 4
-        + plan.output_size * 4
+        + plan.outputs.iter().map(|o| o.size).sum::<usize>() * 4
         + frame_boundary_bytes(plan)
 }
 
@@ -146,6 +146,26 @@ pub fn generate_code(
     stream_batch: Option<(usize, usize)>,
     residency_choice: Option<usize>,
     resident_budget: Option<usize>,
+) -> GenResult<Generated> {
+    generate_code_named(
+        model,
+        stream_batch,
+        residency_choice,
+        resident_budget,
+        "weights.bin",
+    )
+}
+
+/// `generate_code` with a caller-chosen weight-blob filename, for crates that
+/// embed more than one generated module: the blob name lands in the generated
+/// `include_bytes!` (resolved next to the generated file), the device
+/// `host0:/<name>` load, and the host `$OUT_DIR/<name>` pointer path.
+pub fn generate_code_named(
+    model: &mut PspModel,
+    stream_batch: Option<(usize, usize)>,
+    residency_choice: Option<usize>,
+    resident_budget: Option<usize>,
+    weights_name: &str,
 ) -> GenResult<Generated> {
     // Stream analysis + rewrite (before lowering, so lowerer sees clean batch=1 graph)
     let stream_plan = if let Some((start, end)) = stream_batch {
@@ -214,17 +234,17 @@ pub fn generate_code(
         streamed_bytes,
         arena_size_floats: plan.arena.as_ref().map_or(0, |a| a.arena_size_floats),
         input_size_floats: plan.input_size,
-        output_size_floats: plan.output_size,
+        output_size_floats: plan.outputs.iter().map(|o| o.size).sum(),
         frame_boundary_bytes: frame_boundary_bytes(&plan),
         resident_budget: budget,
     };
 
-    let tokens = render::render(&plan, &model.graph);
+    let tokens = render::render(&plan, &model.graph, weights_name);
 
     Ok(Generated {
         tokens,
         data_bytes,
-        data_path: "weights.bin".to_string(),
+        data_path: weights_name.to_string(),
         stats,
     })
 }
