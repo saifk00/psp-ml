@@ -9,10 +9,12 @@
 //! both modes, takes `--mode` at runtime, and checks everything against the
 //! TFLite goldens.
 //!
-//! NOTE: `fully_connected_cb` is currently the scalar reference on device
-//! too — its VFPU kernel is deliberately not designed yet (see
-//! psp-rt/src/kernels/mod.rs). The memory/blob numbers here are final; the
-//! device-time number is a floor to beat, not the ceiling.
+//! banded_cb's output is `[96, 511]` — transposed relative to the dense
+//! mode's `[511, 96]` — because the VFPU kernel writes each bank's per-4-row
+//! GEMV result contiguously (vtfm4 tiles, see
+//! `psp_rt::kernels::fully_connected_cb`); the checks index the golden
+//! accordingly. Bank-major is also what the full model's downstream
+//! TRANSPOSE wants.
 //!
 //! Every run prints a machine-readable `#melbench ...` line for the host.
 
@@ -288,18 +290,23 @@ fn load_golden(name: &str) -> Vec<f32> {
 /// regenerated filterbank, whose ~2e-5 weight deltas the x^~0.22 compression
 /// amplifies to a few 1e-3 (5e-3; MEL_CB_USE_STORED=1 at build time swaps in
 /// the stored matrix and brings it back to dense levels).
+///
+/// The golden is `[N_WINDOWS, N_BANKS]` row-major; `transposed` says the
+/// checked output is `[N_BANKS, N_WINDOWS]` (banded_cb's layout).
 #[cfg(feature = "local")]
-fn check_golden(got: &[f32], golden: &[f32], label: &str, tol: f64) -> bool {
+fn check_golden(got: &[f32], golden: &[f32], label: &str, tol: f64, transposed: bool) -> bool {
     let mut worst = 0.0f64;
-    for (g_row, w_row) in got
-        .chunks_exact(N_BANKS)
-        .zip(golden.chunks_exact(N_BANKS))
-    {
+    for (m, w_row) in golden.chunks_exact(N_BANKS).enumerate() {
         let rms = (w_row.iter().map(|v| (*v as f64) * (*v as f64)).sum::<f64>()
             / N_BANKS as f64)
             .sqrt()
             .max(1e-9);
-        for (g, w) in g_row.iter().zip(w_row.iter()) {
+        for (b, w) in w_row.iter().enumerate() {
+            let g = if transposed {
+                got[b * N_WINDOWS + m]
+            } else {
+                got[m * N_BANKS + b]
+            };
             worst = worst.max(((g - w).abs() as f64) / rms);
         }
     }
@@ -341,8 +348,8 @@ fn main() {
             run_mode!(dense_2048, dense_1024, println_line, local_get_tick, tick_res);
         println!("  mel: {us_2048} us (L=2048) + {us_1024} us (L=1024) avg over {RUNS} runs");
         let (o0, o1) = unsafe { (&*core::ptr::addr_of!(OUT_2048), &*core::ptr::addr_of!(OUT_1024)) };
-        ok &= check_golden(o0, &golden_2048, "L=2048", 1e-3);
-        ok &= check_golden(o1, &golden_1024, "L=1024", 1e-3);
+        ok &= check_golden(o0, &golden_2048, "L=2048", 1e-3, false);
+        ok &= check_golden(o1, &golden_1024, "L=1024", 1e-3, false);
         dense_out = Some((o0.to_vec(), o1.to_vec()));
     }
 
@@ -352,18 +359,21 @@ fn main() {
             run_mode!(cb_2048, cb_1024, println_line, local_get_tick, tick_res);
         println!("  mel: {us_2048} us (L=2048) + {us_1024} us (L=1024) avg over {RUNS} runs");
         let (o0, o1) = unsafe { (&*core::ptr::addr_of!(OUT_2048), &*core::ptr::addr_of!(OUT_1024)) };
-        ok &= check_golden(o0, &golden_2048, "L=2048", 5e-3);
-        ok &= check_golden(o1, &golden_1024, "L=1024", 5e-3);
+        ok &= check_golden(o0, &golden_2048, "L=2048", 5e-3, true);
+        ok &= check_golden(o1, &golden_1024, "L=1024", 5e-3, true);
 
         // Informational: how far the regenerated filterbank lands from the
-        // stored one, end to end (both modes already gate against the golden).
+        // stored one, end to end (both modes already gate against the
+        // golden). dense is [511, 96], cb is [96, 511].
         if let Some((d0, d1)) = &dense_out {
-            let worst = d0
-                .iter()
-                .zip(o0.iter())
-                .chain(d1.iter().zip(o1.iter()))
-                .map(|(a, b)| (a - b).abs())
-                .fold(0.0f32, f32::max);
+            let mut worst = 0.0f32;
+            for m in 0..N_WINDOWS {
+                for b in 0..N_BANKS {
+                    let a = (d0[m * N_BANKS + b] - o0[b * N_WINDOWS + m]).abs();
+                    let c = (d1[m * N_BANKS + b] - o1[b * N_WINDOWS + m]).abs();
+                    worst = worst.max(a).max(c);
+                }
+            }
             println!("  dense vs cb: max |diff| = {worst:.2e}");
         }
     }

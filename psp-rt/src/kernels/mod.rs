@@ -1701,7 +1701,7 @@ pub fn square_pow(input: &[f32], output: &mut [f32], exponent: f32) {
 // Banded (Compressed-Sparse-Column) fully connected — the mel projection
 // ============================================================================
 
-/// `output[m, b] = Σ_k input[m, start_b + k] * band_data[off_b + k]` — a
+/// `output[b, m] = Σ_k input[m, start_b + k] * band_data[off_b + k]` — a
 /// matmul against a column-banded matrix, one contiguous band of nonzeros
 /// per output column. BirdNET's mel filterbanks are the motivating case:
 /// [1025, 96] and [513, 96] matrices at 0.3% / 1.2% nonzero (bands of 1–17
@@ -1710,16 +1710,27 @@ pub fn square_pow(input: &[f32], output: &mut [f32], exponent: f32) {
 /// `band_meta` holds `[start, len]` per output column (bank), and `band_data`
 /// their coefficients concatenated in the same order.
 ///
-/// The scalar accumulation order matches `naive::fully_connected` (ascending
-/// k, zero terms contribute exactly nothing), so on the host the result is
-/// bit-identical to the dense matmul with the equivalent dense matrix.
+/// **The output is `[out_features, rows]` — transposed** relative to the
+/// dense FC. Each bank's GEMV over the 4-row group lands in one 4-vector, so
+/// writing bank-major stores it contiguously with no transpose pass — and
+/// bank-major is what the full model wants anyway (the mel projection is
+/// followed by a TRANSPOSE there).
 ///
-/// **VFPU kernel: deliberately not designed yet.** This body is the scalar
-/// reference on both targets. The design sketch (docs/Custom Frontend.md):
-/// each column slices the input to an [M, C] subset, giving an [M×C] × [C×1]
-/// dense matmul — but with C this small (1–17) the load/blocking trade-offs
-/// are open. Replace this body with the VFPU path when that design lands;
-/// the benchmark and codegen need no change.
+/// VFPU path, per bank, per 4 input rows: k GEMVs over 16-coefficient
+/// chunks. The band (zero-padded to the chunk) multiplies a 4×16 window of
+/// input — M000..M300 hold its four 4×4 tiles, M400's rows the four
+/// coefficient subvectors, four `vtfm4.q` produce M500's rows, and their sum
+/// accumulates in R600, stored with `sv.s` (the 511-row output stride is not
+/// quad-aligned). Input rows aren't quad-aligned either (stride 1025/513 ≡ 1
+/// mod 4), so each 4×W window is packed into an aligned scratch first —
+/// per-group traffic the band's overlap keeps cache-resident. Memory-bound
+/// and low arithmetic intensity by design: this is the correctness baseline,
+/// not the end state.
+///
+/// The scalar mirror (host, tail rows, bands longer than 32) accumulates in
+/// ascending k, so on the host the result is bit-identical to the dense
+/// matmul with the equivalent mostly-zero dense matrix, transposed. The VFPU
+/// path's chunk-tree summation differs in the last bits.
 #[allow(clippy::too_many_arguments)]
 pub fn fully_connected_cb(
     input: &[f32],
@@ -1731,19 +1742,178 @@ pub fn fully_connected_cb(
     out_features: usize,
 ) {
     debug_assert_eq!(band_meta.len(), out_features * 2);
-    for m in 0..rows {
-        let row = &input[m * in_features..(m + 1) * in_features];
-        let out_row = &mut output[m * out_features..(m + 1) * out_features];
+
+    #[cfg(target_os = "psp")]
+    {
+        fully_connected_cb_vfpu(
+            input,
+            rows,
+            in_features,
+            band_meta,
+            band_data,
+            output,
+            out_features,
+        );
+    }
+
+    #[cfg(not(target_os = "psp"))]
+    {
         let mut off = 0usize;
         for b in 0..out_features {
             let start = band_meta[2 * b] as usize;
             let len = band_meta[2 * b + 1] as usize;
-            let mut sum = 0.0f32;
-            for k in 0..len {
-                sum += row[start + k] * band_data[off + k];
-            }
-            out_row[b] = sum;
+            let band = &band_data[off..off + len];
             off += len;
+            let out_row = &mut output[b * rows..(b + 1) * rows];
+            for (m, out) in out_row.iter_mut().enumerate() {
+                *out = fc_cb_dot(&input[m * in_features + start..], band);
+            }
+        }
+    }
+}
+
+/// One band dot in ascending-k order (the scalar reference order).
+fn fc_cb_dot(row: &[f32], band: &[f32]) -> f32 {
+    let mut sum = 0.0f32;
+    for (x, w) in row.iter().zip(band.iter()) {
+        sum += x * w;
+    }
+    sum
+}
+
+#[cfg(target_os = "psp")]
+#[inline(never)]
+#[allow(clippy::too_many_arguments)]
+fn fully_connected_cb_vfpu(
+    input: &[f32],
+    rows: usize,
+    in_features: usize,
+    band_meta: &[i32],
+    band_data: &[f32],
+    output: &mut [f32],
+    out_features: usize,
+) {
+    // Zero-padded band coefficients (up to 2 chunks) and the packed 4×W
+    // input window. Rows of `scratch` are a fixed 32 floats apart so the asm
+    // walks chunks with one 64-byte stride for both W=16 and W=32.
+    #[repr(align(16))]
+    struct AlignedBuf<const N: usize>([f32; N]);
+    let mut coef = AlignedBuf([0.0f32; 32]);
+    let mut scratch = AlignedBuf([0.0f32; 4 * 32]);
+
+    let mut off = 0usize;
+    for b in 0..out_features {
+        let start = band_meta[2 * b] as usize;
+        let len = band_meta[2 * b + 1] as usize;
+        let band = &band_data[off..off + len];
+        off += len;
+        let out_row = &mut output[b * rows..(b + 1) * rows];
+
+        if len == 0 {
+            out_row.fill(0.0);
+            continue;
+        }
+        // BirdNET's bands are 1–17 long; anything past two chunks takes the
+        // scalar path rather than growing the fixed buffers.
+        if len > 32 {
+            for (m, out) in out_row.iter_mut().enumerate() {
+                *out = fc_cb_dot(&input[m * in_features + start..], band);
+            }
+            continue;
+        }
+        debug_assert!(start + len <= in_features);
+
+        let chunks = if len <= 16 { 1usize } else { 2 };
+        let w = chunks * 16;
+        for k in 0..len {
+            coef.0[k] = band[k];
+        }
+        for k in len..w {
+            coef.0[k] = 0.0;
+        }
+        // The window may run past the row's end (the padding is zeros in
+        // `coef`, but the packed input must not read the next row).
+        let copy_w = w.min(in_features - start);
+
+        let groups = rows / 4;
+        for g in 0..groups {
+            let m0 = g * 4;
+            for r in 0..4 {
+                let src = &input[(m0 + r) * in_features + start..];
+                let dst = &mut scratch.0[r * 32..r * 32 + w];
+                for k in 0..copy_w {
+                    dst[k] = src[k];
+                }
+                for k in copy_w..w {
+                    dst[k] = 0.0;
+                }
+            }
+            unsafe {
+                let s = scratch.0.as_ptr();
+                vfpu_asm!(
+                    "vzero.q R600",
+                    "2:",
+                    // M000..M300: the four 4×4 tiles of the 4×16 window.
+                    "lv.q R000, 0({r0})",
+                    "lv.q R001, 0({r1})",
+                    "lv.q R002, 0({r2})",
+                    "lv.q R003, 0({r3})",
+                    "lv.q R100, 16({r0})",
+                    "lv.q R101, 16({r1})",
+                    "lv.q R102, 16({r2})",
+                    "lv.q R103, 16({r3})",
+                    "lv.q R200, 32({r0})",
+                    "lv.q R201, 32({r1})",
+                    "lv.q R202, 32({r2})",
+                    "lv.q R203, 32({r3})",
+                    "lv.q R300, 48({r0})",
+                    "lv.q R301, 48({r1})",
+                    "lv.q R302, 48({r2})",
+                    "lv.q R303, 48({r3})",
+                    // M400: the four coefficient subvectors.
+                    "lv.q R400, 0({c})",
+                    "lv.q R401, 16({c})",
+                    "lv.q R402, 32({c})",
+                    "lv.q R403, 48({c})",
+                    // Four GEMVs into M500's rows. E-form: vtfm4's M-form
+                    // dots the register matrix's *columns* with the vector
+                    // (same implicit transpose as vmmul's first operand,
+                    // pinned by a hardware diagnostic); E accesses the
+                    // transpose, giving the row dots the lv.q row loads set up.
+                    "vtfm4.q R500, E000, R400",
+                    "vtfm4.q R501, E100, R401",
+                    "vtfm4.q R502, E200, R402",
+                    "vtfm4.q R503, E300, R403",
+                    // ...sum the rows, accumulate across chunks in R600.
+                    "vadd.q R500, R500, R501",
+                    "vadd.q R502, R502, R503",
+                    "vadd.q R500, R500, R502",
+                    "vadd.q R600, R600, R500",
+                    "addiu {r0}, {r0}, 64",
+                    "addiu {r1}, {r1}, 64",
+                    "addiu {r2}, {r2}, 64",
+                    "addiu {r3}, {r3}, 64",
+                    "addiu {n}, {n}, -1",
+                    "bnez {n}, 2b",
+                    "addiu {c}, {c}, 64", // branch delay slot
+                    // Column-major result: 4 consecutive windows of bank b.
+                    "sv.s S600, 0({o})",
+                    "sv.s S610, 4({o})",
+                    "sv.s S620, 8({o})",
+                    "sv.s S630, 12({o})",
+                    r0 = inout(reg) (s) => _,
+                    r1 = inout(reg) (s.add(32)) => _,
+                    r2 = inout(reg) (s.add(64)) => _,
+                    r3 = inout(reg) (s.add(96)) => _,
+                    c = inout(reg) (coef.0.as_ptr()) => _,
+                    o = in(reg) (out_row.as_mut_ptr().add(m0)),
+                    n = inout(reg) (chunks) => _,
+                    options(nostack),
+                );
+            }
+        }
+        for m in groups * 4..rows {
+            out_row[m] = fc_cb_dot(&input[m * in_features + start..], band);
         }
     }
 }
@@ -2494,9 +2664,10 @@ mod mel_tests {
     use std::vec;
     use std::vec::Vec;
 
-    /// The CB contract: bit-identical to the dense matmul with the
-    /// equivalent (mostly-zero) dense matrix, because zero terms contribute
-    /// exactly nothing to an ordered f32 accumulation.
+    /// The CB contract on the host (scalar path): bit-identical to the dense
+    /// matmul with the equivalent (mostly-zero) dense matrix — transposed,
+    /// since the CB output is `[out_features, rows]` — because zero terms
+    /// contribute exactly nothing to an ordered f32 accumulation.
     #[test]
     fn fc_cb_matches_dense_bitwise() {
         let (rows, in_features, out_features) = (7, 40, 9);
@@ -2506,13 +2677,17 @@ mod mel_tests {
             ((s >> 8) as f32 / 8388608.0) - 1.0
         };
 
-        // Random bands, including len-1 and a band touching the last column.
+        // Random bands, including len-1, a 17-long band (the second-chunk
+        // case on device), and a band whose padded window runs past the row.
         let mut band_meta = Vec::new();
         let mut band_data = Vec::new();
         let mut dense = vec![0.0f32; out_features * in_features];
         for b in 0..out_features {
-            let start = (b * 4) % (in_features - 6);
-            let len = 1 + (b % 6);
+            let (start, len) = match b {
+                7 => (5, 17),
+                8 => (36, 4),
+                _ => ((b * 4) % (in_features - 6), 1 + (b % 6)),
+            };
             band_meta.push(start as i32);
             band_meta.push(len as i32);
             for k in 0..len {
@@ -2546,8 +2721,11 @@ mod mel_tests {
             out_features,
         );
 
-        for (i, (g, w)) in got.iter().zip(want.iter()).enumerate() {
-            assert!(g.to_bits() == w.to_bits(), "elem {i}: {g} != {w}");
+        for m in 0..rows {
+            for b in 0..out_features {
+                let (g, w) = (got[b * rows + m], want[m * out_features + b]);
+                assert!(g.to_bits() == w.to_bits(), "m={m} b={b}: {g} != {w}");
+            }
         }
     }
 

@@ -621,19 +621,21 @@ fn test_square_pow_matches_mul_then_pow() -> bool {
 }
 
 fn test_fc_cb_matches_dense() -> bool {
-    // Scalar on both targets today (the VFPU CB kernel is deliberately
-    // undesigned — see kernels/mod.rs); the check pins the contract a future
-    // VFPU version must keep: identical results to the dense matmul over the
-    // equivalent mostly-zero matrix.
-    const ROWS: usize = 3;
-    const IN: usize = 24;
-    const OUT: usize = 5;
+    // On device this exercises the real VFPU path — 4-row groups through the
+    // vtfm4 GEMV tiles (11 rows = 2 groups + a 3-row scalar tail), a 17-long
+    // band (two coefficient chunks), and a band whose padded window runs past
+    // the row end. The VFPU chunk-tree summation reorders the adds, so the
+    // check is tolerance-based, not bitwise; the output is [OUT, ROWS]
+    // (transposed relative to the dense matmul).
+    const ROWS: usize = 11;
+    const IN: usize = 40;
+    const OUT: usize = 6;
     let mut input = Aligned([0.0f32; ROWS * IN]);
     for i in 0..ROWS * IN {
         input[i] = libm::sinf(i as f32 * 0.9);
     }
-    let band_meta: [i32; OUT * 2] = [0, 3, 2, 1, 5, 4, 10, 2, 20, 4];
-    let mut band_data = Aligned([0.0f32; 3 + 1 + 4 + 2 + 4]);
+    let band_meta: [i32; OUT * 2] = [0, 3, 2, 1, 5, 17, 10, 2, 20, 4, 36, 4];
+    let mut band_data = Aligned([0.0f32; 3 + 1 + 17 + 2 + 4 + 4]);
     for (i, v) in band_data.iter_mut().enumerate() {
         *v = 0.1 + i as f32 * 0.07;
     }
@@ -661,12 +663,63 @@ fn test_fc_cb_matches_dense() -> bool {
     }
     let mut got = Aligned([f32::NAN; ROWS * OUT]);
     kernels::fully_connected_cb(&input, ROWS, IN, &band_meta, &band_data, &mut got, OUT);
-    for i in 0..ROWS * OUT {
-        if got[i].to_bits() != want[i].to_bits() {
-            return false;
+    for m in 0..ROWS {
+        for b in 0..OUT {
+            let (g, w) = (got[b * ROWS + m], want[m * OUT + b]);
+            let d = if g > w { g - w } else { w - g };
+            if !(d <= EPS) {
+                return false;
+            }
         }
     }
     true
+}
+
+/// The fact `fully_connected_cb`'s asm rests on, measured on hardware:
+/// `vtfm4.q rd, Mxxx, rt` dots the register matrix's *columns* with the
+/// vector (the same implicit transpose as `vmmul.q`'s first operand), so a
+/// matrix loaded row-wise with `lv.q R000..R003` needs the E-form --
+/// `vtfm4.q rd, Exxx, rt` -- to get row dots. If a rust-psp upgrade ever
+/// changes the encoding, this names the failure that
+/// `test_fc_cb_matches_dense` would only report as a wrong result.
+#[cfg(target_os = "psp")]
+fn test_vtfm4_e_form_is_row_dots() -> bool {
+    use psp::vfpu_asm;
+    #[repr(align(16))]
+    struct A16([f32; 16]);
+    #[repr(align(16))]
+    struct A4([f32; 4]);
+    // A[r][j] = 4r + j -- asymmetric, distinguishes rows from columns.
+    let mut a = A16([0.0; 16]);
+    for r in 0..4 {
+        for j in 0..4 {
+            a.0[r * 4 + j] = (r * 4 + j) as f32;
+        }
+    }
+    let v = A4([1.0, 10.0, 100.0, 1000.0]);
+    let mut out = A4([0.0; 4]);
+    unsafe {
+        vfpu_asm!(
+            "lv.q R000, 0({a})",
+            "lv.q R001, 16({a})",
+            "lv.q R002, 32({a})",
+            "lv.q R003, 48({a})",
+            "lv.q R400, 0({v})",
+            "vtfm4.q R500, E000, R400",
+            "sv.q R500, 0({o})",
+            a = in(reg) (a.0.as_ptr()),
+            v = in(reg) (v.0.as_ptr()),
+            o = in(reg) (out.0.as_mut_ptr()),
+            options(nostack),
+        );
+    }
+    let mut want = [0.0f32; 4];
+    for (r, w) in want.iter_mut().enumerate() {
+        for (j, vv) in [1.0f32, 10.0, 100.0, 1000.0].iter().enumerate() {
+            *w += (r * 4 + j) as f32 * vv;
+        }
+    }
+    out.0 == want
 }
 
 device_checks! {
@@ -690,6 +743,8 @@ device_checks! {
         test_square_pow_matches_mul_then_pow,
         test_fc_cb_matches_dense,
     ],
-    device: [],
+    device: [
+        test_vtfm4_e_form_is_row_dots,
+    ],
 }
 

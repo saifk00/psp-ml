@@ -98,11 +98,14 @@ fn main() {
         // regenerated one, whose ~2e-5 weight deltas the x^~0.22 compression
         // amplifies to a few 1e-3 — hence the looser gate (build the device
         // crate with MEL_CB_USE_STORED=1 to isolate the CB kernel from it).
-        let tol = if *mode_name == "banded_cb" { 5e-3 } else { 1e-3 };
+        // banded_cb's output is [96, 511] (transposed — the CB kernel writes
+        // bank-major); dense_fc's is [511, 96].
+        let cb = *mode_name == "banded_cb";
+        let tol = if cb { 5e-3 } else { 1e-3 };
         let o0 = read_f32(&mount_dir.join(format!("out_{tag}_mel_2048.bin")), OUT_LEN);
         let o1 = read_f32(&mount_dir.join(format!("out_{tag}_mel_1024.bin")), OUT_LEN);
-        ok &= check_golden(&o0, &golden_2048, &format!("{mode_name} L=2048"), tol);
-        ok &= check_golden(&o1, &golden_1024, &format!("{mode_name} L=1024"), tol);
+        ok &= check_golden(&o0, &golden_2048, &format!("{mode_name} L=2048"), tol, cb);
+        ok &= check_golden(&o1, &golden_1024, &format!("{mode_name} L=1024"), tol, cb);
     }
 
     // The comparison table.
@@ -136,8 +139,7 @@ fn main() {
         let d_us = dense["us_2048"] + dense["us_1024"];
         let c_us = cb["us_2048"] + cb["us_1024"];
         println!(
-            "mel time: {} ms -> {} ms ({:+.1}%) — banded_cb is still the scalar \
-             reference kernel; its VFPU design is open",
+            "mel time: {} ms -> {} ms ({:+.1}%) with the vtfm4-tiled GEMV baseline",
             d_us / 1000,
             c_us / 1000,
             (c_us as f64 - d_us as f64) * 100.0 / d_us as f64
@@ -202,15 +204,21 @@ fn read_f32(path: &Path, len: usize) -> Vec<f32> {
 }
 
 /// Max per-frame error normalised by that frame's RMS — same yardstick as
-/// the device crate's local check.
-fn check_golden(got: &[f32], golden: &[f32], label: &str, tol: f64) -> bool {
+/// the device crate's local check. The golden is `[N_WINDOWS, N_BANKS]`
+/// row-major; `transposed` says `got` is `[N_BANKS, N_WINDOWS]`.
+fn check_golden(got: &[f32], golden: &[f32], label: &str, tol: f64, transposed: bool) -> bool {
     let mut worst = 0.0f64;
-    for (g_row, w_row) in got.chunks_exact(N_BANKS).zip(golden.chunks_exact(N_BANKS)) {
+    for (m, w_row) in golden.chunks_exact(N_BANKS).enumerate() {
         let rms = (w_row.iter().map(|v| (*v as f64) * (*v as f64)).sum::<f64>()
             / N_BANKS as f64)
             .sqrt()
             .max(1e-9);
-        for (g, w) in g_row.iter().zip(w_row.iter()) {
+        for (b, w) in w_row.iter().enumerate() {
+            let g = if transposed {
+                got[b * N_WINDOWS + m]
+            } else {
+                got[m * N_BANKS + b]
+            };
             worst = worst.max(((g - w).abs() as f64) / rms);
         }
     }

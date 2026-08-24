@@ -129,10 +129,13 @@ impl PspModelBuilder {
     }
 
     /// Matmul against a column-banded matrix (see [`crate::mel::CBMatrix`]):
-    /// `out[m, b] = Σ_k in[m, start_b + k] * band_b[k]`. The matrix is
+    /// `out[b, m] = Σ_k in[m, start_b + k] * band_b[k]`. The matrix is
     /// serialised into the blob as a `[n_banks, 2]` I32 `[start, len]` table
     /// plus the concatenated band coefficients. Returns the
-    /// `[rows, n_banks]` output tensor.
+    /// `[n_banks, rows]` output tensor — **transposed** relative to the
+    /// dense FC: each bank's per-4-row GEMV result stores contiguously, and
+    /// bank-major is the orientation the full model's downstream TRANSPOSE
+    /// wants anyway. See `psp_rt::kernels::fully_connected_cb`.
     pub fn fully_connected_cb(
         &mut self,
         input: TensorId,
@@ -152,7 +155,7 @@ impl PspModelBuilder {
         let band_meta = self.constant_i32(vec![n_banks, 2], &matrix.band_meta());
         let band_data = self.constant_f32(vec![matrix.nnz()], &matrix.band_data());
         let output = self.graph.add_tensor(
-            vec![rows, n_banks],
+            vec![n_banks, rows],
             DType::F32,
             TensorKind::Intermediate,
         );

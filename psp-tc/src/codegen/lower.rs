@@ -572,15 +572,17 @@ fn lower_ops(
                 output,
             } => {
                 let in_shape = &graph.tensor(*input).shape;
-                let out_shape = &graph.tensor(*output).shape;
                 let in_features = *in_shape.last().ok_or("FullyConnectedCB: scalar input")?;
-                let out_features = *out_shape.last().ok_or("FullyConnectedCB: scalar output")?;
                 let rows = in_shape.iter().product::<usize>() / in_features;
+                // The band table is authoritative for the bank count; the
+                // output is [out_features, rows] (transposed — see the kernel).
                 let meta_elems: usize = graph.tensor(*band_meta).shape.iter().product();
-                if meta_elems != out_features * 2 {
+                let out_features = meta_elems / 2;
+                let out_elems: usize = graph.tensor(*output).shape.iter().product();
+                if out_elems != rows * out_features {
                     return Err(format!(
-                        "Op {i}: FullyConnectedCB band_meta has {meta_elems} entries, \
-                         expected {out_features}x2"
+                        "Op {i}: FullyConnectedCB output has {out_elems} elements, \
+                         expected [{out_features}, {rows}]"
                     ));
                 }
                 OpPlan {

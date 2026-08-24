@@ -173,8 +173,9 @@ pub fn make_mel(
 /// Assemble the mel-spectrogram subgraph on a builder: banded matmul by the
 /// generated filterbank, then the fused square-and-pow compression
 /// (`(x^2)^p` — the FFT hands us real parts, so squaring comes first).
-/// Returns the `[n_windows, n_banks]` output tensor; the caller marks it as
-/// a graph output.
+/// Returns the `[n_banks, n_windows]` output tensor — transposed relative
+/// to the dense mel step (see `PspModelBuilder::fully_connected_cb`); the
+/// caller marks it as a graph output.
 #[allow(clippy::too_many_arguments)]
 pub fn mel_spectrogram(
     b: &mut PspModelBuilder,
