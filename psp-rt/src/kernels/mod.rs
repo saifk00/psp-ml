@@ -818,6 +818,30 @@ fn rfft_pack_split(input: &[f32], re: &mut [f32], im: &mut [f32], nc: usize) {
     }
 }
 
+/// `rfft_pack_split` with a window multiply folded into the pack. Each source
+/// sample is multiplied by the matching window coefficient exactly once, so
+/// the result is bit-identical to materialising `input[i] * window[i]` first
+/// and packing that (the dense gather+mul path this replaces).
+fn rfft_pack_split_windowed(
+    input: &[f32],
+    window: &[f32],
+    re: &mut [f32],
+    im: &mut [f32],
+    nc: usize,
+) {
+    let mut rev = 0usize;
+    for k in 0..nc {
+        re[k] = input[2 * rev] * window[2 * rev];
+        im[k] = input[2 * rev + 1] * window[2 * rev + 1];
+        let mut bit = nc >> 1;
+        while bit != 0 && rev & bit != 0 {
+            rev ^= bit;
+            bit >>= 1;
+        }
+        rev |= bit;
+    }
+}
+
 /// Stage 0: twiddle is 1, so each adjacent pair becomes (a+b, a-b).
 #[cfg(target_os = "psp")]
 fn fft_stage0(re: &mut [f32], im: &mut [f32], nc: usize) {
@@ -991,6 +1015,46 @@ fn rfft_unpack_split(
     }
 }
 
+/// One frame of the real FFT: pack (optionally windowed), butterfly stages,
+/// unpack. Shared by `rfft_batch` and `rfft_strided_batch`.
+#[allow(clippy::too_many_arguments)]
+fn rfft_frame_split(
+    frame: &[f32],
+    window: Option<&[f32]>,
+    stage_twiddles: &[f32],
+    utw_re: &[f32],
+    utw_im: &[f32],
+    re: &mut [f32],
+    im: &mut [f32],
+    out_row: &mut [f32],
+    nc: usize,
+    stages: usize,
+) {
+    match window {
+        Some(w) => rfft_pack_split_windowed(frame, w, re, im, nc),
+        None => rfft_pack_split(frame, re, im, nc),
+    }
+    fft_stage0(re, im, nc);
+    // Stage blocks are padded to a multiple of 4 floats. The natural
+    // packing (block s at offset 2*(2^s - 1)) puts every stage's twiddles
+    // at byte offset 8 mod 16, so every `lv.q` of them would be
+    // misaligned — which the scalar host mirror cannot detect.
+    let mut off = stage_tw_block(0);
+    for s in 1..stages {
+        let half = 1usize << s;
+        fft_stage_split(
+            re,
+            im,
+            &stage_twiddles[off..off + half],
+            &stage_twiddles[off + half..off + 2 * half],
+            nc,
+            half,
+        );
+        off += stage_tw_block(s);
+    }
+    rfft_unpack_split(re, im, utw_re, utw_im, out_row, nc);
+}
+
 /// Batched real FFT over `frames` contiguous length-`n` frames.
 ///
 /// `input` is `[frames, n]`, `output` is `[frames, n/2 + 1]` (real parts of the
@@ -1012,32 +1076,70 @@ pub fn rfft_batch(
     let (utw_re, utw_im) = unpack_twiddles.split_at(nc - 1);
 
     for f in 0..frames {
-        rfft_pack_split(&input[f * n..(f + 1) * n], re, im, nc);
-        fft_stage0(re, im, nc);
-        // Stage blocks are padded to a multiple of 4 floats. The natural
-        // packing (block s at offset 2*(2^s - 1)) puts every stage's twiddles
-        // at byte offset 8 mod 16, so every `lv.q` of them would be
-        // misaligned — which the scalar host mirror cannot detect.
-        let mut off = stage_tw_block(0);
-        for s in 1..stages {
-            let half = 1usize << s;
-            fft_stage_split(
-                re,
-                im,
-                &stage_twiddles[off..off + half],
-                &stage_twiddles[off + half..off + 2 * half],
-                nc,
-                half,
-            );
-            off += stage_tw_block(s);
-        }
-        rfft_unpack_split(
-            re,
-            im,
+        rfft_frame_split(
+            &input[f * n..(f + 1) * n],
+            None,
+            stage_twiddles,
             utw_re,
             utw_im,
+            re,
+            im,
             &mut output[f * out_bins..(f + 1) * out_bins],
             nc,
+            stages,
+        );
+    }
+}
+
+/// Windowed STFT over strided views of a 1D signal: frame `f` is the slice
+/// `input[f*hop .. f*hop + n]`, multiplied elementwise by `window` (if given)
+/// during the bit-reversal pack, then real-FFT'd into row `f` of `output`
+/// (`[frames, n/2 + 1]`, real parts of the frequency bins).
+///
+/// This replaces the dense-gather STFT frontend — materialising every
+/// (overlapping) window as a `[frames, n]` matrix plus its `[frames, n]`
+/// index constant — with reads straight from the signal, so no intermediate
+/// larger than the `n`-float scratch exists. Because the window multiply and
+/// the FFT are the same f32 operations in the same order, the output is
+/// bit-identical to `gather` + `mul` + `rfft_batch`.
+#[allow(clippy::too_many_arguments)]
+pub fn rfft_strided_batch(
+    input: &[f32],
+    window: Option<&[f32]>,
+    stage_twiddles: &[f32],
+    unpack_twiddles: &[f32],
+    scratch: &mut [f32],
+    output: &mut [f32],
+    n: usize,
+    hop: usize,
+    frames: usize,
+) {
+    assert!(
+        (frames - 1) * hop + n <= input.len(),
+        "rfft_strided_batch: {} frames of {} at hop {} overrun input len {}",
+        frames,
+        n,
+        hop,
+        input.len()
+    );
+    let nc = n / 2;
+    let out_bins = nc + 1;
+    let stages = nc.trailing_zeros() as usize;
+    let (re, im) = scratch.split_at_mut(nc);
+    let (utw_re, utw_im) = unpack_twiddles.split_at(nc - 1);
+
+    for f in 0..frames {
+        rfft_frame_split(
+            &input[f * hop..f * hop + n],
+            window,
+            stage_twiddles,
+            utw_re,
+            utw_im,
+            re,
+            im,
+            &mut output[f * out_bins..(f + 1) * out_bins],
+            nc,
+            stages,
         );
     }
 }
@@ -1541,6 +1643,278 @@ pub fn pow_const(input: &[f32], output: &mut [f32], exponent: f32) {
     let n = core::cmp::min(input.len(), output.len());
     for i in 0..n {
         output[i] = libm::powf(input[i], exponent);
+    }
+}
+
+/// `out[i] = (in[i] * in[i]).powf(c)` — the spectrogram compression fused
+/// into one pass. BirdNET applies MUL(x,x) then POW(·, c) to each mel
+/// projection; fusing saves a full read+write of the tensor, and squaring
+/// first makes the base non-negative, so `pow_const`'s precondition holds by
+/// construction. One `vmul.q` on top of `pow_const`'s pipeline; numerics are
+/// otherwise identical to `mul` + `pow_const` (an IEEE f32 multiply is exact
+/// in either engine).
+#[cfg(target_os = "psp")]
+#[inline(never)]
+pub fn square_pow(input: &[f32], output: &mut [f32], exponent: f32) {
+    let n = core::cmp::min(input.len(), output.len());
+    let aligned = input.as_ptr() as usize % 16 == 0 && output.as_ptr() as usize % 16 == 0;
+    let quads = if aligned { n / 4 } else { 0 };
+    if quads > 0 {
+        let c4 = Align16F4([exponent; 4]);
+        unsafe {
+            vfpu_asm!(
+                "lv.q R700, 0({c})",
+                "2:",
+                "lv.q R000, 0({i})",
+                "vmul.q R000, R000, R000",   // x^2
+                "vlog2.q R001, R000",        // log2 x^2
+                "vmul.q R002, R001, R700",   // c * log2 x^2
+                "vexp2.q R003, R002",        // (x^2)^c
+                "sv.q R003, 0({o})",
+                "addiu {i}, {i}, 16",
+                "addiu {n}, {n}, -1",
+                "bnez {n}, 2b",
+                "addiu {o}, {o}, 16",        // branch delay slot
+                c = in(reg) (c4.0.as_ptr()),
+                i = inout(reg) (input.as_ptr()) => _,
+                o = inout(reg) (output.as_mut_ptr()) => _,
+                n = inout(reg) (quads) => _,
+                options(nostack),
+            );
+        }
+    }
+    for i in quads * 4..n {
+        output[i] = libm::powf(input[i] * input[i], exponent);
+    }
+}
+
+/// Scalar mirror for host builds.
+#[cfg(not(target_os = "psp"))]
+pub fn square_pow(input: &[f32], output: &mut [f32], exponent: f32) {
+    let n = core::cmp::min(input.len(), output.len());
+    for i in 0..n {
+        output[i] = libm::powf(input[i] * input[i], exponent);
+    }
+}
+
+// ============================================================================
+// Banded (Compressed-Sparse-Column) fully connected — the mel projection
+// ============================================================================
+
+/// `output[b, m] = Σ_k input[m, start_b + k] * band_data[off_b + k]` — a
+/// matmul against a column-banded matrix, one contiguous band of nonzeros
+/// per output column. BirdNET's mel filterbanks are the motivating case:
+/// [1025, 96] and [513, 96] matrices at 0.3% / 1.2% nonzero (bands of 1–17
+/// bins), so the dense FC spends >99% of its MACs multiplying by zero.
+///
+/// `band_meta` holds `[start, len]` per output column (bank), and `band_data`
+/// their coefficients concatenated in the same order.
+///
+/// **The output is `[out_features, rows]` — transposed** relative to the
+/// dense FC. Each bank's GEMV over the 4-row group lands in one 4-vector, so
+/// writing bank-major stores it contiguously with no transpose pass — and
+/// bank-major is what the full model wants anyway (the mel projection is
+/// followed by a TRANSPOSE there).
+///
+/// VFPU path, per bank, per 4 input rows: k GEMVs over 16-coefficient
+/// chunks. The band (zero-padded to the chunk) multiplies a 4×16 window of
+/// input — M000..M300 hold its four 4×4 tiles, M400's rows the four
+/// coefficient subvectors, four `vtfm4.q` produce M500's rows, and their sum
+/// accumulates in R600, stored with `sv.s` (the 511-row output stride is not
+/// quad-aligned). Input rows aren't quad-aligned either (stride 1025/513 ≡ 1
+/// mod 4), so each 4×W window is packed into an aligned scratch first —
+/// per-group traffic the band's overlap keeps cache-resident. Memory-bound
+/// and low arithmetic intensity by design: this is the correctness baseline,
+/// not the end state.
+///
+/// The scalar mirror (host, tail rows, bands longer than 32) accumulates in
+/// ascending k, so on the host the result is bit-identical to the dense
+/// matmul with the equivalent mostly-zero dense matrix, transposed. The VFPU
+/// path's chunk-tree summation differs in the last bits.
+#[allow(clippy::too_many_arguments)]
+pub fn fully_connected_cb(
+    input: &[f32],
+    rows: usize,
+    in_features: usize,
+    band_meta: &[i32],
+    band_data: &[f32],
+    output: &mut [f32],
+    out_features: usize,
+) {
+    debug_assert_eq!(band_meta.len(), out_features * 2);
+
+    #[cfg(target_os = "psp")]
+    {
+        fully_connected_cb_vfpu(
+            input,
+            rows,
+            in_features,
+            band_meta,
+            band_data,
+            output,
+            out_features,
+        );
+    }
+
+    #[cfg(not(target_os = "psp"))]
+    {
+        let mut off = 0usize;
+        for b in 0..out_features {
+            let start = band_meta[2 * b] as usize;
+            let len = band_meta[2 * b + 1] as usize;
+            let band = &band_data[off..off + len];
+            off += len;
+            let out_row = &mut output[b * rows..(b + 1) * rows];
+            for (m, out) in out_row.iter_mut().enumerate() {
+                *out = fc_cb_dot(&input[m * in_features + start..], band);
+            }
+        }
+    }
+}
+
+/// One band dot in ascending-k order (the scalar reference order).
+fn fc_cb_dot(row: &[f32], band: &[f32]) -> f32 {
+    let mut sum = 0.0f32;
+    for (x, w) in row.iter().zip(band.iter()) {
+        sum += x * w;
+    }
+    sum
+}
+
+#[cfg(target_os = "psp")]
+#[inline(never)]
+#[allow(clippy::too_many_arguments)]
+fn fully_connected_cb_vfpu(
+    input: &[f32],
+    rows: usize,
+    in_features: usize,
+    band_meta: &[i32],
+    band_data: &[f32],
+    output: &mut [f32],
+    out_features: usize,
+) {
+    // Zero-padded band coefficients (up to 2 chunks) and the packed 4×W
+    // input window. Rows of `scratch` are a fixed 32 floats apart so the asm
+    // walks chunks with one 64-byte stride for both W=16 and W=32.
+    #[repr(align(16))]
+    struct AlignedBuf<const N: usize>([f32; N]);
+    let mut coef = AlignedBuf([0.0f32; 32]);
+    let mut scratch = AlignedBuf([0.0f32; 4 * 32]);
+
+    let mut off = 0usize;
+    for b in 0..out_features {
+        let start = band_meta[2 * b] as usize;
+        let len = band_meta[2 * b + 1] as usize;
+        let band = &band_data[off..off + len];
+        off += len;
+        let out_row = &mut output[b * rows..(b + 1) * rows];
+
+        if len == 0 {
+            out_row.fill(0.0);
+            continue;
+        }
+        // BirdNET's bands are 1–17 long; anything past two chunks takes the
+        // scalar path rather than growing the fixed buffers.
+        if len > 32 {
+            for (m, out) in out_row.iter_mut().enumerate() {
+                *out = fc_cb_dot(&input[m * in_features + start..], band);
+            }
+            continue;
+        }
+        debug_assert!(start + len <= in_features);
+
+        let chunks = if len <= 16 { 1usize } else { 2 };
+        let w = chunks * 16;
+        for k in 0..len {
+            coef.0[k] = band[k];
+        }
+        for k in len..w {
+            coef.0[k] = 0.0;
+        }
+        // The window may run past the row's end (the padding is zeros in
+        // `coef`, but the packed input must not read the next row).
+        let copy_w = w.min(in_features - start);
+
+        let groups = rows / 4;
+        for g in 0..groups {
+            let m0 = g * 4;
+            for r in 0..4 {
+                let src = &input[(m0 + r) * in_features + start..];
+                let dst = &mut scratch.0[r * 32..r * 32 + w];
+                for k in 0..copy_w {
+                    dst[k] = src[k];
+                }
+                for k in copy_w..w {
+                    dst[k] = 0.0;
+                }
+            }
+            unsafe {
+                let s = scratch.0.as_ptr();
+                vfpu_asm!(
+                    "vzero.q R600",
+                    "2:",
+                    // M000..M300: the four 4×4 tiles of the 4×16 window.
+                    "lv.q R000, 0({r0})",
+                    "lv.q R001, 0({r1})",
+                    "lv.q R002, 0({r2})",
+                    "lv.q R003, 0({r3})",
+                    "lv.q R100, 16({r0})",
+                    "lv.q R101, 16({r1})",
+                    "lv.q R102, 16({r2})",
+                    "lv.q R103, 16({r3})",
+                    "lv.q R200, 32({r0})",
+                    "lv.q R201, 32({r1})",
+                    "lv.q R202, 32({r2})",
+                    "lv.q R203, 32({r3})",
+                    "lv.q R300, 48({r0})",
+                    "lv.q R301, 48({r1})",
+                    "lv.q R302, 48({r2})",
+                    "lv.q R303, 48({r3})",
+                    // M400: the four coefficient subvectors.
+                    "lv.q R400, 0({c})",
+                    "lv.q R401, 16({c})",
+                    "lv.q R402, 32({c})",
+                    "lv.q R403, 48({c})",
+                    // Four GEMVs into M500's rows. E-form: vtfm4's M-form
+                    // dots the register matrix's *columns* with the vector
+                    // (same implicit transpose as vmmul's first operand,
+                    // pinned by a hardware diagnostic); E accesses the
+                    // transpose, giving the row dots the lv.q row loads set up.
+                    "vtfm4.q R500, E000, R400",
+                    "vtfm4.q R501, E100, R401",
+                    "vtfm4.q R502, E200, R402",
+                    "vtfm4.q R503, E300, R403",
+                    // ...sum the rows, accumulate across chunks in R600.
+                    "vadd.q R500, R500, R501",
+                    "vadd.q R502, R502, R503",
+                    "vadd.q R500, R500, R502",
+                    "vadd.q R600, R600, R500",
+                    "addiu {r0}, {r0}, 64",
+                    "addiu {r1}, {r1}, 64",
+                    "addiu {r2}, {r2}, 64",
+                    "addiu {r3}, {r3}, 64",
+                    "addiu {n}, {n}, -1",
+                    "bnez {n}, 2b",
+                    "addiu {c}, {c}, 64", // branch delay slot
+                    // Column-major result: 4 consecutive windows of bank b.
+                    "sv.s S600, 0({o})",
+                    "sv.s S610, 4({o})",
+                    "sv.s S620, 8({o})",
+                    "sv.s S630, 12({o})",
+                    r0 = inout(reg) (s) => _,
+                    r1 = inout(reg) (s.add(32)) => _,
+                    r2 = inout(reg) (s.add(64)) => _,
+                    r3 = inout(reg) (s.add(96)) => _,
+                    c = inout(reg) (coef.0.as_ptr()) => _,
+                    o = in(reg) (out_row.as_mut_ptr().add(m0)),
+                    n = inout(reg) (chunks) => _,
+                    options(nostack),
+                );
+            }
+        }
+        for m in groups * 4..rows {
+            out_row[m] = fc_cb_dot(&input[m * in_features + start..], band);
+        }
     }
 }
 
@@ -2216,6 +2590,159 @@ mod rfft_tests {
     fn small_sizes() {
         for n in [8, 16, 32, 64, 128] {
             check(n, 3);
+        }
+    }
+
+    /// The contract `rfft_strided_batch` exists to honour: bit-identical to
+    /// materialising every overlapping window (the dense gather), multiplying
+    /// by the window, and running `rfft_batch` on the result.
+    fn check_strided(n: usize, hop: usize, frames: usize, windowed: bool) {
+        let n_samples = (frames - 1) * hop + n + 3; // a few trailing samples
+        let mut s = 99u32;
+        let mut rand = || {
+            s = s.wrapping_mul(1664525).wrapping_add(1013904223);
+            ((s >> 8) as f32 / 8388608.0) - 1.0
+        };
+        let samples: Vec<f32> = (0..n_samples).map(|_| rand()).collect();
+        let window: Option<Vec<f32>> = windowed.then(|| (0..n).map(|_| rand()).collect());
+        let (stage, unpack) = twiddles(n);
+        let bins = n / 2 + 1;
+
+        // Dense reference: gather + window multiply + rfft_batch.
+        let mut dense = vec![0.0f32; frames * n];
+        for f in 0..frames {
+            for j in 0..n {
+                let w = window.as_ref().map_or(1.0, |w| w[j]);
+                dense[f * n + j] = samples[f * hop + j] * w;
+            }
+        }
+        let mut scratch = vec![7.5f32; n];
+        let mut want = vec![f32::NAN; bins * frames];
+        rfft_batch(&dense, &stage, &unpack, &mut scratch, &mut want, n, frames);
+
+        let mut scratch = vec![-3.25f32; n];
+        let mut got = vec![f32::NAN; bins * frames];
+        rfft_strided_batch(
+            &samples,
+            window.as_deref(),
+            &stage,
+            &unpack,
+            &mut scratch,
+            &mut got,
+            n,
+            hop,
+            frames,
+        );
+
+        for (i, (g, w)) in got.iter().zip(want.iter()).enumerate() {
+            assert!(
+                g.to_bits() == w.to_bits(),
+                "n={n} hop={hop} frames={frames} windowed={windowed} elem {i}: {g} != {w}"
+            );
+        }
+    }
+
+    #[test]
+    fn strided_matches_dense_small() {
+        check_strided(16, 5, 4, true);
+        check_strided(32, 32, 3, false); // hop == n: identical to rfft_batch
+        check_strided(64, 7, 6, true); // heavily overlapping windows
+    }
+
+    #[test]
+    fn strided_matches_dense_birdnet_shapes() {
+        // The real branches, a handful of frames: L=2048 hop=278, L=1024 hop=280.
+        check_strided(2048, 278, 5, true);
+        check_strided(1024, 280, 5, true);
+    }
+}
+
+#[cfg(test)]
+mod mel_tests {
+    use super::*;
+    extern crate std;
+    use std::vec;
+    use std::vec::Vec;
+
+    /// The CB contract on the host (scalar path): bit-identical to the dense
+    /// matmul with the equivalent (mostly-zero) dense matrix — transposed,
+    /// since the CB output is `[out_features, rows]` — because zero terms
+    /// contribute exactly nothing to an ordered f32 accumulation.
+    #[test]
+    fn fc_cb_matches_dense_bitwise() {
+        let (rows, in_features, out_features) = (7, 40, 9);
+        let mut s = 5u32;
+        let mut rand = || {
+            s = s.wrapping_mul(1664525).wrapping_add(1013904223);
+            ((s >> 8) as f32 / 8388608.0) - 1.0
+        };
+
+        // Random bands, including len-1, a 17-long band (the second-chunk
+        // case on device), and a band whose padded window runs past the row.
+        let mut band_meta = Vec::new();
+        let mut band_data = Vec::new();
+        let mut dense = vec![0.0f32; out_features * in_features];
+        for b in 0..out_features {
+            let (start, len) = match b {
+                7 => (5, 17),
+                8 => (36, 4),
+                _ => ((b * 4) % (in_features - 6), 1 + (b % 6)),
+            };
+            band_meta.push(start as i32);
+            band_meta.push(len as i32);
+            for k in 0..len {
+                let v = rand();
+                band_data.push(v);
+                dense[b * in_features + start + k] = v;
+            }
+        }
+        let input: Vec<f32> = (0..rows * in_features).map(|_| rand()).collect();
+
+        let mut want = vec![0.0f32; rows * out_features];
+        for m in 0..rows {
+            naive::fully_connected(
+                &input[m * in_features..(m + 1) * in_features],
+                in_features,
+                &dense,
+                None,
+                &mut want[m * out_features..(m + 1) * out_features],
+                out_features,
+            );
+        }
+
+        let mut got = vec![f32::NAN; rows * out_features];
+        fully_connected_cb(
+            &input,
+            rows,
+            in_features,
+            &band_meta,
+            &band_data,
+            &mut got,
+            out_features,
+        );
+
+        for m in 0..rows {
+            for b in 0..out_features {
+                let (g, w) = (got[b * rows + m], want[m * out_features + b]);
+                assert!(g.to_bits() == w.to_bits(), "m={m} b={b}: {g} != {w}");
+            }
+        }
+    }
+
+    /// Fusing the square must change nothing vs the two-op form.
+    #[test]
+    fn square_pow_matches_mul_then_pow() {
+        let input: Vec<f32> = (0..37).map(|i| (i as f32 - 11.0) * 0.3).collect();
+        let mut squared = vec![0.0f32; input.len()];
+        for (s, x) in squared.iter_mut().zip(input.iter()) {
+            *s = x * x;
+        }
+        let mut want = vec![0.0f32; input.len()];
+        pow_const(&squared, &mut want, 0.2199);
+        let mut got = vec![f32::NAN; input.len()];
+        square_pow(&input, &mut got, 0.2199);
+        for (i, (g, w)) in got.iter().zip(want.iter()).enumerate() {
+            assert!(g.to_bits() == w.to_bits(), "elem {i}: {g} != {w}");
         }
     }
 }

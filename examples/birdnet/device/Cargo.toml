@@ -15,6 +15,13 @@ hwprofile = []
 # fails loudly at link time rather than silently building the wrong thing.
 default = ["local"]
 local = []
+# Replace the model's dense spectrogram frontend with the custom-op one
+# (StridedViewStft + FullyConnectedCB + SquarePow): build.rs severs the
+# .tflite at the branch-merge CONCAT and compiles only the conv backbone
+# from it, plus a builder-generated frontend module; main.rs runs the two
+# forwards in sequence. Enable via BIRDNET_CUSTOM_FRONTEND=1 on the host
+# runner, which forwards it as this feature.
+custom-frontend = []
 
 [dependencies]
 psp-rt = { path = "../../../psp-rt" }
@@ -24,3 +31,4 @@ psp = "0.3"
 
 [build-dependencies]
 psp-tc = { path = "../../../psp-tc" }
+serde_json = "1"

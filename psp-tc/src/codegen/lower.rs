@@ -60,22 +60,21 @@ pub fn lower(
             model.graph.inputs.len()
         ));
     }
-    if model.graph.outputs.len() != 1 {
-        return Err(format!(
-            "Expected 1 output tensor, found {}",
-            model.graph.outputs.len()
-        ));
+    if model.graph.outputs.is_empty() {
+        return Err("Expected at least 1 output tensor, found 0".to_string());
     }
 
     let input_id = model.graph.inputs[0];
-    let output_id = model.graph.outputs[0];
     let input_size = model.graph.tensor(input_id).shape.iter().product::<usize>();
-    let output_size = model
+    let outputs: Vec<PlanOutput> = model
         .graph
-        .tensor(output_id)
-        .shape
+        .outputs
         .iter()
-        .product::<usize>();
+        .map(|&id| PlanOutput {
+            id,
+            size: model.graph.tensor(id).shape.iter().product::<usize>(),
+        })
+        .collect();
 
     // TODO: expose as compiler flag
     let use_vfpu_conv2d = true;
@@ -90,9 +89,8 @@ pub fn lower(
 
     Ok(CodegenPlan {
         input_id,
-        output_id,
+        outputs,
         input_size,
-        output_size,
         blob_bytes,
         blob_floats,
         allocs,
@@ -250,6 +248,22 @@ fn lower_ops(
         } = &op
         {
             ops.push(lower_rfft(model, allocs, i, *input, *output, *fft_length)?);
+            continue;
+        }
+
+        // Same for the strided-view STFT (twiddles are appended constants).
+        if let PspOp::StridedViewStft {
+            input,
+            window,
+            output,
+            fft_length,
+            hop,
+            n_windows,
+        } = &op
+        {
+            ops.push(lower_strided_stft(
+                model, allocs, *input, *window, *output, *fft_length, *hop, *n_windows,
+            )?);
             continue;
         }
 
@@ -550,6 +564,59 @@ fn lower_ops(
                     }],
                 }],
             },
+
+            PspOp::FullyConnectedCB {
+                input,
+                band_meta,
+                band_data,
+                output,
+            } => {
+                let in_shape = &graph.tensor(*input).shape;
+                let in_features = *in_shape.last().ok_or("FullyConnectedCB: scalar input")?;
+                let rows = in_shape.iter().product::<usize>() / in_features;
+                // The band table is authoritative for the bank count; the
+                // output is [out_features, rows] (transposed — see the kernel).
+                let meta_elems: usize = graph.tensor(*band_meta).shape.iter().product();
+                let out_features = meta_elems / 2;
+                let out_elems: usize = graph.tensor(*output).shape.iter().product();
+                if out_elems != rows * out_features {
+                    return Err(format!(
+                        "Op {i}: FullyConnectedCB output has {out_elems} elements, \
+                         expected [{out_features}, {rows}]"
+                    ));
+                }
+                OpPlan {
+                    scratch: vec![],
+                    sub_ops: vec![SubOpPlan {
+                        name: "fc_cb".into(),
+                        kernels: vec![KernelCall::FullyConnectedCB {
+                            input: *input,
+                            band_meta: *band_meta,
+                            band_data: *band_data,
+                            output: *output,
+                            rows,
+                            in_features,
+                            out_features,
+                        }],
+                    }],
+                }
+            }
+
+            PspOp::SquarePow {
+                input,
+                output,
+                exponent,
+            } => OpPlan {
+                scratch: vec![],
+                sub_ops: vec![SubOpPlan {
+                    name: "square_pow".into(),
+                    kernels: vec![KernelCall::SquarePow {
+                        input: *input,
+                        output: *output,
+                        exponent: *exponent,
+                    }],
+                }],
+            },
             PspOp::Swish { input, output } => OpPlan {
                 scratch: vec![],
                 sub_ops: vec![SubOpPlan {
@@ -804,7 +871,7 @@ fn lower_ops(
                 }
             }
 
-            PspOp::Rfft { .. } => unreachable!("handled above"),
+            PspOp::Rfft { .. } | PspOp::StridedViewStft { .. } => unreachable!("handled above"),
 
             PspOp::StridedSlice {
                 input,
@@ -1228,7 +1295,6 @@ fn lower_rfft(
     fft_length: usize,
 ) -> Result<OpPlan, String> {
     let n = fft_length;
-    let n_complex = n / 2;
 
     // Batched over all leading dims: input is [.., frames, n] flattened.
     let in_elems: usize = model.graph.tensor(input).shape.iter().product();
@@ -1239,15 +1305,42 @@ fn lower_rfft(
     }
     let frames = in_elems / n;
 
-    // Number of butterfly stages = log2(n_complex)
-    let num_stages = n_complex.trailing_zeros() as usize;
+    let (stage_tw_id, unpack_tw_id) = append_rfft_twiddles(model, allocs, n);
 
-    // Scratch buffer: n floats (n_complex interleaved complex pairs), reused
+    // Scratch buffer: n floats (n/2 interleaved complex pairs), reused
     // across frames.
     let scratch = vec![ScratchBuffer {
         size: n,
         load_from: None,
     }];
+
+    Ok(OpPlan {
+        scratch,
+        sub_ops: vec![SubOpPlan {
+            name: "rfft".into(),
+            kernels: vec![KernelCall::RfftBatch {
+                input,
+                stage_twiddles: stage_tw_id,
+                unpack_twiddles: unpack_tw_id,
+                output,
+                scratch: 0,
+                n,
+                frames,
+            }],
+        }],
+    })
+}
+
+/// Append the split-layout stage and unpack twiddle constants for an
+/// `n`-point real FFT to the model blob. Layouts match what `rfft_batch` /
+/// `rfft_strided_batch` consume — see the FFT section of psp-rt's kernels.
+fn append_rfft_twiddles(
+    model: &mut PspModel,
+    allocs: &mut Vec<TensorAlloc>,
+    n: usize,
+) -> (TensorId, TensorId) {
+    let n_complex = n / 2;
+    let num_stages = n_complex.trailing_zeros() as usize;
 
     // Stage twiddles, concatenated in stage order: stage s holds 2^s complex
     // entries exp(-2πi·j / 2^(s+1)) at float offset (2^s - 1) * 2.
@@ -1288,18 +1381,71 @@ fn lower_rfft(
     let unpack_tw_id =
         append_constant_f32(model, allocs, vec![(n_complex - 1) * 2], &unpack_twiddles);
 
+    (stage_tw_id, unpack_tw_id)
+}
+
+/// Lower `StridedViewStft`: one `rfft_strided_batch` call reading frames as
+/// strided views straight out of the signal, windowing during the pack. No
+/// index constant and no materialised `[n_windows, n]` window matrix.
+#[allow(clippy::too_many_arguments)]
+fn lower_strided_stft(
+    model: &mut PspModel,
+    allocs: &mut Vec<TensorAlloc>,
+    input: TensorId,
+    window: Option<TensorId>,
+    output: TensorId,
+    fft_length: usize,
+    hop: usize,
+    n_windows: usize,
+) -> Result<OpPlan, String> {
+    let n = fft_length;
+    if !(n / 2).is_power_of_two() {
+        return Err(format!("StridedViewStft: fft_length {n} must be 2*2^k"));
+    }
+
+    let in_elems: usize = model.graph.tensor(input).shape.iter().product();
+    if (n_windows - 1) * hop + n > in_elems {
+        return Err(format!(
+            "StridedViewStft: {n_windows} windows of {n} at hop {hop} overrun input of {in_elems}"
+        ));
+    }
+    if let Some(w) = window {
+        let w_elems: usize = model.graph.tensor(w).shape.iter().product();
+        if w_elems != n {
+            return Err(format!(
+                "StridedViewStft: window has {w_elems} elements, expected fft_length {n}"
+            ));
+        }
+    }
+    let out_elems: usize = model.graph.tensor(output).shape.iter().product();
+    if out_elems != n_windows * (n / 2 + 1) {
+        return Err(format!(
+            "StridedViewStft: output has {out_elems} elements, expected {n_windows}×{}",
+            n / 2 + 1
+        ));
+    }
+
+    let (stage_tw_id, unpack_tw_id) = append_rfft_twiddles(model, allocs, n);
+
+    let scratch = vec![ScratchBuffer {
+        size: n,
+        load_from: None,
+    }];
+
     Ok(OpPlan {
         scratch,
         sub_ops: vec![SubOpPlan {
-            name: "rfft".into(),
-            kernels: vec![KernelCall::RfftBatch {
+            name: "strided_stft".into(),
+            kernels: vec![KernelCall::RfftStridedBatch {
                 input,
+                window,
                 stage_twiddles: stage_tw_id,
                 unpack_twiddles: unpack_tw_id,
                 output,
                 scratch: 0,
                 n,
-                frames,
+                hop,
+                frames: n_windows,
             }],
         }],
     })

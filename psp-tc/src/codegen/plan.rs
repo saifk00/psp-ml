@@ -22,13 +22,20 @@ pub struct Tensor4d {
     pub shape: [usize; 4],
 }
 
+/// One graph output: its tensor and flat size in floats. Order follows
+/// `Graph::outputs`, which is also the order of `forward()`'s output params.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PlanOutput {
+    pub id: TensorId,
+    pub size: usize,
+}
+
 /// Complete codegen plan for a model. Produced by `lower()`, consumed by `render()`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CodegenPlan {
     pub input_id: TensorId,
-    pub output_id: TensorId,
+    pub outputs: Vec<PlanOutput>,
     pub input_size: usize,
-    pub output_size: usize,
     pub blob_bytes: usize,
     pub blob_floats: usize,
     pub allocs: Vec<TensorAlloc>,
@@ -345,6 +352,39 @@ pub enum KernelCall {
         output: TensorId,
         scratch: ScratchId,
         n: usize,
+        frames: usize,
+    },
+
+    /// Matmul against a column-banded matrix ([start, len] I32 table +
+    /// concatenated band coefficients). See `psp_rt::kernels::fully_connected_cb`.
+    FullyConnectedCB {
+        input: TensorId,
+        band_meta: TensorId,
+        band_data: TensorId,
+        output: TensorId,
+        rows: usize,
+        in_features: usize,
+        out_features: usize,
+    },
+
+    /// Fused `(x^2)^exponent` elementwise. See `psp_rt::kernels::square_pow`.
+    SquarePow {
+        input: TensorId,
+        output: TensorId,
+        exponent: f32,
+    },
+
+    /// Windowed STFT over strided views: frame `f` is `input[f*hop..f*hop+n]`,
+    /// windowed during the bit-reversal pack. See `psp_rt::kernels::rfft_strided_batch`.
+    RfftStridedBatch {
+        input: TensorId,
+        window: Option<TensorId>,
+        stage_twiddles: TensorId,
+        unpack_twiddles: TensorId,
+        output: TensorId,
+        scratch: ScratchId,
+        n: usize,
+        hop: usize,
         frames: usize,
     },
 

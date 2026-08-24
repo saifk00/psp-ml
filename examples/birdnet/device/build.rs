@@ -20,7 +20,15 @@ use std::process::Command;
 const FULL_MODEL: &str = "models/birdnet/audio-model-int8.tflite";
 const FULL_LABELS: &str = "models/birdnet/labels/en_us.txt";
 const PRUNER: &str = "examples/birdnet/prune_classifier.py";
+const SLICER: &str = "examples/birdnet-stft-benchmark/slice_stft.py";
+const STFT_ASSETS: &str = "models/birdnet/stft";
 const INPUT_SAMPLES: usize = 144_000;
+const N_WINDOWS: usize = 511;
+const N_BANKS: usize = 96;
+/// (fft_length, fmin, fmax) — the reverse-engineered filterbank ranges,
+/// verified against the stored matrices by psp-tc's mel tests.
+const BRANCHES: [(usize, f64, f64); 2] = [(2048, 0.0, 3000.0), (1024, 500.0, 15000.0)];
+const SAMPLING_RATE: f64 = 48_000.0;
 
 fn main() {
     let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -45,9 +53,16 @@ fn main() {
     //    kept_indices.txt) into OUT_DIR alongside it.
     let model = select_model(&repo_root, &out_dir);
 
-    // 2. Codegen. Produces generated.rs and weights.bin in OUT_DIR.
-    psp_tc::compile_tflite(&model, &out_dir, None)
-        .unwrap_or_else(|e| panic!("psp-tc codegen failed: {e}"));
+    // 2. Codegen. Produces generated.rs and weights.bin in OUT_DIR — from
+    //    the whole model normally, or (custom frontend) from the backbone
+    //    severed at the branch-merge CONCAT, plus a builder-generated
+    //    frontend module in OUT_DIR/frontend/.
+    if std::env::var("CARGO_FEATURE_CUSTOM_FRONTEND").is_ok() {
+        build_custom_frontend(&repo_root, &out_dir, &model);
+    } else {
+        psp_tc::compile_tflite(&model, &out_dir, None)
+            .unwrap_or_else(|e| panic!("psp-tc codegen failed: {e}"));
+    }
     apply_generated_override(&out_dir);
 
     // 3. Class count, read back from the labels the selected model implies.
@@ -148,6 +163,91 @@ fn pruner_command(script: &Path) -> Command {
             c
         }
     }
+}
+
+/// The custom-frontend build: sever the (possibly pruned) model at the two
+/// branches' 4D CONCAT and compile only the conv backbone from it (its input
+/// is the assembled `[1, 96, 511, 2]` spectrogram pair, which main.rs builds
+/// from the frontend's bank-major outputs); then generate the frontend
+/// module — normalisation, strided-view STFTs, banded mel projections —
+/// with the builder.
+fn build_custom_frontend(repo_root: &Path, out_dir: &Path, model: &Path) {
+    let assets = repo_root.join(STFT_ASSETS);
+    let needed = ["window_2048.bin", "window_1024.bin", "manifest.json"];
+    if !needed.iter().all(|f| assets.join(f).exists()) {
+        let status = pruner_command(&repo_root.join(SLICER))
+            .current_dir(repo_root)
+            .status()
+            .unwrap_or_else(|e| panic!("failed to run the slicer ({e}). {PYTHON_HELP}"));
+        assert!(status.success(), "slice_stft.py failed. {PYTHON_HELP}");
+    }
+
+    // Backbone: severed from whichever model select_model() picked, so TOPK
+    // pruning composes with the custom frontend.
+    let backbone = out_dir.join("backbone.tflite");
+    let mut cmd = pruner_command(&repo_root.join(SLICER));
+    cmd.arg("sever-backbone").arg(model).arg(&backbone);
+    let status = cmd
+        .current_dir(repo_root)
+        .status()
+        .unwrap_or_else(|e| panic!("failed to run the slicer ({e}). {PYTHON_HELP}"));
+    assert!(status.success(), "sever-backbone failed. {PYTHON_HELP}");
+    psp_tc::compile_tflite(&backbone, out_dir, None)
+        .unwrap_or_else(|e| panic!("psp-tc codegen (backbone) failed: {e}"));
+
+    // Frontend module: raw signal -> normalize -> 2x (strided STFT -> mel).
+    let manifest: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(assets.join("manifest.json")).unwrap(),
+    )
+    .unwrap();
+    let pow_exponent = |fft_length: usize| -> f32 {
+        manifest["branches"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|b| b["fft_length"].as_u64() == Some(fft_length as u64))
+            .unwrap_or_else(|| panic!("no manifest entry for L={fft_length}"))["pow_exponent"]
+            .as_f64()
+            .unwrap() as f32
+    };
+    let branches: Vec<psp_tc::mel::FrontendBranch> = BRANCHES
+        .iter()
+        .map(|&(l, fmin, fmax)| {
+            let bytes = std::fs::read(assets.join(format!("window_{l}.bin"))).unwrap();
+            psp_tc::mel::FrontendBranch {
+                fft_length: l,
+                window: bytes
+                    .chunks_exact(4)
+                    .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
+                    .collect(),
+                fmin,
+                fmax,
+                pow_exponent: pow_exponent(l),
+            }
+        })
+        .collect();
+
+    let mut b = psp_tc::PspModelBuilder::new();
+    let raw = b.input(vec![1, INPUT_SAMPLES]);
+    let norm = psp_tc::mel::birdnet_normalize(&mut b, raw);
+    let outs = psp_tc::mel::stft_mel_frontend(
+        &mut b,
+        norm,
+        N_WINDOWS,
+        SAMPLING_RATE,
+        N_BANKS,
+        &branches,
+    );
+    for out in outs {
+        b.output(out);
+    }
+    let mut fe_model = b.finish();
+    let fe_dir = out_dir.join("frontend");
+    std::fs::create_dir_all(&fe_dir).unwrap();
+    psp_tc::compile_graph(&mut fe_model, &fe_dir, "custom_frontend")
+        .unwrap_or_else(|e| panic!("psp-tc codegen (custom frontend) failed: {e}"));
+
+    println!("cargo:warning=birdnet: custom frontend enabled (backbone severed at the branch concat)");
 }
 
 /// Prototyping hook: swap in a hand-edited `generated.rs` to measure a codegen

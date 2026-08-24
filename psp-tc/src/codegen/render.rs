@@ -15,7 +15,7 @@ use super::plan::*;
 use super::plan::GemmOperand;
 use super::tensor_expr::TensorExprWriter;
 
-pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
+pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>, weights_name: &str) -> TokenStream {
     // Every timing slot must have a name and vice versa. When these drift, the
     // per-op breakdown silently misattributes *everything* rather than
     // failing — which is exactly what happened when `pack_weights` was added
@@ -31,7 +31,7 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
     let writer = TensorExprWriter::new(graph);
     let arena = plan.arena.as_ref();
 
-    let weight_statics = render_weight_statics(plan);
+    let weight_statics = render_weight_statics(plan, weights_name);
     let weight_views = render_weight_views(plan, &writer);
     let arena_static = render_arena_static(arena);
     let tensor_allocs = render_tensor_allocs(plan, &writer, arena, plan.stream.as_ref());
@@ -43,8 +43,48 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
     let op_metadata = render_op_metadata(plan);
 
     let input_size = plan.input_size;
-    let output_size = plan.output_size;
-    let output_ident = writer.ident(plan.output_id);
+
+    // Output parameters. A single output keeps the historical signature
+    // (`output: &mut [f32; N]` + `OUTPUT_SIZE`); a multi-output graph gets one
+    // `outputN` param per graph output, in `Graph::outputs` order, plus
+    // `OUTPUT_SIZES`.
+    let single_output = plan.outputs.len() == 1;
+    let output_params: Vec<TokenStream> = plan
+        .outputs
+        .iter()
+        .enumerate()
+        .map(|(i, out)| {
+            let name = if single_output {
+                Ident::new("output", Span::call_site())
+            } else {
+                Ident::new(&format!("output{i}"), Span::call_site())
+            };
+            let size = out.size;
+            quote! { #name: &mut [f32; #size] }
+        })
+        .collect();
+    let output_copies: TokenStream = plan
+        .outputs
+        .iter()
+        .enumerate()
+        .map(|(i, out)| {
+            let name = if single_output {
+                Ident::new("output", Span::call_site())
+            } else {
+                Ident::new(&format!("output{i}"), Span::call_site())
+            };
+            let ident = writer.ident(out.id);
+            quote! { #name.copy_from_slice(&#ident); }
+        })
+        .collect();
+    let output_consts = if single_output {
+        let size = plan.outputs[0].size;
+        quote! { pub const OUTPUT_SIZE: usize = #size; }
+    } else {
+        let sizes: Vec<usize> = plan.outputs.iter().map(|o| o.size).collect();
+        let count = sizes.len();
+        quote! { pub const OUTPUT_SIZES: [usize; #count] = [#(#sizes),*]; }
+    };
 
     quote! {
         // Generated inference module
@@ -56,22 +96,22 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
 
         #arena_static
 
-        pub const OUTPUT_SIZE: usize = #output_size;
+        #output_consts
 
-        pub fn forward(input: &[f32; #input_size], output: &mut [f32; #output_size]) {
+        pub fn forward(input: &[f32; #input_size], #(#output_params),*) {
             #tensor_allocs
 
             #weight_views
 
             #plain_calls
 
-            output.copy_from_slice(&#output_ident);
+            #output_copies
         }
 
         /// Instrumented inference: accumulates per-op tick deltas into `op_ticks`.
         pub fn forward_timed(
             input: &[f32; #input_size],
-            output: &mut [f32; #output_size],
+            #(#output_params,)*
             op_ticks: &mut [u64; NUM_OPS],
             get_tick: fn() -> u64,
         ) {
@@ -81,13 +121,13 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
 
             #timed_calls
 
-            output.copy_from_slice(&#output_ident);
+            #output_copies
         }
 
         /// Instrumented inference with per-op hardware profiling counters.
         pub fn forward_profiled(
             input: &[f32; #input_size],
-            output: &mut [f32; #output_size],
+            #(#output_params,)*
             op_ticks: &mut [u64; NUM_OPS],
             #[allow(unused)] op_profile: &mut [psp_rt::profiler::OpProfileStats; NUM_OPS],
             get_tick: fn() -> u64,
@@ -98,7 +138,7 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
 
             #profiled_calls
 
-            output.copy_from_slice(&#output_ident);
+            #output_copies
         }
 
         /// Debug inference: invokes `tap(op_idx, tensor_id, values)` after
@@ -109,7 +149,7 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
         #[allow(dead_code)]
         pub fn forward_debug(
             input: &[f32; #input_size],
-            output: &mut [f32; #output_size],
+            #(#output_params,)*
             tap: &mut dyn FnMut(usize, usize, &[f32]),
         ) {
             #tensor_allocs
@@ -118,7 +158,7 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>) -> TokenStream {
 
             #debug_calls
 
-            output.copy_from_slice(&#output_ident);
+            #output_copies
         }
 
         #op_metadata
@@ -396,7 +436,19 @@ fn render_op_with_timing(
 /// intermediate buffers.
 const EXTERNAL_WEIGHT_THRESHOLD: usize = 16 * 1024 * 1024;
 
-fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
+fn render_weight_statics(plan: &CodegenPlan, weights_name: &str) -> TokenStream {
+    // The blob's filename, threaded into every path the generated code uses:
+    // `include_bytes!` resolves relative to the generated file, the device
+    // pointer/streamed paths read `host0:/<name>` from the hostfs mount root,
+    // and the host pointer path reads `$OUT_DIR/<name>` (so callers of the
+    // pointer path must emit into OUT_DIR itself, as `compile_tflite` does).
+    let hostfs_path = proc_macro2::Literal::byte_string(
+        format!("host0:/{weights_name}\0").as_bytes(),
+    );
+    let hostfs_msg = format!("FATAL: could not open host0:/{weights_name}");
+    let hostfs_stream_msg = format!("FATAL: could not open host0:/{weights_name} for streaming");
+    let open_panic_msg = format!("{weights_name} open failed");
+    let outdir_rel = format!("/{weights_name}");
     let total_bytes = plan.blob_bytes;
     let total_floats = plan.blob_floats;
 
@@ -437,10 +489,10 @@ fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
             ) {
                 use psp::sys::{sceIoClose, sceIoLseek, sceIoOpen, sceIoRead, IoOpenFlags, IoWhence};
                 let fd = unsafe {
-                    sceIoOpen(b"host0:/weights.bin\0".as_ptr(), IoOpenFlags::RD_ONLY, 0)
+                    sceIoOpen(#hostfs_path.as_ptr(), IoOpenFlags::RD_ONLY, 0)
                 };
                 if fd.0 < 0 {
-                    psp_rt::dprintln!("FATAL: could not open host0:/weights.bin for streaming");
+                    psp_rt::dprintln!(#hostfs_stream_msg);
                     panic!("weight stream open failed");
                 }
                 unsafe { sceIoLseek(fd, byte_offset as i64, IoWhence::Set) };
@@ -478,8 +530,8 @@ fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
                 consume: &mut dyn FnMut(usize, &[f32]),
             ) {
                 use std::io::{Read, Seek, SeekFrom};
-                let mut f = std::fs::File::open(concat!(env!("OUT_DIR"), "/weights.bin"))
-                    .expect("failed to open weights.bin for streaming");
+                let mut f = std::fs::File::open(concat!(env!("OUT_DIR"), #outdir_rel))
+                    .expect("failed to open the weight blob for streaming");
                 f.seek(SeekFrom::Start(byte_offset as u64)).unwrap();
                 let mut done = 0usize;
                 while done < total_bytes {
@@ -509,7 +561,7 @@ fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
             struct Aligned16<const N: usize>([f32; N]);
 
             static TENSOR_DATA_BYTES: AlignedBytes<#total_bytes> =
-                AlignedBytes(*include_bytes!("weights.bin"));
+                AlignedBytes(*include_bytes!(#weights_name));
             const TENSOR_DATA_FLOATS: usize = #total_floats;
 
             #(#const_entries)*
@@ -603,14 +655,14 @@ fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
 
                 let fd = unsafe {
                     sceIoOpen(
-                        b"host0:/weights.bin\0".as_ptr(),
+                        #hostfs_path.as_ptr(),
                         IoOpenFlags::RD_ONLY,
                         0,
                     )
                 };
                 if fd.0 < 0 {
-                    psp_rt::dprintln!("FATAL: could not open host0:/weights.bin");
-                    panic!("weights.bin open failed"); // surfaces as the panic exit sentinel
+                    psp_rt::dprintln!(#hostfs_msg);
+                    panic!(#open_panic_msg); // surfaces as the panic exit sentinel
                 }
                 let mut loaded = 0usize;
                 while loaded < WEIGHT_BYTES {
@@ -647,10 +699,10 @@ fn render_weight_statics(plan: &CodegenPlan) -> TokenStream {
             #[cfg(not(target_os = "psp"))]
             pub fn init() {
                 let mut data = std::fs::read(
-                    concat!(env!("OUT_DIR"), "/weights.bin"),
+                    concat!(env!("OUT_DIR"), #outdir_rel),
                 )
-                .expect("failed to read weights.bin");
-                assert!(data.len() >= WEIGHT_BYTES, "weights.bin smaller than resident size");
+                .expect("failed to read the weight blob");
+                assert!(data.len() >= WEIGHT_BYTES, "weight blob smaller than resident size");
                 data.truncate(WEIGHT_BYTES);
                 let ptr = data.as_ptr();
                 std::mem::forget(data);
@@ -1101,6 +1153,45 @@ fn render_kernel_call(
             quote! { swish(#in_expr, #out_expr); }
         }
 
+        KernelCall::FullyConnectedCB {
+            input,
+            band_meta,
+            band_data,
+            output,
+            rows,
+            in_features,
+            out_features,
+        } => {
+            let in_expr = writer.read(*input);
+            // band_meta is an I32 constant tensor in the weights blob; read as
+            // f32 slice and reinterpret as i32 at runtime (the Gather pattern).
+            let meta_expr = writer.read(*band_meta);
+            let meta_len = out_features * 2;
+            let data_expr = writer.read(*band_data);
+            let out_expr = writer.write(*output);
+            quote! {
+                fully_connected_cb(
+                    #in_expr,
+                    #rows,
+                    #in_features,
+                    unsafe { core::slice::from_raw_parts(#meta_expr.as_ptr() as *const i32, #meta_len) },
+                    #data_expr,
+                    #out_expr,
+                    #out_features,
+                );
+            }
+        }
+
+        KernelCall::SquarePow {
+            input,
+            output,
+            exponent,
+        } => {
+            let in_expr = writer.read(*input);
+            let out_expr = writer.write(*output);
+            quote! { square_pow(#in_expr, #out_expr, #exponent); }
+        }
+
         KernelCall::FakeQuant {
             input,
             output,
@@ -1210,6 +1301,35 @@ fn render_kernel_call(
                 Ident::new(&format!("scratch_{op_idx}_{scratch}"), Span::call_site());
             quote! {
                 rfft_batch(#input_expr, #stw_expr, #utw_expr, #scratch_ident, #output_expr, #n, #frames);
+            }
+        }
+
+        KernelCall::RfftStridedBatch {
+            input,
+            window,
+            stage_twiddles,
+            unpack_twiddles,
+            output,
+            scratch,
+            n,
+            hop,
+            frames,
+        } => {
+            let input_expr = writer.read(*input);
+            let window_expr = match window {
+                Some(w) => {
+                    let w_expr = writer.read(*w);
+                    quote! { Some(#w_expr) }
+                }
+                None => quote! { None },
+            };
+            let stw_expr = writer.read(*stage_twiddles);
+            let utw_expr = writer.read(*unpack_twiddles);
+            let output_expr = writer.write(*output);
+            let scratch_ident =
+                Ident::new(&format!("scratch_{op_idx}_{scratch}"), Span::call_site());
+            quote! {
+                rfft_strided_batch(#input_expr, #window_expr, #stw_expr, #utw_expr, #scratch_ident, #output_expr, #n, #hop, #frames);
             }
         }
 

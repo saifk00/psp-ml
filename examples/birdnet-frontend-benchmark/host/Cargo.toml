@@ -1,0 +1,11 @@
+[package]
+name = "birdnet-frontend-benchmark-host"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "birdnet-frontend-benchmark-host"
+path = "src/main.rs"
+
+[dependencies]
+psplink-connection = { path = "../../../psplink-connection" }

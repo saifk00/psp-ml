@@ -1,0 +1,29 @@
+[package]
+name = "birdnet-stft-benchmark"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "birdnet-stft-benchmark"
+path = "src/main.rs"
+
+[features]
+# `local` by default so `cargo test`/`cargo build` treat this as a normal host
+# crate (scalar kernels, both frontends compiled in, mode picked by --mode).
+# The device build passes --no-default-features --features mode-* to get a
+# no_std PRX containing exactly ONE frontend — that is the point: each mode's
+# PRX carries only its own arena and weight blob, so the on-device free-memory
+# numbers attribute cleanly to the mode being measured.
+default = ["local"]
+local = []
+mode-dense = []
+mode-strided = []
+
+[dependencies]
+psp-rt = { path = "../../../psp-rt" }
+
+[target.'cfg(target_os = "psp")'.dependencies]
+psp = "0.3"
+
+[build-dependencies]
+psp-tc = { path = "../../../psp-tc" }

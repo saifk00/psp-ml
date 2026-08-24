@@ -30,6 +30,12 @@ pub fn infer(model: &mut PspModel) {
             // I32 shape-computation ops: evaluate and store as constants
             // ══════════════════════════════════════════════════════════
 
+            // Builder-provided ops: shapes are declared explicitly at
+            // construction, nothing to infer.
+            PspOp::StridedViewStft { .. }
+            | PspOp::FullyConnectedCB { .. }
+            | PspOp::SquarePow { .. } => {}
+
             PspOp::Shape { input, output } => {
                 let vals: Vec<i32> = model.graph.tensor(*input).shape
                     .iter().map(|&s| s as i32).collect();

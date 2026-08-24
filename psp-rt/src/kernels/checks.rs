@@ -518,6 +518,210 @@ fn test_pow_const_matches_libm() -> bool {
     true
 }
 
+fn test_rfft_strided_matches_dense() -> bool {
+    // Windows overlap (hop < n), so the strided kernel reads each sample
+    // through several frames — on device the butterfly stages and stage-0
+    // `vbfy1.q` run for real, which the host mirror never exercises.
+    const N: usize = 32;
+    const NC: usize = N / 2;
+    const HOP: usize = 9;
+    const FRAMES: usize = 4;
+    const BINS: usize = NC + 1;
+    const N_SAMPLES: usize = (FRAMES - 1) * HOP + N;
+
+    // Twiddles in the split layout psp-tc emits (see `lower_rfft`). Both the
+    // stage runs and the scratch are loaded with `lv.q`, hence `Aligned`.
+    let mut stage = Aligned([0.0f32; kernels::stage_tw_len(N)]);
+    let stages = NC.trailing_zeros() as usize;
+    let mut off = 0usize;
+    for s in 0..stages {
+        let half = 1usize << s;
+        for j in 0..half {
+            let a = -2.0 * core::f64::consts::PI * j as f64 / (2.0 * half as f64);
+            stage[off + j] = libm::cos(a) as f32;
+            stage[off + half + j] = libm::sin(a) as f32;
+        }
+        off += kernels::stage_tw_block(s);
+    }
+    let mut unpack = Aligned([0.0f32; (NC - 1) * 2]);
+    for k in 1..NC {
+        let a = 2.0 * core::f64::consts::PI * k as f64 / N as f64;
+        unpack[k - 1] = libm::cos(a) as f32;
+        unpack[NC - 1 + k - 1] = -(libm::sin(a) as f32);
+    }
+
+    let mut samples = Aligned([0.0f32; N_SAMPLES]);
+    for i in 0..N_SAMPLES {
+        samples[i] = libm::sinf(i as f32 * 0.7) + 0.25 * (i as f32 % 5.0);
+    }
+    let mut window = Aligned([0.0f32; N]);
+    for j in 0..N {
+        window[j] = 0.5 - 0.5 * libm::cosf(2.0 * core::f32::consts::PI * j as f32 / N as f32);
+    }
+
+    // Dense reference: materialise every window, multiply, rfft_batch.
+    let mut dense = Aligned([0.0f32; FRAMES * N]);
+    for f in 0..FRAMES {
+        for j in 0..N {
+            dense[f * N + j] = samples[f * HOP + j] * window[j];
+        }
+    }
+    let mut scratch = Aligned([7.5f32; N]);
+    let mut want = Aligned([0.0f32; FRAMES * BINS]);
+    kernels::rfft_batch(&dense, &stage, &unpack, &mut scratch, &mut want, N, FRAMES);
+
+    let mut scratch = Aligned([-3.25f32; N]);
+    let mut got = Aligned([0.0f32; FRAMES * BINS]);
+    kernels::rfft_strided_batch(
+        &samples,
+        Some(&window),
+        &stage,
+        &unpack,
+        &mut scratch,
+        &mut got,
+        N,
+        HOP,
+        FRAMES,
+    );
+
+    for i in 0..FRAMES * BINS {
+        if got[i].to_bits() != want[i].to_bits() {
+            return false;
+        }
+    }
+    true
+}
+
+fn test_square_pow_matches_mul_then_pow() -> bool {
+    // On device the fused kernel is pow_const's vlog2/vexp2 pipeline with one
+    // extra vmul.q; squaring via scalar mul first must land on the same bits
+    // (an IEEE f32 multiply is exact in either engine). Aligned buffers so the
+    // VFPU path actually runs — unaligned would silently take the scalar
+    // fallback and prove nothing.
+    const N: usize = 32;
+    const C: f32 = 0.2199;
+    let mut inp = Aligned([0.0f32; N]);
+    for i in 0..N {
+        inp[i] = (i as f32 - 13.0) * 0.31; // negatives included: x^2 fixes them
+    }
+    let mut squared = Aligned([0.0f32; N]);
+    for i in 0..N {
+        squared[i] = inp[i] * inp[i];
+    }
+    let mut want = Aligned([0.0f32; N]);
+    kernels::pow_const(&squared, &mut want, C);
+    let mut got = Aligned([f32::NAN; N]);
+    kernels::square_pow(&inp, &mut got, C);
+    for i in 0..N {
+        if got[i].to_bits() != want[i].to_bits() {
+            return false;
+        }
+    }
+    true
+}
+
+fn test_fc_cb_matches_dense() -> bool {
+    // On device this exercises the real VFPU path — 4-row groups through the
+    // vtfm4 GEMV tiles (11 rows = 2 groups + a 3-row scalar tail), a 17-long
+    // band (two coefficient chunks), and a band whose padded window runs past
+    // the row end. The VFPU chunk-tree summation reorders the adds, so the
+    // check is tolerance-based, not bitwise; the output is [OUT, ROWS]
+    // (transposed relative to the dense matmul).
+    const ROWS: usize = 11;
+    const IN: usize = 40;
+    const OUT: usize = 6;
+    let mut input = Aligned([0.0f32; ROWS * IN]);
+    for i in 0..ROWS * IN {
+        input[i] = libm::sinf(i as f32 * 0.9);
+    }
+    let band_meta: [i32; OUT * 2] = [0, 3, 2, 1, 5, 17, 10, 2, 20, 4, 36, 4];
+    let mut band_data = Aligned([0.0f32; 3 + 1 + 17 + 2 + 4 + 4]);
+    for (i, v) in band_data.iter_mut().enumerate() {
+        *v = 0.1 + i as f32 * 0.07;
+    }
+
+    let mut dense = Aligned([0.0f32; OUT * IN]);
+    let mut off = 0usize;
+    for b in 0..OUT {
+        let (start, len) = (band_meta[2 * b] as usize, band_meta[2 * b + 1] as usize);
+        for k in 0..len {
+            dense[b * IN + start + k] = band_data[off + k];
+        }
+        off += len;
+    }
+
+    let mut want = Aligned([0.0f32; ROWS * OUT]);
+    for m in 0..ROWS {
+        naive::fully_connected(
+            &input[m * IN..(m + 1) * IN],
+            IN,
+            &dense,
+            None,
+            &mut want[m * OUT..(m + 1) * OUT],
+            OUT,
+        );
+    }
+    let mut got = Aligned([f32::NAN; ROWS * OUT]);
+    kernels::fully_connected_cb(&input, ROWS, IN, &band_meta, &band_data, &mut got, OUT);
+    for m in 0..ROWS {
+        for b in 0..OUT {
+            let (g, w) = (got[b * ROWS + m], want[m * OUT + b]);
+            let d = if g > w { g - w } else { w - g };
+            if !(d <= EPS) {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+/// The fact `fully_connected_cb`'s asm rests on, measured on hardware:
+/// `vtfm4.q rd, Mxxx, rt` dots the register matrix's *columns* with the
+/// vector (the same implicit transpose as `vmmul.q`'s first operand), so a
+/// matrix loaded row-wise with `lv.q R000..R003` needs the E-form --
+/// `vtfm4.q rd, Exxx, rt` -- to get row dots. If a rust-psp upgrade ever
+/// changes the encoding, this names the failure that
+/// `test_fc_cb_matches_dense` would only report as a wrong result.
+#[cfg(target_os = "psp")]
+fn test_vtfm4_e_form_is_row_dots() -> bool {
+    use psp::vfpu_asm;
+    #[repr(align(16))]
+    struct A16([f32; 16]);
+    #[repr(align(16))]
+    struct A4([f32; 4]);
+    // A[r][j] = 4r + j -- asymmetric, distinguishes rows from columns.
+    let mut a = A16([0.0; 16]);
+    for r in 0..4 {
+        for j in 0..4 {
+            a.0[r * 4 + j] = (r * 4 + j) as f32;
+        }
+    }
+    let v = A4([1.0, 10.0, 100.0, 1000.0]);
+    let mut out = A4([0.0; 4]);
+    unsafe {
+        vfpu_asm!(
+            "lv.q R000, 0({a})",
+            "lv.q R001, 16({a})",
+            "lv.q R002, 32({a})",
+            "lv.q R003, 48({a})",
+            "lv.q R400, 0({v})",
+            "vtfm4.q R500, E000, R400",
+            "sv.q R500, 0({o})",
+            a = in(reg) (a.0.as_ptr()),
+            v = in(reg) (v.0.as_ptr()),
+            o = in(reg) (out.0.as_mut_ptr()),
+            options(nostack),
+        );
+    }
+    let mut want = [0.0f32; 4];
+    for (r, w) in want.iter_mut().enumerate() {
+        for (j, vv) in [1.0f32, 10.0, 100.0, 1000.0].iter().enumerate() {
+            *w += (r * 4 + j) as f32 * vv;
+        }
+    }
+    out.0 == want
+}
+
 device_checks! {
     // Every kernel has a scalar fallback in the same signature, so the whole
     // suite is meaningful on both runners.
@@ -535,7 +739,12 @@ device_checks! {
         test_conv2d_via_im2col_vs_naive,
         test_depthwise_padding_matches_explicit_pad,
         test_pow_const_matches_libm,
+        test_rfft_strided_matches_dense,
+        test_square_pow_matches_mul_then_pow,
+        test_fc_cb_matches_dense,
     ],
-    device: [],
+    device: [
+        test_vtfm4_e_form_is_row_dots,
+    ],
 }
 
