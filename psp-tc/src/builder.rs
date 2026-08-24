@@ -94,6 +94,13 @@ impl PspModelBuilder {
         &self.graph.tensor(id).shape
     }
 
+    /// Declare an intermediate (activation) tensor, for wiring hand-built
+    /// ops via [`Self::add_op`].
+    pub fn intermediate(&mut self, shape: Vec<usize>) -> TensorId {
+        self.graph
+            .add_tensor(shape, DType::F32, TensorKind::Intermediate)
+    }
+
     /// Windowed strided-view STFT over a 1D signal: `n_windows` frames of
     /// `fft_length` samples, hop derived the way BirdNET frames —
     /// `floor((n_samples - fft_length) / (n_windows - 1))`. Returns the

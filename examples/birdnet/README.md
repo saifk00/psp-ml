@@ -80,7 +80,8 @@ is silent: it runs on wrong offsets and returns garbage. Staging beside the
 | `BIRDNET_WAV` | the XC468176 fixture | input for `models/birdnet_reference.py` when regenerating the golden. That script lives under gitignored `models/`, so this knob is not carried by this branch. |
 | `BIRDNET_GENERATED_OVERRIDE` | unset | hand-edited `generated.rs`, for prototyping codegen changes. |
 | `PSP_PROFILE` | unset | build with hardware counters (`hwprofile`). |
-| `BIRDNET_TAP` | unset | local runs dump every op's output tensor to `device/tap/`. |
+| `BIRDNET_TAP` | unset | local runs dump every op's output tensor to `device/tap/`. Not supported with the custom frontend. |
+| `BIRDNET_CUSTOM_FRONTEND` | unset | replace the model's spectrogram frontend with the custom-op one (`StridedViewStft` + banded mel): `build.rs` severs the .tflite at the branch-merge CONCAT and compiles only the conv backbone, plus a builder-generated frontend module; `main.rs` runs the two forwards in sequence. Composes with `TOPK`. Measured (TOPK=500, cardinal fixture): 5617 → 4865 ms (−13.4%), golden PASS. |
 
 Picking `TOPK`: ask the pruner. Only ~405 species clear 0.01 likelihood
 anywhere in `eastern-na`, so a much larger `TOPK` buys rows that can never fire.

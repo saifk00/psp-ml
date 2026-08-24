@@ -438,6 +438,33 @@ def main() -> None:
       raise AssertionError(f"mel slice diverges from full model (L={fft_length})")
     print(f"mel_{fft_length} slice matches full-model taps exactly")
 
+  # ── The whole frontend in one slice: norm -> both branches' POW ───────
+  pow_outs = [find_mel(model, sg, cast_out)[0] for _, _, cast_out in branches]
+  fm = slice_subgraph(buf, norm, pow_outs)
+  (OUT_DIR / "frontend_mel.tflite").write_bytes(fm)
+  check = Interpreter(model_content=fm)
+  check.allocate_tensors()
+  (cin,) = check.get_input_details()
+  check.set_tensor(cin["index"], norm_vals.reshape(1, -1))
+  check.invoke()
+  outs = check.get_output_details()
+  assert len(outs) == 2
+  for o in outs:
+    vals = check.get_tensor(o["index"])
+    vals = vals.reshape(vals.shape[-2], -1)
+    # identify the branch by its golden
+    matched = [
+        l for l, _, _ in branches
+        if np.array_equal(
+            vals,
+            np.fromfile(OUT_DIR / f"golden_mel_{l}.bin", dtype=np.float32).reshape(
+                n_windows, 96
+            ),
+        )
+    ]
+    assert matched, "frontend_mel output matches no branch golden"
+  print(f"frontend_mel.tflite: {len(fm)} bytes, matches full-model taps exactly")
+
   manifest = {
       "n_samples": 144000,
       "n_windows": int(n_windows),
@@ -454,5 +481,44 @@ def main() -> None:
   print(f"wrote {OUT_DIR}/manifest.json")
 
 
+N_WINDOWS = 511  # both branches; floor((144000-L)/(511-1)) framing
+
+
+def sever_backbone(model_path: str, out_path: str) -> None:
+  """Cut the conv backbone out of a (possibly TOPK-pruned) BirdNET model:
+  everything from the two branches' 4D CONCAT onward. The severed model's
+  input is the concat result `[1, 96, N_WINDOWS, 2]` (channel 0 = the
+  L=2048 branch, channel 1 = L=1024, both mel-axis-REVERSEd then
+  transposed — the caller assembles that from the custom frontend's
+  bank-major outputs). Outputs are the model's own outputs.
+  """
+  buf = Path(model_path).read_bytes()
+  model = schema.ModelT.InitFromObj(schema.Model.GetRootAs(buf, 0))
+  sg = model.subgraphs[0]
+
+  concat_out = None
+  for op in sg.operators:
+    if opcode(model, op) != BO.CONCATENATION:
+      continue
+    shape = list(sg.tensors[op.outputs[0]].shape)
+    if len(shape) == 4 and shape[-1] == 2:
+      assert concat_out is None, "multiple 4D concats"
+      concat_out = op.outputs[0]
+      n_banks = shape[1]
+  assert concat_out is not None, "no 4D branch-merge CONCAT found"
+
+  sliced = slice_subgraph(
+      buf,
+      concat_out,
+      list(sg.outputs),
+      input_shape=[1, n_banks, N_WINDOWS, 2],
+  )
+  Path(out_path).write_bytes(sliced)
+  print(f"severed backbone: {out_path} ({len(sliced)} bytes from {len(buf)})")
+
+
 if __name__ == "__main__":
-  main()
+  if len(sys.argv) > 1 and sys.argv[1] == "sever-backbone":
+    sever_backbone(sys.argv[2], sys.argv[3])
+  else:
+    main()

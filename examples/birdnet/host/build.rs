@@ -25,6 +25,14 @@ fn main() {
     if profiling {
         cmd.arg("--features").arg("hwprofile");
     }
+    // BIRDNET_CUSTOM_FRONTEND=1: sever the model at the branch concat and run
+    // the custom-op frontend (StridedViewStft + banded mel) ahead of the
+    // backbone. See examples/birdnet/device's `custom-frontend` feature.
+    let custom_frontend = std::env::var("BIRDNET_CUSTOM_FRONTEND").is_ok_and(|v| v != "0");
+    if custom_frontend {
+        cmd.arg("--features").arg("custom-frontend");
+    }
+    println!("cargo:rerun-if-env-changed=BIRDNET_CUSTOM_FRONTEND");
 
     // Forward the species-pruning knobs to the device build, which is what
     // actually invokes prune_classifier.py. Cargo would pass these through

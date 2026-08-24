@@ -16,6 +16,24 @@ dependencies = [
  "psp",
  "psp-rt",
  "psp-tc",
+ "serde_json",
+]
+
+[[package]]
+name = "birdnet-frontend-benchmark"
+version = "0.1.0"
+dependencies = [
+ "psp",
+ "psp-rt",
+ "psp-tc",
+ "serde_json",
+]
+
+[[package]]
+name = "birdnet-frontend-benchmark-host"
+version = "0.1.0"
+dependencies = [
+ "psplink-connection",
 ]
 
 [[package]]

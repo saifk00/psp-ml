@@ -11,9 +11,35 @@ use psp::sys::{
 #[cfg(not(feature = "local"))]
 psp_rt::module!("birdnet", 1, 0);
 
+// dead_code: with the custom frontend the backbone's OUTPUT_SIZE/debug entry
+// points go unused (main.rs sizes buffers from classes.rs's OUTPUT_CLASSES).
+#[allow(dead_code)]
 mod generated {
     include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 }
+
+// Custom frontend (BIRDNET_CUSTOM_FRONTEND=1): `generated` above is only the
+// conv backbone (severed at the branch-merge CONCAT), and this module is the
+// spectrogram frontend — normalisation, strided-view STFTs, banded mel
+// projections — built by build.rs with PspModelBuilder.
+#[cfg(feature = "custom-frontend")]
+#[allow(dead_code)]
+mod frontend {
+    include!(concat!(env!("OUT_DIR"), "/frontend/custom_frontend.rs"));
+}
+
+#[cfg(feature = "custom-frontend")]
+const N_BANKS: usize = 96;
+#[cfg(feature = "custom-frontend")]
+const N_WINDOWS: usize = 511;
+#[cfg(feature = "custom-frontend")]
+const MEL_LEN: usize = N_BANKS * N_WINDOWS;
+#[cfg(feature = "custom-frontend")]
+static mut FRONTEND_MEL_2048: [f32; MEL_LEN] = [0.0; MEL_LEN];
+#[cfg(feature = "custom-frontend")]
+static mut FRONTEND_MEL_1024: [f32; MEL_LEN] = [0.0; MEL_LEN];
+#[cfg(feature = "custom-frontend")]
+static mut BACKBONE_INPUT: [f32; MEL_LEN * 2] = [0.0; MEL_LEN * 2];
 
 const INPUT_SAMPLES: usize = 144000;
 // 6522 for the full model, or the surviving species count when TOPK is set.
@@ -63,6 +89,11 @@ fn top_k(output: &[f32; OUTPUT_CLASSES]) -> [usize; TOP_K] {
 
 struct BenchResult {
     total_us: u64,
+    /// Time inside the custom frontend + input assembly (0 without the
+    /// `custom-frontend` feature, where nothing reads it). Included in
+    /// `total_us`.
+    #[cfg_attr(not(feature = "custom-frontend"), allow(dead_code))]
+    frontend_us: u64,
     op_ticks: [u64; generated::NUM_OPS],
 }
 
@@ -75,10 +106,36 @@ fn run_benchmark(
     tick_res: u64,
     output: &mut [f32; OUTPUT_CLASSES],
 ) -> BenchResult {
-    let input = audio_input();
     let mut op_ticks = [0u64; generated::NUM_OPS];
 
     let start = get_tick();
+
+    // Custom frontend: run the builder-generated module, then assemble the
+    // backbone's [1, 96, 511, 2] input from its bank-major outputs — each
+    // branch mel-axis reversed (the model's REVERSE_V2, axis 2) and
+    // channel-interleaved (2048 first), which is what the severed model's
+    // CONCAT consumed. Folding this shuffle into the frontend itself is
+    // deliberately deferred.
+    #[cfg(feature = "custom-frontend")]
+    let (input, frontend_us) = {
+        assert!(frontend::OUTPUT_SIZES == [MEL_LEN, MEL_LEN]);
+        let m2048 = unsafe { &mut *core::ptr::addr_of_mut!(FRONTEND_MEL_2048) };
+        let m1024 = unsafe { &mut *core::ptr::addr_of_mut!(FRONTEND_MEL_1024) };
+        frontend::forward(audio_input(), m2048, m1024);
+        let bb = unsafe { &mut *core::ptr::addr_of_mut!(BACKBONE_INPUT) };
+        for q in 0..N_BANKS {
+            let src = (N_BANKS - 1 - q) * N_WINDOWS;
+            for t in 0..N_WINDOWS {
+                let i = (q * N_WINDOWS + t) * 2;
+                bb[i] = m2048[src + t];
+                bb[i + 1] = m1024[src + t];
+            }
+        }
+        let us = (get_tick() - start) * 1_000_000 / tick_res;
+        (unsafe { &*core::ptr::addr_of!(BACKBONE_INPUT) }, us)
+    };
+    #[cfg(not(feature = "custom-frontend"))]
+    let (input, frontend_us) = (audio_input(), 0u64);
     #[cfg(not(feature = "hwprofile"))]
     generated::forward_timed(input, output, &mut op_ticks, get_tick);
     // Hardware-counter pass. The generated `forward_profiled` brackets every
@@ -102,7 +159,11 @@ fn run_benchmark(
 
     let total_us = (elapsed_ticks * 1_000_000) / tick_res;
 
-    BenchResult { total_us, op_ticks }
+    BenchResult {
+        total_us,
+        frontend_us,
+        op_ticks,
+    }
 }
 
 /// Print the ops that cost the most CPU cycles, with the counters that say why.
@@ -358,8 +419,13 @@ fn app_main() {
 
     psp_rt::dprintln!("birdnet: started, loading weights...");
     generated::init();
+    #[cfg(feature = "custom-frontend")]
+    frontend::init();
 
+    #[cfg(not(feature = "custom-frontend"))]
     psp_rt::dprintln!("Running BirdNET (int8)...");
+    #[cfg(feature = "custom-frontend")]
+    psp_rt::dprintln!("Running BirdNET (int8, custom frontend)...");
 
     let tick_res = unsafe { sceRtcGetTickResolution() } as u64;
     static mut OUTPUT_BUF: [f32; OUTPUT_CLASSES] = [0.0f32; OUTPUT_CLASSES];
@@ -368,6 +434,8 @@ fn app_main() {
 
     psp_rt::dprintln!("");
     psp_rt::dprintln!("Total time: {} ms", result.total_us / 1000);
+    #[cfg(feature = "custom-frontend")]
+    psp_rt::dprintln!("  frontend (incl. assembly): {} ms", result.frontend_us / 1000);
     psp_rt::dprintln!("");
     psp_rt::dprintln!("Top-{} species:", TOP_K);
     for &i in top_k(output).iter() {
@@ -410,6 +478,14 @@ fn main() {
 
     // Debug tap mode: dump every op's output tensor to tap/t<ID>.bin for
     // layer-by-layer comparison against a TFLite reference run.
+    #[cfg(feature = "custom-frontend")]
+    if std::env::var("BIRDNET_TAP").is_ok() {
+        eprintln!("BIRDNET_TAP is not supported with the custom frontend (tensor ids");
+        eprintln!("only line up against TFLite for the whole-model compile); rerun");
+        eprintln!("without --features custom-frontend.");
+        std::process::exit(2);
+    }
+    #[cfg(not(feature = "custom-frontend"))]
     if std::env::var("BIRDNET_TAP").is_ok() {
         let tap_dir = format!("{}/tap", env!("CARGO_MANIFEST_DIR"));
         std::fs::create_dir_all(&tap_dir).unwrap();
@@ -434,6 +510,8 @@ fn main() {
 
     println!();
     println!("Total time: {} ms", result.total_us / 1000);
+    #[cfg(feature = "custom-frontend")]
+    println!("  frontend (incl. assembly): {} ms", result.frontend_us / 1000);
     println!();
     println!("Top-{TOP_K} species:");
     for &i in top_k(&output).iter() {
