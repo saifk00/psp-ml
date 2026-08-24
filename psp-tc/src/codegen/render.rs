@@ -1153,6 +1153,45 @@ fn render_kernel_call(
             quote! { swish(#in_expr, #out_expr); }
         }
 
+        KernelCall::FullyConnectedCB {
+            input,
+            band_meta,
+            band_data,
+            output,
+            rows,
+            in_features,
+            out_features,
+        } => {
+            let in_expr = writer.read(*input);
+            // band_meta is an I32 constant tensor in the weights blob; read as
+            // f32 slice and reinterpret as i32 at runtime (the Gather pattern).
+            let meta_expr = writer.read(*band_meta);
+            let meta_len = out_features * 2;
+            let data_expr = writer.read(*band_data);
+            let out_expr = writer.write(*output);
+            quote! {
+                fully_connected_cb(
+                    #in_expr,
+                    #rows,
+                    #in_features,
+                    unsafe { core::slice::from_raw_parts(#meta_expr.as_ptr() as *const i32, #meta_len) },
+                    #data_expr,
+                    #out_expr,
+                    #out_features,
+                );
+            }
+        }
+
+        KernelCall::SquarePow {
+            input,
+            output,
+            exponent,
+        } => {
+            let in_expr = writer.read(*input);
+            let out_expr = writer.write(*output);
+            quote! { square_pow(#in_expr, #out_expr, #exponent); }
+        }
+
         KernelCall::FakeQuant {
             input,
             output,

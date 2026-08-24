@@ -24,12 +24,19 @@ REDUCE_MIN/SUB/REDUCE_MAX/ADD/DIV/SUB/MUL chain), so the benchmark measures
 the STFT alone and every consumer — dense-gather compile, strided-view
 compile, and the TFLite golden — sees bit-identical input bytes.
 
+Also slices the mel projection that follows each branch (FC by the mel
+filterbank matrix, then MUL(x,x) + POW) into per-branch models whose input
+is that branch's STFT output — golden_<L>.bin is bit-exactly their input.
+
 Writes into models/birdnet/stft/ (gitignored, regenerated on demand):
-  frontend.tflite            the sliced model (dense-gather semantics)
-  window_2048.bin/1024.bin   the hann window constants, f32
-  samples.bin                normalised cardinal_3s.wav samples, f32[144000]
-  golden_2048.bin/1024.bin   TFLite's own frontend outputs for samples.bin
-  manifest.json              shapes/hops, read by the benchmark's build.rs
+  frontend.tflite              the sliced STFT model (dense-gather semantics)
+  window_2048.bin/1024.bin     the hann window constants, f32
+  samples.bin                  normalised cardinal_3s.wav samples, f32[144000]
+  golden_2048.bin/1024.bin     TFLite's own frontend outputs for samples.bin
+  mel_2048.tflite/1024.tflite  per-branch mel slices (dense-FC semantics)
+  mel_dense_2048.bin/1024.bin  the stored [96, bins] mel matrices, row-major
+  golden_mel_2048.bin/1024.bin TFLite's own mel outputs ([511, 96], post-POW)
+  manifest.json                shapes + the pow exponent, read by build.rs
 
 Run from the repo root::
 
@@ -203,27 +210,41 @@ def backward_slice(model, sg, outputs, stop_tensor):
   return sorted(keep_ops)
 
 
-def slice_model(buf: bytes):
+def slice_subgraph(buf: bytes, input_tensor: int, outputs: list[int],
+                   input_shape: list[int] | None = None) -> bytes:
+  """Cut the subgraph feeding `outputs` out of the model, with `input_tensor`
+  as its sole input.
+
+  `input_shape` overrides the input tensor's stored shape — needed when the
+  stored static shape is the single-frame lie (e.g. the CAST outputs say
+  [1, 1, 1025] but run as [1, 511, 1025]); downstream SHAPE arithmetic and
+  psp-tc's inference both derive everything from the input's shape, so the
+  slice must declare the runtime truth.
+
+  Parses its own ModelT: slicing mutates ops/tensors in place, so each slice
+  needs a fresh object tree.
+  """
   model = schema.ModelT.InitFromObj(schema.Model.GetRootAs(buf, 0))
   if len(model.subgraphs) != 1:
     raise ValueError(f"expected 1 subgraph, got {len(model.subgraphs)}")
   sg = model.subgraphs[0]
 
-  norm, branches = find_frontend(model, sg)
-  outputs = [cast_out for _, _, cast_out in branches]
-  keep_ops = backward_slice(model, sg, outputs, norm)
+  keep_ops = backward_slice(model, sg, outputs, input_tensor)
 
   # The framing arithmetic reads the shape of the *graph input* via SHAPE ops;
-  # after the slice the normalised tensor (identical [1, 144000]) is the
-  # input, so redirect those reads.
+  # after the slice the new input tensor plays that role, so redirect any
+  # remaining reads of the old graph input.
   old_input = sg.inputs[0]
   for op_idx in keep_ops:
     op = sg.operators[op_idx]
-    op.inputs = [norm if i == old_input else i for i in op.inputs]
+    op.inputs = [input_tensor if i == old_input else i for i in op.inputs]
+
+  if input_shape is not None:
+    sg.tensors[input_tensor].shape = list(input_shape)
 
   # Tensor + buffer remap. Buffer 0 stays the canonical empty buffer.
-  kept_tensors = [norm]
-  seen = {norm}
+  kept_tensors = [input_tensor]
+  seen = {input_tensor}
   for op_idx in keep_ops:
     op = sg.operators[op_idx]
     for t in list(op.inputs) + list(op.outputs):
@@ -253,7 +274,7 @@ def slice_model(buf: bytes):
 
   sg.tensors = new_tensors
   sg.operators = new_ops
-  sg.inputs = [tensor_map[norm]]
+  sg.inputs = [tensor_map[input_tensor]]
   sg.outputs = [tensor_map[t] for t in outputs]
   model.buffers = new_buffers
   # Metadata and signatures index into the old tensor/buffer tables.
@@ -263,7 +284,54 @@ def slice_model(buf: bytes):
 
   builder = flatbuffers.Builder(1024)
   builder.Finish(model.Pack(builder), TFLITE_FILE_IDENTIFIER)
-  return bytes(builder.Output()), branches
+  return bytes(builder.Output())
+
+
+def find_mel(model, sg, cast_out: int):
+  """From a branch's CAST output, locate the mel projection downstream:
+  CAST -> (shape arithmetic + RESHAPE) -> FULLY_CONNECTED [96, bins]
+       -> RESHAPE -> MUL(x, x) -> POW(x, const).
+
+  Returns (pow_output_tensor, fc_weights_tensor, pow_exponent).
+  """
+  consumers = {}
+  for op_idx, op in enumerate(sg.operators):
+    for t in op.inputs:
+      if t >= 0:
+        consumers.setdefault(t, []).append(op_idx)
+
+  # Follow the data path (not the SHAPE arithmetic) to the FC.
+  t = cast_out
+  fc = None
+  while fc is None:
+    data_ops = [
+        sg.operators[c]
+        for c in consumers.get(t, [])
+        if opcode(model, sg.operators[c]) in (BO.RESHAPE, BO.FULLY_CONNECTED)
+    ]
+    if not data_ops:
+      raise ValueError(f"no FC downstream of t{cast_out}")
+    follow = data_ops[0]
+    if opcode(model, follow) == BO.FULLY_CONNECTED:
+      fc = follow
+    else:
+      t = follow.outputs[0]
+
+  weights_idx = fc.inputs[1]
+  # FC -> RESHAPE -> MUL -> POW
+  t = fc.outputs[0]
+  pow_op = None
+  while pow_op is None:
+    nxt = sg.operators[consumers[t][0]]
+    code = opcode(model, nxt)
+    if code == BO.POW:
+      pow_op = nxt
+    elif code in (BO.RESHAPE, BO.MUL):
+      t = nxt.outputs[0]
+    else:
+      raise ValueError(f"unexpected op {code} between FC and POW")
+  exponent = float(buffer_data(model, sg, pow_op.inputs[1])[0])
+  return pow_op.outputs[0], weights_idx, exponent
 
 
 def load_wav(path: Path) -> np.ndarray:
@@ -312,8 +380,8 @@ def main() -> None:
     goldens[fft_length] = vals
     print(f"golden_{fft_length}.bin: {vals.shape}")
 
-  # The slice itself.
-  sliced, _ = slice_model(buf)
+  # The STFT slice itself.
+  sliced = slice_subgraph(buf, norm, [cast_out for _, _, cast_out in branches])
   (OUT_DIR / "frontend.tflite").write_bytes(sliced)
   print(f"frontend.tflite: {len(sliced)} bytes (from {len(buf)})")
 
@@ -334,11 +402,52 @@ def main() -> None:
       raise AssertionError(f"sliced model diverges from full model (L={fft_length})")
   print("sliced model matches full-model taps exactly")
 
+  # ── Mel projection slices, one per branch ────────────────────────────
+  # CAST(f32 bins) -> FC [96, bins] (the mel filterbank as a dense matmul)
+  # -> MUL(x,x) -> POW. The slice's input is the branch's STFT output with
+  # its runtime shape declared, so golden_<L>.bin is exactly its input.
+  pow_exponents = {}
+  for fft_length, _, cast_out in branches:
+    bins = fft_length // 2 + 1
+    pow_out, weights_idx, exponent = find_mel(model, sg, cast_out)
+    pow_exponents[fft_length] = exponent
+
+    weights = buffer_data(model, sg, weights_idx)
+    assert weights.size == 96 * bins
+    (OUT_DIR / f"mel_dense_{fft_length}.bin").write_bytes(weights.tobytes())
+
+    golden_mel = interp.get_tensor(pow_out)
+    golden_mel = golden_mel.reshape(golden_mel.shape[-2], -1).astype(np.float32)
+    assert golden_mel.shape == (n_windows, 96), golden_mel.shape
+    (OUT_DIR / f"golden_mel_{fft_length}.bin").write_bytes(golden_mel.tobytes())
+
+    mel_sliced = slice_subgraph(
+        buf, cast_out, [pow_out], input_shape=[1, int(n_windows), bins]
+    )
+    (OUT_DIR / f"mel_{fft_length}.tflite").write_bytes(mel_sliced)
+    print(f"mel_{fft_length}.tflite: {len(mel_sliced)} bytes, pow={exponent}")
+
+    check = Interpreter(model_content=mel_sliced)
+    check.allocate_tensors()
+    (cin,) = check.get_input_details()
+    check.set_tensor(cin["index"], goldens[fft_length].reshape(1, n_windows, bins))
+    check.invoke()
+    (out,) = check.get_output_details()
+    vals = check.get_tensor(out["index"]).reshape(n_windows, -1)
+    if not np.array_equal(vals, golden_mel):
+      raise AssertionError(f"mel slice diverges from full model (L={fft_length})")
+    print(f"mel_{fft_length} slice matches full-model taps exactly")
+
   manifest = {
       "n_samples": 144000,
       "n_windows": int(n_windows),
       "branches": [
-          {"fft_length": int(l), "bins": int(l) // 2 + 1} for l, _, _ in branches
+          {
+              "fft_length": int(l),
+              "bins": int(l) // 2 + 1,
+              "pow_exponent": pow_exponents[l],
+          }
+          for l, _, _ in branches
       ],
   }
   (OUT_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")

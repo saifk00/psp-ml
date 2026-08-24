@@ -251,6 +251,26 @@ pub enum PspOp {
         hop: usize,
         n_windows: usize,
     },
+
+    /// Matmul against a column-banded matrix (`PspModelBuilder` graphs): the
+    /// mel filterbank stored as a `[n_banks, 2]` I32 `[start, len]` table
+    /// (`band_meta`) plus concatenated band coefficients (`band_data`).
+    /// `output[m, b] = Σ_k input[m, start_b + k] * band_b[k]`.
+    FullyConnectedCB {
+        input: TensorId,
+        band_meta: TensorId,
+        band_data: TensorId,
+        output: TensorId,
+    },
+
+    /// Fused `(x^2)^exponent` elementwise (`PspModelBuilder` graphs): the
+    /// spectrogram compression applied to real-part FFT bins — squaring
+    /// makes the base non-negative, so the `vlog2`/`vexp2` pow applies.
+    SquarePow {
+        input: TensorId,
+        output: TensorId,
+        exponent: f32,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -617,6 +637,25 @@ impl std::fmt::Display for PspOp {
                     n_windows
                 )
             }
+            PspOp::FullyConnectedCB {
+                input,
+                band_meta,
+                band_data,
+                output,
+            } => {
+                write!(
+                    f,
+                    "FullyConnectedCB(t{}, meta t{}, data t{} → t{})",
+                    input, band_meta, band_data, output
+                )
+            }
+            PspOp::SquarePow {
+                input,
+                output,
+                exponent,
+            } => {
+                write!(f, "SquarePow(t{} → t{}; p={})", input, output, exponent)
+            }
         }
     }
 }
@@ -728,6 +767,13 @@ impl PspOp {
                 Some(w) => vec![*input, *w],
                 None => vec![*input],
             },
+            PspOp::FullyConnectedCB {
+                input,
+                band_meta,
+                band_data,
+                ..
+            } => vec![*input, *band_meta, *band_data],
+            PspOp::SquarePow { input, .. } => vec![*input],
             PspOp::Pad {
                 input, paddings, ..
             } => vec![*input, *paddings],
@@ -814,7 +860,9 @@ impl PspOp {
             | PspOp::ReverseV2 { output, .. }
             | PspOp::Rfft2d { output, .. }
             | PspOp::Rfft { output, .. }
-            | PspOp::StridedViewStft { output, .. } => *output,
+            | PspOp::StridedViewStft { output, .. }
+            | PspOp::FullyConnectedCB { output, .. }
+            | PspOp::SquarePow { output, .. } => *output,
             PspOp::SplitV { .. } => panic!("SplitV has multiple outputs; use outputs()"),
         }
     }
@@ -902,6 +950,21 @@ impl PspOp {
             } => {
                 r(input);
                 r_opt(window);
+                r(output);
+            }
+            PspOp::FullyConnectedCB {
+                input,
+                band_meta,
+                band_data,
+                output,
+            } => {
+                r(input);
+                r(band_meta);
+                r(band_data);
+                r(output);
+            }
+            PspOp::SquarePow { input, output, .. } => {
+                r(input);
                 r(output);
             }
             PspOp::ElementWise {

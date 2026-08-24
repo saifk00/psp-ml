@@ -147,6 +147,9 @@ fn is_batch_independent(model: &PspModel, op: &PspOp) -> bool {
         // the output is not independently sliceable from dim 0 of the input.
         PspOp::StridedViewStft { .. } => false,
 
+        // Row-wise / elementwise builder ops.
+        PspOp::FullyConnectedCB { .. } | PspOp::SquarePow { .. } => true,
+
         // ReverseV2: batch-independent if not reversing dim 0
         PspOp::ReverseV2 { axis, .. } => match model.read_i32_const(*axis) {
             Some(axis_vals) => !axis_vals.contains(&0),

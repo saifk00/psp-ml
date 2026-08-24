@@ -592,6 +592,83 @@ fn test_rfft_strided_matches_dense() -> bool {
     true
 }
 
+fn test_square_pow_matches_mul_then_pow() -> bool {
+    // On device the fused kernel is pow_const's vlog2/vexp2 pipeline with one
+    // extra vmul.q; squaring via scalar mul first must land on the same bits
+    // (an IEEE f32 multiply is exact in either engine). Aligned buffers so the
+    // VFPU path actually runs — unaligned would silently take the scalar
+    // fallback and prove nothing.
+    const N: usize = 32;
+    const C: f32 = 0.2199;
+    let mut inp = Aligned([0.0f32; N]);
+    for i in 0..N {
+        inp[i] = (i as f32 - 13.0) * 0.31; // negatives included: x^2 fixes them
+    }
+    let mut squared = Aligned([0.0f32; N]);
+    for i in 0..N {
+        squared[i] = inp[i] * inp[i];
+    }
+    let mut want = Aligned([0.0f32; N]);
+    kernels::pow_const(&squared, &mut want, C);
+    let mut got = Aligned([f32::NAN; N]);
+    kernels::square_pow(&inp, &mut got, C);
+    for i in 0..N {
+        if got[i].to_bits() != want[i].to_bits() {
+            return false;
+        }
+    }
+    true
+}
+
+fn test_fc_cb_matches_dense() -> bool {
+    // Scalar on both targets today (the VFPU CB kernel is deliberately
+    // undesigned — see kernels/mod.rs); the check pins the contract a future
+    // VFPU version must keep: identical results to the dense matmul over the
+    // equivalent mostly-zero matrix.
+    const ROWS: usize = 3;
+    const IN: usize = 24;
+    const OUT: usize = 5;
+    let mut input = Aligned([0.0f32; ROWS * IN]);
+    for i in 0..ROWS * IN {
+        input[i] = libm::sinf(i as f32 * 0.9);
+    }
+    let band_meta: [i32; OUT * 2] = [0, 3, 2, 1, 5, 4, 10, 2, 20, 4];
+    let mut band_data = Aligned([0.0f32; 3 + 1 + 4 + 2 + 4]);
+    for (i, v) in band_data.iter_mut().enumerate() {
+        *v = 0.1 + i as f32 * 0.07;
+    }
+
+    let mut dense = Aligned([0.0f32; OUT * IN]);
+    let mut off = 0usize;
+    for b in 0..OUT {
+        let (start, len) = (band_meta[2 * b] as usize, band_meta[2 * b + 1] as usize);
+        for k in 0..len {
+            dense[b * IN + start + k] = band_data[off + k];
+        }
+        off += len;
+    }
+
+    let mut want = Aligned([0.0f32; ROWS * OUT]);
+    for m in 0..ROWS {
+        naive::fully_connected(
+            &input[m * IN..(m + 1) * IN],
+            IN,
+            &dense,
+            None,
+            &mut want[m * OUT..(m + 1) * OUT],
+            OUT,
+        );
+    }
+    let mut got = Aligned([f32::NAN; ROWS * OUT]);
+    kernels::fully_connected_cb(&input, ROWS, IN, &band_meta, &band_data, &mut got, OUT);
+    for i in 0..ROWS * OUT {
+        if got[i].to_bits() != want[i].to_bits() {
+            return false;
+        }
+    }
+    true
+}
+
 device_checks! {
     // Every kernel has a scalar fallback in the same signature, so the whole
     // suite is meaningful on both runners.
@@ -610,6 +687,8 @@ device_checks! {
         test_depthwise_padding_matches_explicit_pad,
         test_pow_const_matches_libm,
         test_rfft_strided_matches_dense,
+        test_square_pow_matches_mul_then_pow,
+        test_fc_cb_matches_dense,
     ],
     device: [],
 }

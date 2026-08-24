@@ -355,6 +355,25 @@ pub enum KernelCall {
         frames: usize,
     },
 
+    /// Matmul against a column-banded matrix ([start, len] I32 table +
+    /// concatenated band coefficients). See `psp_rt::kernels::fully_connected_cb`.
+    FullyConnectedCB {
+        input: TensorId,
+        band_meta: TensorId,
+        band_data: TensorId,
+        output: TensorId,
+        rows: usize,
+        in_features: usize,
+        out_features: usize,
+    },
+
+    /// Fused `(x^2)^exponent` elementwise. See `psp_rt::kernels::square_pow`.
+    SquarePow {
+        input: TensorId,
+        output: TensorId,
+        exponent: f32,
+    },
+
     /// Windowed STFT over strided views: frame `f` is `input[f*hop..f*hop+n]`,
     /// windowed during the bit-reversal pack. See `psp_rt::kernels::rfft_strided_batch`.
     RfftStridedBatch {

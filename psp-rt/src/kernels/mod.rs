@@ -1646,6 +1646,108 @@ pub fn pow_const(input: &[f32], output: &mut [f32], exponent: f32) {
     }
 }
 
+/// `out[i] = (in[i] * in[i]).powf(c)` — the spectrogram compression fused
+/// into one pass. BirdNET applies MUL(x,x) then POW(·, c) to each mel
+/// projection; fusing saves a full read+write of the tensor, and squaring
+/// first makes the base non-negative, so `pow_const`'s precondition holds by
+/// construction. One `vmul.q` on top of `pow_const`'s pipeline; numerics are
+/// otherwise identical to `mul` + `pow_const` (an IEEE f32 multiply is exact
+/// in either engine).
+#[cfg(target_os = "psp")]
+#[inline(never)]
+pub fn square_pow(input: &[f32], output: &mut [f32], exponent: f32) {
+    let n = core::cmp::min(input.len(), output.len());
+    let aligned = input.as_ptr() as usize % 16 == 0 && output.as_ptr() as usize % 16 == 0;
+    let quads = if aligned { n / 4 } else { 0 };
+    if quads > 0 {
+        let c4 = Align16F4([exponent; 4]);
+        unsafe {
+            vfpu_asm!(
+                "lv.q R700, 0({c})",
+                "2:",
+                "lv.q R000, 0({i})",
+                "vmul.q R000, R000, R000",   // x^2
+                "vlog2.q R001, R000",        // log2 x^2
+                "vmul.q R002, R001, R700",   // c * log2 x^2
+                "vexp2.q R003, R002",        // (x^2)^c
+                "sv.q R003, 0({o})",
+                "addiu {i}, {i}, 16",
+                "addiu {n}, {n}, -1",
+                "bnez {n}, 2b",
+                "addiu {o}, {o}, 16",        // branch delay slot
+                c = in(reg) (c4.0.as_ptr()),
+                i = inout(reg) (input.as_ptr()) => _,
+                o = inout(reg) (output.as_mut_ptr()) => _,
+                n = inout(reg) (quads) => _,
+                options(nostack),
+            );
+        }
+    }
+    for i in quads * 4..n {
+        output[i] = libm::powf(input[i] * input[i], exponent);
+    }
+}
+
+/// Scalar mirror for host builds.
+#[cfg(not(target_os = "psp"))]
+pub fn square_pow(input: &[f32], output: &mut [f32], exponent: f32) {
+    let n = core::cmp::min(input.len(), output.len());
+    for i in 0..n {
+        output[i] = libm::powf(input[i] * input[i], exponent);
+    }
+}
+
+// ============================================================================
+// Banded (Compressed-Sparse-Column) fully connected — the mel projection
+// ============================================================================
+
+/// `output[m, b] = Σ_k input[m, start_b + k] * band_data[off_b + k]` — a
+/// matmul against a column-banded matrix, one contiguous band of nonzeros
+/// per output column. BirdNET's mel filterbanks are the motivating case:
+/// [1025, 96] and [513, 96] matrices at 0.3% / 1.2% nonzero (bands of 1–17
+/// bins), so the dense FC spends >99% of its MACs multiplying by zero.
+///
+/// `band_meta` holds `[start, len]` per output column (bank), and `band_data`
+/// their coefficients concatenated in the same order.
+///
+/// The scalar accumulation order matches `naive::fully_connected` (ascending
+/// k, zero terms contribute exactly nothing), so on the host the result is
+/// bit-identical to the dense matmul with the equivalent dense matrix.
+///
+/// **VFPU kernel: deliberately not designed yet.** This body is the scalar
+/// reference on both targets. The design sketch (docs/Custom Frontend.md):
+/// each column slices the input to an [M, C] subset, giving an [M×C] × [C×1]
+/// dense matmul — but with C this small (1–17) the load/blocking trade-offs
+/// are open. Replace this body with the VFPU path when that design lands;
+/// the benchmark and codegen need no change.
+#[allow(clippy::too_many_arguments)]
+pub fn fully_connected_cb(
+    input: &[f32],
+    rows: usize,
+    in_features: usize,
+    band_meta: &[i32],
+    band_data: &[f32],
+    output: &mut [f32],
+    out_features: usize,
+) {
+    debug_assert_eq!(band_meta.len(), out_features * 2);
+    for m in 0..rows {
+        let row = &input[m * in_features..(m + 1) * in_features];
+        let out_row = &mut output[m * out_features..(m + 1) * out_features];
+        let mut off = 0usize;
+        for b in 0..out_features {
+            let start = band_meta[2 * b] as usize;
+            let len = band_meta[2 * b + 1] as usize;
+            let mut sum = 0.0f32;
+            for k in 0..len {
+                sum += row[start + k] * band_data[off + k];
+            }
+            out_row[b] = sum;
+            off += len;
+        }
+    }
+}
+
 /// `out[i] = in[i] * sigmoid(in[i])` (swish / SiLU).
 #[cfg(target_os = "psp")]
 #[inline(never)]
@@ -2382,5 +2484,87 @@ mod rfft_tests {
         // The real branches, a handful of frames: L=2048 hop=278, L=1024 hop=280.
         check_strided(2048, 278, 5, true);
         check_strided(1024, 280, 5, true);
+    }
+}
+
+#[cfg(test)]
+mod mel_tests {
+    use super::*;
+    extern crate std;
+    use std::vec;
+    use std::vec::Vec;
+
+    /// The CB contract: bit-identical to the dense matmul with the
+    /// equivalent (mostly-zero) dense matrix, because zero terms contribute
+    /// exactly nothing to an ordered f32 accumulation.
+    #[test]
+    fn fc_cb_matches_dense_bitwise() {
+        let (rows, in_features, out_features) = (7, 40, 9);
+        let mut s = 5u32;
+        let mut rand = || {
+            s = s.wrapping_mul(1664525).wrapping_add(1013904223);
+            ((s >> 8) as f32 / 8388608.0) - 1.0
+        };
+
+        // Random bands, including len-1 and a band touching the last column.
+        let mut band_meta = Vec::new();
+        let mut band_data = Vec::new();
+        let mut dense = vec![0.0f32; out_features * in_features];
+        for b in 0..out_features {
+            let start = (b * 4) % (in_features - 6);
+            let len = 1 + (b % 6);
+            band_meta.push(start as i32);
+            band_meta.push(len as i32);
+            for k in 0..len {
+                let v = rand();
+                band_data.push(v);
+                dense[b * in_features + start + k] = v;
+            }
+        }
+        let input: Vec<f32> = (0..rows * in_features).map(|_| rand()).collect();
+
+        let mut want = vec![0.0f32; rows * out_features];
+        for m in 0..rows {
+            naive::fully_connected(
+                &input[m * in_features..(m + 1) * in_features],
+                in_features,
+                &dense,
+                None,
+                &mut want[m * out_features..(m + 1) * out_features],
+                out_features,
+            );
+        }
+
+        let mut got = vec![f32::NAN; rows * out_features];
+        fully_connected_cb(
+            &input,
+            rows,
+            in_features,
+            &band_meta,
+            &band_data,
+            &mut got,
+            out_features,
+        );
+
+        for (i, (g, w)) in got.iter().zip(want.iter()).enumerate() {
+            assert!(g.to_bits() == w.to_bits(), "elem {i}: {g} != {w}");
+        }
+    }
+
+    /// Fusing the square must change nothing vs the two-op form.
+    #[test]
+    fn square_pow_matches_mul_then_pow() {
+        let input: Vec<f32> = (0..37).map(|i| (i as f32 - 11.0) * 0.3).collect();
+        let mut squared = vec![0.0f32; input.len()];
+        for (s, x) in squared.iter_mut().zip(input.iter()) {
+            *s = x * x;
+        }
+        let mut want = vec![0.0f32; input.len()];
+        pow_const(&squared, &mut want, 0.2199);
+        let mut got = vec![f32::NAN; input.len()];
+        square_pow(&input, &mut got, 0.2199);
+        for (i, (g, w)) in got.iter().zip(want.iter()).enumerate() {
+            assert!(g.to_bits() == w.to_bits(), "elem {i}: {g} != {w}");
+        }
     }
 }

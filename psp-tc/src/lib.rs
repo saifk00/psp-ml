@@ -3,11 +3,13 @@
 pub mod builder;
 pub mod codegen;
 pub mod ir;
+pub mod mel;
 pub mod memory_planner;
 pub mod parse;
 
 pub use builder::PspModelBuilder;
 pub use codegen::ModelStats;
+pub use mel::{make_mel, mel_spectrogram, CBMatrix, ColumnBand};
 
 use ir::PspModel;
 use std::fs;

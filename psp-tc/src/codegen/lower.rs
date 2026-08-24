@@ -564,6 +564,57 @@ fn lower_ops(
                     }],
                 }],
             },
+
+            PspOp::FullyConnectedCB {
+                input,
+                band_meta,
+                band_data,
+                output,
+            } => {
+                let in_shape = &graph.tensor(*input).shape;
+                let out_shape = &graph.tensor(*output).shape;
+                let in_features = *in_shape.last().ok_or("FullyConnectedCB: scalar input")?;
+                let out_features = *out_shape.last().ok_or("FullyConnectedCB: scalar output")?;
+                let rows = in_shape.iter().product::<usize>() / in_features;
+                let meta_elems: usize = graph.tensor(*band_meta).shape.iter().product();
+                if meta_elems != out_features * 2 {
+                    return Err(format!(
+                        "Op {i}: FullyConnectedCB band_meta has {meta_elems} entries, \
+                         expected {out_features}x2"
+                    ));
+                }
+                OpPlan {
+                    scratch: vec![],
+                    sub_ops: vec![SubOpPlan {
+                        name: "fc_cb".into(),
+                        kernels: vec![KernelCall::FullyConnectedCB {
+                            input: *input,
+                            band_meta: *band_meta,
+                            band_data: *band_data,
+                            output: *output,
+                            rows,
+                            in_features,
+                            out_features,
+                        }],
+                    }],
+                }
+            }
+
+            PspOp::SquarePow {
+                input,
+                output,
+                exponent,
+            } => OpPlan {
+                scratch: vec![],
+                sub_ops: vec![SubOpPlan {
+                    name: "square_pow".into(),
+                    kernels: vec![KernelCall::SquarePow {
+                        input: *input,
+                        output: *output,
+                        exponent: *exponent,
+                    }],
+                }],
+            },
             PspOp::Swish { input, output } => OpPlan {
                 scratch: vec![],
                 sub_ops: vec![SubOpPlan {

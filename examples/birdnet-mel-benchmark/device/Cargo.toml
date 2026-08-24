@@ -1,0 +1,29 @@
+[package]
+name = "birdnet-mel-benchmark"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "birdnet-mel-benchmark"
+path = "src/main.rs"
+
+[features]
+# `local` by default so `cargo test`/`cargo build` treat this as a normal host
+# crate (scalar kernels, both mel implementations compiled in, mode picked by
+# --mode). The device build passes --no-default-features --features mode-* to
+# get a no_std PRX containing exactly ONE implementation, so its arena and
+# blob attribute cleanly to the mode being measured.
+default = ["local"]
+local = []
+mode-dense = []
+mode-cb = []
+
+[dependencies]
+psp-rt = { path = "../../../psp-rt" }
+
+[target.'cfg(target_os = "psp")'.dependencies]
+psp = "0.3"
+
+[build-dependencies]
+psp-tc = { path = "../../../psp-tc" }
+serde_json = "1"

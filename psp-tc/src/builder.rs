@@ -67,6 +67,33 @@ impl PspModelBuilder {
         )
     }
 
+    /// Add an I32 constant backed by the model blob.
+    pub fn constant_i32(&mut self, shape: Vec<usize>, data: &[i32]) -> TensorId {
+        assert_eq!(
+            shape.iter().product::<usize>(),
+            data.len(),
+            "constant shape {shape:?} does not match {} data elements",
+            data.len()
+        );
+        let offset = self.model_data.len();
+        for v in data {
+            self.model_data.extend_from_slice(&v.to_le_bytes());
+        }
+        self.graph.add_tensor(
+            shape,
+            DType::I32,
+            TensorKind::Constant {
+                offset,
+                len: data.len() * 4,
+            },
+        )
+    }
+
+    /// Shape of a tensor created through this builder.
+    pub fn shape(&self, id: TensorId) -> &[usize] {
+        &self.graph.tensor(id).shape
+    }
+
     /// Windowed strided-view STFT over a 1D signal: `n_windows` frames of
     /// `fft_length` samples, hop derived the way BirdNET frames —
     /// `floor((n_samples - fft_length) / (n_windows - 1))`. Returns the
@@ -97,6 +124,58 @@ impl PspModelBuilder {
             fft_length,
             hop,
             n_windows,
+        });
+        output
+    }
+
+    /// Matmul against a column-banded matrix (see [`crate::mel::CBMatrix`]):
+    /// `out[m, b] = Σ_k in[m, start_b + k] * band_b[k]`. The matrix is
+    /// serialised into the blob as a `[n_banks, 2]` I32 `[start, len]` table
+    /// plus the concatenated band coefficients. Returns the
+    /// `[rows, n_banks]` output tensor.
+    pub fn fully_connected_cb(
+        &mut self,
+        input: TensorId,
+        matrix: &crate::mel::CBMatrix,
+    ) -> TensorId {
+        let in_shape = self.graph.tensor(input).shape.clone();
+        let (rows, in_features) = match in_shape.as_slice() {
+            [rows, cols] => (*rows, *cols),
+            other => panic!("fully_connected_cb input must be 2D, got {other:?}"),
+        };
+        assert_eq!(
+            in_features, matrix.n_rows,
+            "input has {in_features} features but the matrix has {} rows",
+            matrix.n_rows
+        );
+        let n_banks = matrix.n_cols();
+        let band_meta = self.constant_i32(vec![n_banks, 2], &matrix.band_meta());
+        let band_data = self.constant_f32(vec![matrix.nnz()], &matrix.band_data());
+        let output = self.graph.add_tensor(
+            vec![rows, n_banks],
+            DType::F32,
+            TensorKind::Intermediate,
+        );
+        self.graph.ops.push(PspOp::FullyConnectedCB {
+            input,
+            band_meta,
+            band_data,
+            output,
+        });
+        output
+    }
+
+    /// Fused `(x^2)^p` elementwise — the spectrogram compression applied to
+    /// the real-part FFT bins. Returns the output tensor (same shape).
+    pub fn square_pow(&mut self, input: TensorId, exponent: f32) -> TensorId {
+        let shape = self.graph.tensor(input).shape.clone();
+        let output = self
+            .graph
+            .add_tensor(shape, DType::F32, TensorKind::Intermediate);
+        self.graph.ops.push(PspOp::SquarePow {
+            input,
+            output,
+            exponent,
         });
         output
     }
