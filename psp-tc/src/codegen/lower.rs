@@ -258,11 +258,13 @@ fn lower_ops(
             output,
             fft_length,
             hop,
+            in_stride,
             n_windows,
         } = &op
         {
             ops.push(lower_strided_stft(
-                model, allocs, *input, *window, *output, *fft_length, *hop, *n_windows,
+                model, allocs, *input, *window, *output, *fft_length, *hop, *in_stride,
+                *n_windows,
             )?);
             continue;
         }
@@ -617,6 +619,33 @@ fn lower_ops(
                     }],
                 }],
             },
+
+            PspOp::FirDecimate {
+                input,
+                taps,
+                output,
+                factor,
+            } => {
+                let in_elems: usize = graph.tensor(*input).shape.iter().product();
+                let out_elems: usize = graph.tensor(*output).shape.iter().product();
+                if out_elems * *factor != in_elems {
+                    return Err(format!(
+                        "Op {i}: FirDecimate output {out_elems} x factor {factor} != input {in_elems}"
+                    ));
+                }
+                OpPlan {
+                    scratch: vec![],
+                    sub_ops: vec![SubOpPlan {
+                        name: "fir_decimate".into(),
+                        kernels: vec![KernelCall::FirDecimate {
+                            input: *input,
+                            taps: *taps,
+                            output: *output,
+                            factor: *factor,
+                        }],
+                    }],
+                }
+            }
             PspOp::Swish { input, output } => OpPlan {
                 scratch: vec![],
                 sub_ops: vec![SubOpPlan {
@@ -1396,17 +1425,22 @@ fn lower_strided_stft(
     output: TensorId,
     fft_length: usize,
     hop: usize,
+    in_stride: usize,
     n_windows: usize,
 ) -> Result<OpPlan, String> {
     let n = fft_length;
     if !(n / 2).is_power_of_two() {
         return Err(format!("StridedViewStft: fft_length {n} must be 2*2^k"));
     }
+    if in_stride == 0 {
+        return Err("StridedViewStft: in_stride must be >= 1".to_string());
+    }
 
     let in_elems: usize = model.graph.tensor(input).shape.iter().product();
-    if (n_windows - 1) * hop + n > in_elems {
+    if (n_windows - 1) * hop + in_stride * (n - 1) + 1 > in_elems {
         return Err(format!(
-            "StridedViewStft: {n_windows} windows of {n} at hop {hop} overrun input of {in_elems}"
+            "StridedViewStft: {n_windows} windows of {n} (stride {in_stride}) at hop {hop} \
+             overrun input of {in_elems}"
         ));
     }
     if let Some(w) = window {
@@ -1445,6 +1479,7 @@ fn lower_strided_stft(
                 scratch: 0,
                 n,
                 hop,
+                in_stride,
                 frames: n_windows,
             }],
         }],

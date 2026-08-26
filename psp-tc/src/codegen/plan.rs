@@ -385,7 +385,16 @@ pub enum KernelCall {
         scratch: ScratchId,
         n: usize,
         hop: usize,
+        in_stride: usize,
         frames: usize,
+    },
+
+    /// FIR lowpass + decimation. See `psp_rt::kernels::fir_decimate`.
+    FirDecimate {
+        input: TensorId,
+        taps: TensorId,
+        output: TensorId,
+        factor: usize,
     },
 
     /// Pack N real values into N/2 interleaved complex pairs in bit-reversed order.

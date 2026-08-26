@@ -299,6 +299,243 @@ pub fn stft_mel_frontend(
         .collect()
 }
 
+// ═════════════════════════════════════════════════════════════════════════
+// Small-FFT pruning pass
+// ═════════════════════════════════════════════════════════════════════════
+//
+// The mel banks read a contiguous low prefix of the FFT's bins (BirdNET:
+// 128 of 1025 for L=2048, 320 of 513 for L=1024) — most of the transform is
+// computed and thrown away. This pass shrinks the FFT while keeping the
+// SAME bin grid: reading the signal at stride D and transforming N = L/D
+// points yields bins spaced Fs/L exactly as before, just fewer of them —
+// provided the signal is anti-alias filtered first, since everything above
+// the pruned Nyquist folds back into the kept bins.
+
+/// How one branch's FFT gets pruned. Produced by [`plan_small_fft`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct SmallFftPlan {
+    /// Columns the mel banks actually read (top band's end bin + 1).
+    pub needed_cols: usize,
+    /// Pruned FFT length: needed_cols rounded up to 2^j + 1 columns
+    /// (N = 2·2^j), then doubled while the Nyquist guard demands it.
+    pub fft_length: usize,
+    /// Total decimation `original_L / fft_length`.
+    pub decim: usize,
+    /// Decimation of the *stored* signal — the largest power of 2 dividing
+    /// `decim` that keeps the hop integer (BirdNET's hop 278 = 2·139 allows
+    /// 2, not 4). The rest of the decimation happens as the STFT's
+    /// `in_stride` read, aliasing already removed by the filter.
+    pub store_decim: usize,
+    /// Frame-internal stride at the stored rate: `decim / store_decim`.
+    pub in_stride: usize,
+    /// Hop at the stored rate: `original_hop / store_decim`.
+    pub hop: usize,
+    /// Anti-alias FIR (designed at the original rate, applied by
+    /// `fir_decimate` with factor `store_decim`).
+    pub taps: Vec<f32>,
+}
+
+/// Compute the pruned-FFT plan for one branch, or `None` when the rule
+/// leaves the FFT unchanged.
+///
+/// The sizing rule: count the FFT columns the branch's mel banks touch,
+/// round up to the nearest `2^j + 1`, and use `N = 2·2^j` as the FFT size.
+/// One guard on top: the anti-alias filter needs transition room. Aliases
+/// onto a kept frequency f come from `Fs/decim − f` and above, so if the top
+/// needed frequency exceeds `NYQUIST_GUARD` of the pruned Nyquist the
+/// transition band would be impossibly narrow (BirdNET's L=2048 branch at
+/// the rule's N=256: top bank at 2977 Hz vs a 3000 Hz Nyquist — 47 Hz of
+/// room) and the size is doubled. At N=512 the transition spans
+/// 2977→9023 Hz, a ~30-tap filter, and everything the transition band
+/// aliases lands in bins the mel banks never read.
+pub fn plan_small_fft(
+    fft_length: usize,
+    fmin: f64,
+    fmax: f64,
+    n_banks: usize,
+    sampling_rate: f64,
+    n_samples: usize,
+    n_windows: usize,
+) -> Option<SmallFftPlan> {
+    const NYQUIST_GUARD: f64 = 0.75;
+    const STOPBAND_DB: f64 = 60.0;
+
+    let n_freqs = fft_length / 2 + 1;
+    let mel_mat = make_mel(n_freqs, n_banks, fmin, fmax, sampling_rate);
+    let needed_cols = mel_mat
+        .columns
+        .iter()
+        .map(|b| b.start + b.data.len())
+        .max()
+        .unwrap_or(0);
+    assert!(needed_cols > 1, "mel banks read no bins");
+
+    // Round needed columns up to 2^j + 1; the FFT size is then 2·2^j.
+    let pow = usize::BITS - (needed_cols - 2).leading_zeros();
+    let mut n_new = 2usize << pow;
+    // Nyquist guard.
+    let top_hz = (needed_cols - 1) as f64 * sampling_rate / fft_length as f64;
+    while n_new < fft_length
+        && top_hz > NYQUIST_GUARD * sampling_rate * n_new as f64 / fft_length as f64 / 2.0
+    {
+        n_new *= 2;
+    }
+    if n_new >= fft_length {
+        return None;
+    }
+
+    let decim = fft_length / n_new;
+    let hop_full = (n_samples - fft_length) / (n_windows - 1);
+    let mut store_decim = 1usize;
+    while store_decim * 2 <= decim
+        && decim % (store_decim * 2) == 0
+        && hop_full % (store_decim * 2) == 0
+        && n_samples % (store_decim * 2) == 0
+    {
+        store_decim *= 2;
+    }
+
+    // Anti-alias filter: pass everything the banks read, stop everything
+    // whose alias would land on it.
+    let stop_hz = sampling_rate / decim as f64 - top_hz;
+    let taps = design_lowpass(sampling_rate, top_hz, stop_hz, STOPBAND_DB);
+
+    Some(SmallFftPlan {
+        needed_cols,
+        fft_length: n_new,
+        decim,
+        store_decim,
+        in_stride: decim / store_decim,
+        hop: hop_full / store_decim,
+        taps,
+    })
+}
+
+/// Kaiser windowed-sinc lowpass: unity passband up to `pass_hz`,
+/// `atten_db` of stopband rejection from `stop_hz`. Odd tap count
+/// (linear phase). Standard Kaiser design equations.
+pub fn design_lowpass(fs: f64, pass_hz: f64, stop_hz: f64, atten_db: f64) -> Vec<f32> {
+    assert!(stop_hz > pass_hz && stop_hz < fs / 2.0);
+    let delta_w = 2.0 * std::f64::consts::PI * (stop_hz - pass_hz) / fs;
+    let mut n = ((atten_db - 7.95) / (2.285 * delta_w)).ceil() as usize + 1;
+    if n % 2 == 0 {
+        n += 1;
+    }
+    let beta = if atten_db > 50.0 {
+        0.1102 * (atten_db - 8.7)
+    } else if atten_db >= 21.0 {
+        0.5842 * (atten_db - 21.0).powf(0.4) + 0.07886 * (atten_db - 21.0)
+    } else {
+        0.0
+    };
+    let fc = (pass_hz + stop_hz) / 2.0 / fs; // normalized cutoff (cycles/sample)
+    let center = (n - 1) as f64 / 2.0;
+    let i0_beta = bessel_i0(beta);
+    (0..n)
+        .map(|i| {
+            let m = i as f64 - center;
+            let sinc = if m == 0.0 {
+                2.0 * fc
+            } else {
+                (2.0 * std::f64::consts::PI * fc * m).sin() / (std::f64::consts::PI * m)
+            };
+            let r = 2.0 * m / (n - 1) as f64;
+            let w = bessel_i0(beta * (1.0 - r * r).max(0.0).sqrt()) / i0_beta;
+            (sinc * w) as f32
+        })
+        .collect()
+}
+
+/// Modified Bessel function of the first kind, order 0 (power series).
+fn bessel_i0(x: f64) -> f64 {
+    let mut sum = 1.0;
+    let mut term = 1.0;
+    let half_x = x / 2.0;
+    for k in 1..30 {
+        term *= (half_x / k as f64) * (half_x / k as f64);
+        sum += term;
+        if term < 1e-16 * sum {
+            break;
+        }
+    }
+    sum
+}
+
+/// [`stft_mel_frontend`] with the small-FFT pruning pass applied per branch:
+/// where [`plan_small_fft`] shrinks a branch's FFT, the signal is anti-alias
+/// filtered and decimated once (`FirDecimate`), the strided STFT reads it at
+/// the plan's hop and inner stride with the window subsampled to match, and
+/// the mel filterbank is regenerated on the pruned grid — identical bands,
+/// since the bin spacing is unchanged. Branches the rule leaves alone
+/// compile exactly as in the baseline.
+pub fn stft_mel_frontend_small_fft(
+    b: &mut PspModelBuilder,
+    samples: TensorId,
+    n_windows: usize,
+    sampling_rate: f64,
+    n_banks: usize,
+    branches: &[FrontendBranch],
+) -> Vec<TensorId> {
+    let n_samples: usize = b.shape(samples).iter().product();
+    branches
+        .iter()
+        .map(|br| {
+            assert_eq!(br.window.len(), br.fft_length);
+            match plan_small_fft(
+                br.fft_length,
+                br.fmin,
+                br.fmax,
+                n_banks,
+                sampling_rate,
+                n_samples,
+                n_windows,
+            ) {
+                None => {
+                    let w = b.constant_f32(vec![br.fft_length], &br.window);
+                    let stft = b.strided_view_stft(samples, Some(w), br.fft_length, n_windows);
+                    mel_spectrogram(
+                        b,
+                        stft,
+                        sampling_rate,
+                        br.fmin,
+                        br.fmax,
+                        n_banks,
+                        br.pow_exponent,
+                    )
+                }
+                Some(plan) => {
+                    let y = b.fir_decimate(samples, &plan.taps, plan.store_decim);
+                    // Subsample the window AND scale by decim: the pruned
+                    // DFT sums 1/decim as many terms, so without the scale
+                    // every kept bin comes out decim x smaller than the
+                    // baseline's (the aliasing identity X'[k] = (1/D)ΣV[..]).
+                    let sub_window: Vec<f32> = (0..plan.fft_length)
+                        .map(|j| br.window[j * plan.decim] * plan.decim as f32)
+                        .collect();
+                    let w = b.constant_f32(vec![plan.fft_length], &sub_window);
+                    let stft = b.strided_view_stft_with(
+                        y,
+                        Some(w),
+                        plan.fft_length,
+                        n_windows,
+                        plan.hop,
+                        plan.in_stride,
+                    );
+                    mel_spectrogram(
+                        b,
+                        stft,
+                        sampling_rate / plan.decim as f64,
+                        br.fmin,
+                        br.fmax,
+                        n_banks,
+                        br.pow_exponent,
+                    )
+                }
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -321,6 +558,108 @@ mod tests {
     fn split_band_is_rejected() {
         let rows = vec![1.0, 0.0, 1.0];
         assert!(CBMatrix::from_bank_rows(&rows, 1, 3).is_err());
+    }
+
+    #[test]
+    fn small_fft_plan_matches_birdnet_arithmetic() {
+        // L=2048 (banks 0–3 kHz, bins 0..127): rule gives N=256 but the top
+        // bank sits at 99% of that Nyquist, so the guard doubles to 512.
+        // Total decim 4; hop 278 keeps only a factor 2 integer, so the
+        // signal stores at half rate and the STFT reads it at stride 2.
+        let plan = plan_small_fft(2048, 0.0, 3000.0, 96, 48000.0, 144000, 511).unwrap();
+        assert_eq!(plan.needed_cols, 128);
+        assert_eq!(plan.fft_length, 512);
+        assert_eq!(plan.decim, 4);
+        assert_eq!(plan.store_decim, 2);
+        assert_eq!(plan.in_stride, 2);
+        assert_eq!(plan.hop, 139);
+        assert!(plan.taps.len() % 2 == 1 && plan.taps.len() < 64, "{}", plan.taps.len());
+
+        // L=1024 (banks to 15 kHz, bins 0..319): 320 rounds to 513 columns
+        // -> N=1024, unchanged -> no plan.
+        assert!(plan_small_fft(1024, 500.0, 15000.0, 96, 48000.0, 144000, 511).is_none());
+    }
+
+    #[test]
+    fn lowpass_response_meets_spec() {
+        let plan = plan_small_fft(2048, 0.0, 3000.0, 96, 48000.0, 144000, 511).unwrap();
+        let h = |f_hz: f64| -> f64 {
+            // magnitude of the FIR's frequency response at f (fs = 48 kHz)
+            let (mut re, mut im) = (0.0f64, 0.0f64);
+            for (t, &tap) in plan.taps.iter().enumerate() {
+                let ang = -2.0 * std::f64::consts::PI * f_hz * t as f64 / 48000.0;
+                re += tap as f64 * ang.cos();
+                im += tap as f64 * ang.sin();
+            }
+            (re * re + im * im).sqrt()
+        };
+        // Passband (everything the banks read) within ~0.15 dB of unity.
+        for f in [0.0, 1000.0, 2000.0, 2976.6] {
+            assert!((h(f) - 1.0).abs() < 0.02, "f={f}: {}", h(f));
+        }
+        // Stopband: every alias source for the kept band is >= ~60 dB down.
+        for f in [9023.4, 12000.0, 15000.0, 21000.0, 23900.0] {
+            assert!(h(f) < 2e-3, "f={f}: {}", h(f));
+        }
+    }
+
+    #[test]
+    fn pruned_grid_regenerates_identical_bands() {
+        // Bin spacing is unchanged (48000/2048 == 12000/512), so make_mel on
+        // the pruned grid must produce the same bands.
+        let full = make_mel(1025, 96, 0.0, 3000.0, 48000.0);
+        let pruned = make_mel(257, 96, 0.0, 3000.0, 12000.0);
+        assert_eq!(full.columns.len(), pruned.columns.len());
+        for (a, b) in full.columns.iter().zip(pruned.columns.iter()) {
+            assert_eq!(a.start, b.start);
+            assert_eq!(a.data.len(), b.data.len());
+            for (x, y) in a.data.iter().zip(b.data.iter()) {
+                assert!((x - y).abs() < 1e-6);
+            }
+        }
+    }
+
+    #[test]
+    fn small_fft_frontend_graph_generates() {
+        let mut b = PspModelBuilder::new();
+        let raw = b.input(vec![1, 144000]);
+        let norm = birdnet_normalize(&mut b, raw);
+        let branches = [
+            FrontendBranch {
+                fft_length: 2048,
+                window: (0..2048).map(|i| (i % 7) as f32 * 0.1).collect(),
+                fmin: 0.0,
+                fmax: 3000.0,
+                pow_exponent: 0.2199,
+            },
+            FrontendBranch {
+                fft_length: 1024,
+                window: vec![1.0; 1024],
+                fmin: 500.0,
+                fmax: 15000.0,
+                pow_exponent: 0.1720,
+            },
+        ];
+        let outs = stft_mel_frontend_small_fft(&mut b, norm, 511, 48000.0, 96, &branches);
+        for out in outs {
+            b.output(out);
+        }
+        let mut model = b.finish();
+        let generated = crate::codegen::generate_code_named(
+            &mut model,
+            None,
+            None,
+            None,
+            "sf_weights.bin",
+        )
+        .unwrap();
+        assert_eq!(generated.stats.output_size_floats, 2 * 96 * 511);
+        let code = generated.tokens.to_string();
+        assert!(code.contains("fir_decimate"));
+        // The pruned branch: 512-point FFT at hop 139, inner stride 2.
+        assert!(code.contains("512usize , 139usize , 2usize , 511usize"));
+        // The untouched branch keeps its full 1024-point transform.
+        assert!(code.contains("1024usize , 280usize , 1usize , 511usize"));
     }
 
     #[test]

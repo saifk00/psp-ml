@@ -798,8 +798,10 @@ pub const fn stage_tw_len(n: usize) -> usize {
     total
 }
 
-/// Bit-reversed pack of a real frame into split complex arrays.
-fn rfft_pack_split(input: &[f32], re: &mut [f32], im: &mut [f32], nc: usize) {
+/// Bit-reversed pack of a real frame into split complex arrays. `stride`
+/// spaces the frame's samples inside `input` (1 = contiguous; the pruned
+/// small-FFT frontend reads its decimated signal at stride 2).
+fn rfft_pack_split(input: &[f32], re: &mut [f32], im: &mut [f32], nc: usize, stride: usize) {
     // Reversed-counter increment rather than reversing each index from
     // scratch: the naive form costs log2(nc) shifts per element *per frame*
     // (~5 M operations across BirdNET's 511 frames) to recompute the identical
@@ -807,8 +809,8 @@ fn rfft_pack_split(input: &[f32], re: &mut [f32], im: &mut [f32], nc: usize) {
     // amortised.
     let mut rev = 0usize;
     for k in 0..nc {
-        re[k] = input[2 * rev];
-        im[k] = input[2 * rev + 1];
+        re[k] = input[2 * rev * stride];
+        im[k] = input[(2 * rev + 1) * stride];
         let mut bit = nc >> 1;
         while bit != 0 && rev & bit != 0 {
             rev ^= bit;
@@ -828,11 +830,12 @@ fn rfft_pack_split_windowed(
     re: &mut [f32],
     im: &mut [f32],
     nc: usize,
+    stride: usize,
 ) {
     let mut rev = 0usize;
     for k in 0..nc {
-        re[k] = input[2 * rev] * window[2 * rev];
-        im[k] = input[2 * rev + 1] * window[2 * rev + 1];
+        re[k] = input[2 * rev * stride] * window[2 * rev];
+        im[k] = input[(2 * rev + 1) * stride] * window[2 * rev + 1];
         let mut bit = nc >> 1;
         while bit != 0 && rev & bit != 0 {
             rev ^= bit;
@@ -1020,6 +1023,7 @@ fn rfft_unpack_split(
 #[allow(clippy::too_many_arguments)]
 fn rfft_frame_split(
     frame: &[f32],
+    stride: usize,
     window: Option<&[f32]>,
     stage_twiddles: &[f32],
     utw_re: &[f32],
@@ -1031,8 +1035,8 @@ fn rfft_frame_split(
     stages: usize,
 ) {
     match window {
-        Some(w) => rfft_pack_split_windowed(frame, w, re, im, nc),
-        None => rfft_pack_split(frame, re, im, nc),
+        Some(w) => rfft_pack_split_windowed(frame, w, re, im, nc, stride),
+        None => rfft_pack_split(frame, re, im, nc, stride),
     }
     fft_stage0(re, im, nc);
     // Stage blocks are padded to a multiple of 4 floats. The natural
@@ -1078,6 +1082,7 @@ pub fn rfft_batch(
     for f in 0..frames {
         rfft_frame_split(
             &input[f * n..(f + 1) * n],
+            1,
             None,
             stage_twiddles,
             utw_re,
@@ -1102,6 +1107,11 @@ pub fn rfft_batch(
 /// larger than the `n`-float scratch exists. Because the window multiply and
 /// the FFT are the same f32 operations in the same order, the output is
 /// bit-identical to `gather` + `mul` + `rfft_batch`.
+/// `in_stride` spaces the samples *within* a frame: element `j` of frame `f`
+/// is `input[f*hop + in_stride*j]`. 1 is the plain overlapping-window STFT;
+/// the pruned small-FFT frontend reads its half-rate signal at stride 2
+/// (every 4th original sample) so the same 23.4 Hz bin grid comes out of a
+/// 4x smaller transform. The window still indexes by `j`.
 #[allow(clippy::too_many_arguments)]
 pub fn rfft_strided_batch(
     input: &[f32],
@@ -1112,13 +1122,16 @@ pub fn rfft_strided_batch(
     output: &mut [f32],
     n: usize,
     hop: usize,
+    in_stride: usize,
     frames: usize,
 ) {
+    let span = in_stride * (n - 1) + 1;
     assert!(
-        (frames - 1) * hop + n <= input.len(),
-        "rfft_strided_batch: {} frames of {} at hop {} overrun input len {}",
+        (frames - 1) * hop + span <= input.len(),
+        "rfft_strided_batch: {} frames of {} (stride {}) at hop {} overrun input len {}",
         frames,
         n,
+        in_stride,
         hop,
         input.len()
     );
@@ -1130,7 +1143,8 @@ pub fn rfft_strided_batch(
 
     for f in 0..frames {
         rfft_frame_split(
-            &input[f * hop..f * hop + n],
+            &input[f * hop..f * hop + span],
+            in_stride,
             window,
             stage_twiddles,
             utw_re,
@@ -1141,6 +1155,34 @@ pub fn rfft_strided_batch(
             nc,
             stages,
         );
+    }
+}
+
+/// FIR lowpass + decimation: `output[n] = Σ_t taps[t] · input[n·factor + t − (T−1)/2]`,
+/// out-of-range input treated as zero. The anti-alias step ahead of the
+/// small-FFT frontend's strided reads — taps are designed at build time
+/// (Kaiser windowed-sinc in psp-tc) so the stopband covers every alias
+/// source that would fold onto the mel banks' passband.
+///
+/// Scalar on both targets: it runs once per inference over the whole signal
+/// (72k outputs × ~30 taps for BirdNET), which is noise next to the FFT time
+/// it buys back. Centering on (T−1)/2 (odd tap count, linear phase) makes
+/// the output time-aligned with the input — `output[n]` estimates the
+/// lowpassed signal at sample `n·factor` with zero group delay, which
+/// matters because the STFT keeps real parts (phase-sensitive), not
+/// magnitudes: a delayed read would rotate every bin's phase.
+pub fn fir_decimate(input: &[f32], taps: &[f32], output: &mut [f32], factor: usize) {
+    let center = (taps.len() - 1) / 2;
+    for (n, out) in output.iter_mut().enumerate() {
+        let base = n * factor;
+        let mut sum = 0.0f32;
+        for (t, &h) in taps.iter().enumerate() {
+            let idx = base + t;
+            if idx >= center && idx - center < input.len() {
+                sum += h * input[idx - center];
+            }
+        }
+        *out = sum;
     }
 }
 
@@ -2597,7 +2639,11 @@ mod rfft_tests {
     /// materialising every overlapping window (the dense gather), multiplying
     /// by the window, and running `rfft_batch` on the result.
     fn check_strided(n: usize, hop: usize, frames: usize, windowed: bool) {
-        let n_samples = (frames - 1) * hop + n + 3; // a few trailing samples
+        check_strided_at(n, hop, 1, frames, windowed);
+    }
+
+    fn check_strided_at(n: usize, hop: usize, in_stride: usize, frames: usize, windowed: bool) {
+        let n_samples = (frames - 1) * hop + in_stride * (n - 1) + 4; // a few trailing samples
         let mut s = 99u32;
         let mut rand = || {
             s = s.wrapping_mul(1664525).wrapping_add(1013904223);
@@ -2613,7 +2659,7 @@ mod rfft_tests {
         for f in 0..frames {
             for j in 0..n {
                 let w = window.as_ref().map_or(1.0, |w| w[j]);
-                dense[f * n + j] = samples[f * hop + j] * w;
+                dense[f * n + j] = samples[f * hop + in_stride * j] * w;
             }
         }
         let mut scratch = vec![7.5f32; n];
@@ -2631,13 +2677,14 @@ mod rfft_tests {
             &mut got,
             n,
             hop,
+            in_stride,
             frames,
         );
 
         for (i, (g, w)) in got.iter().zip(want.iter()).enumerate() {
             assert!(
                 g.to_bits() == w.to_bits(),
-                "n={n} hop={hop} frames={frames} windowed={windowed} elem {i}: {g} != {w}"
+                "n={n} hop={hop} stride={in_stride} frames={frames} windowed={windowed} elem {i}: {g} != {w}"
             );
         }
     }
@@ -2654,6 +2701,47 @@ mod rfft_tests {
         // The real branches, a handful of frames: L=2048 hop=278, L=1024 hop=280.
         check_strided(2048, 278, 5, true);
         check_strided(1024, 280, 5, true);
+    }
+
+    #[test]
+    fn inner_stride_matches_gathered_frames() {
+        check_strided_at(16, 5, 2, 4, true);
+        check_strided_at(32, 7, 3, 5, true);
+        // The pruned 2048 branch's real shape: 512-point frames read at
+        // stride 2 from the half-rate signal, hop 139.
+        check_strided_at(512, 139, 2, 5, true);
+    }
+
+    #[test]
+    fn fir_decimate_reference() {
+        // Impulse: output picks up the taps at the decimated positions.
+        let mut x = vec![0.0f32; 32];
+        x[10] = 1.0;
+        let taps = [0.25f32, 0.5, 1.0, 0.5, 0.25]; // center = 2
+        let mut y = vec![0.0f32; 16];
+        fir_decimate(&x, &taps, &mut y, 2);
+        // y[n] = sum_t taps[t] * x[2n + t - 2] -> hits x[10] when 2n + t = 12.
+        let mut want = vec![0.0f32; 16];
+        for (t, &h) in taps.iter().enumerate() {
+            if (12 - t as i32) % 2 == 0 {
+                let n = (12 - t as i32) / 2;
+                if (0..16).contains(&n) {
+                    want[n as usize] += h;
+                }
+            }
+        }
+        assert_eq!(y, want);
+
+        // DC gain: a constant input yields sum(taps) away from the edges.
+        let x = vec![1.0f32; 64];
+        let mut y = vec![0.0f32; 32];
+        fir_decimate(&x, &taps, &mut y, 2);
+        let dc: f32 = taps.iter().sum();
+        for n in 2..30 {
+            assert!((y[n] - dc).abs() < 1e-6, "n={n}: {} vs {dc}", y[n]);
+        }
+        // Edge outputs see zero-padding (fewer taps in range).
+        assert!(y[0] < dc);
     }
 }
 

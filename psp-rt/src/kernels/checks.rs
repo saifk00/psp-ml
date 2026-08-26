@@ -521,13 +521,19 @@ fn test_pow_const_matches_libm() -> bool {
 fn test_rfft_strided_matches_dense() -> bool {
     // Windows overlap (hop < n), so the strided kernel reads each sample
     // through several frames — on device the butterfly stages and stage-0
-    // `vbfy1.q` run for real, which the host mirror never exercises.
+    // `vbfy1.q` run for real, which the host mirror never exercises. The
+    // inner stride (the small-FFT frontend's decimated read) is covered by
+    // running the same comparison at stride 2.
+    test_rfft_strided_at(1) && test_rfft_strided_at(2)
+}
+
+fn test_rfft_strided_at(in_stride: usize) -> bool {
     const N: usize = 32;
     const NC: usize = N / 2;
     const HOP: usize = 9;
     const FRAMES: usize = 4;
     const BINS: usize = NC + 1;
-    const N_SAMPLES: usize = (FRAMES - 1) * HOP + N;
+    const N_SAMPLES: usize = (FRAMES - 1) * HOP + 2 * (N - 1) + 1;
 
     // Twiddles in the split layout psp-tc emits (see `lower_rfft`). Both the
     // stage runs and the scratch are loaded with `lv.q`, hence `Aligned`.
@@ -563,7 +569,7 @@ fn test_rfft_strided_matches_dense() -> bool {
     let mut dense = Aligned([0.0f32; FRAMES * N]);
     for f in 0..FRAMES {
         for j in 0..N {
-            dense[f * N + j] = samples[f * HOP + j] * window[j];
+            dense[f * N + j] = samples[f * HOP + in_stride * j] * window[j];
         }
     }
     let mut scratch = Aligned([7.5f32; N]);
@@ -581,6 +587,7 @@ fn test_rfft_strided_matches_dense() -> bool {
         &mut got,
         N,
         HOP,
+        in_stride,
         FRAMES,
     );
 
@@ -722,6 +729,37 @@ fn test_vtfm4_e_form_is_row_dots() -> bool {
     out.0 == want
 }
 
+fn test_fir_decimate_impulse_and_dc() -> bool {
+    // Same references as the host unit test: an impulse lands the taps at
+    // the decimated positions, and a constant passes with gain sum(taps).
+    let mut x = Aligned([0.0f32; 64]);
+    x[10] = 1.0;
+    let taps = Aligned([0.25f32, 0.5, 1.0, 0.5, 0.25]);
+    let mut y = Aligned([0.0f32; 32]);
+    kernels::fir_decimate(&x, &taps, &mut y, 2);
+    for n in 0..32usize {
+        let mut want = 0.0f32;
+        for (t, &h) in taps.iter().enumerate() {
+            if 2 * n + t == 12 {
+                want += h;
+            }
+        }
+        if (y[n] - want).abs() > 1e-6 {
+            return false;
+        }
+    }
+    let x = Aligned([1.0f32; 64]);
+    let mut y = Aligned([0.0f32; 32]);
+    kernels::fir_decimate(&x, &taps, &mut y, 2);
+    let dc: f32 = taps.iter().sum();
+    for n in 2..30 {
+        if (y[n] - dc).abs() > 1e-5 {
+            return false;
+        }
+    }
+    true
+}
+
 device_checks! {
     // Every kernel has a scalar fallback in the same signature, so the whole
     // suite is meaningful on both runners.
@@ -740,6 +778,7 @@ device_checks! {
         test_depthwise_padding_matches_explicit_pad,
         test_pow_const_matches_libm,
         test_rfft_strided_matches_dense,
+        test_fir_decimate_impulse_and_dc,
         test_square_pow_matches_mul_then_pow,
         test_fc_cb_matches_dense,
     ],

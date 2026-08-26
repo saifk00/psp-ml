@@ -5,9 +5,10 @@
 use std::path::Path;
 use std::process::Command;
 
-const MODES: [(&str, &str); 2] = [
+const MODES: [(&str, &str); 3] = [
     ("mode-dense", "frontend_dense"),
     ("mode-custom", "frontend_custom"),
+    ("mode-small", "frontend_small"),
 ];
 
 fn main() {

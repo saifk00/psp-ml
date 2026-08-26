@@ -34,6 +34,7 @@ pub fn infer(model: &mut PspModel) {
             // construction, nothing to infer.
             PspOp::StridedViewStft { .. }
             | PspOp::FullyConnectedCB { .. }
+            | PspOp::FirDecimate { .. }
             | PspOp::SquarePow { .. } => {}
 
             PspOp::Shape { input, output } => {

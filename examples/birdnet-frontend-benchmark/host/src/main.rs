@@ -23,9 +23,11 @@ fn main() {
     let runs: Vec<(&str, &str, &str)> = match mode.as_str() {
         "dense_tflite" => vec![("dense_tflite", "frontend_dense.prx", "dense")],
         "custom_ops" => vec![("custom_ops", "frontend_custom.prx", "custom")],
+        "small_fft" => vec![("small_fft", "frontend_small.prx", "small")],
         _ => vec![
             ("dense_tflite", "frontend_dense.prx", "dense"),
             ("custom_ops", "frontend_custom.prx", "custom"),
+            ("small_fft", "frontend_small.prx", "small"),
         ],
     };
 
@@ -34,6 +36,8 @@ fn main() {
         "out_dense_front_1024.bin",
         "out_custom_front_2048.bin",
         "out_custom_front_1024.bin",
+        "out_small_front_2048.bin",
+        "out_small_front_1024.bin",
     ] {
         let _ = std::fs::remove_file(mount_dir.join(stale));
     }
@@ -86,12 +90,14 @@ fn main() {
     let golden_1024 = read_f32(&golden_dir.join("golden_mel_1024.bin"), OUT_LEN);
     let mut ok = true;
     for (mode_name, _, tag) in &runs {
-        // Both gate at 1e-2 for the whole frontend: FFT last-bit differences
-        // vs TFLite get amplified by the x^~0.17-0.22 compression on
-        // near-zero mel values (measured: dense 5.4e-3, custom 4.4e-3).
-        // custom is bank-major.
-        let custom = *mode_name == "custom_ops";
-        let tol = 1e-2;
+        // 1e-2 for the whole frontend (FFT last-bit differences vs TFLite,
+        // amplified by the x^~0.17-0.22 compression on near-zero mel
+        // values; measured: dense 5.4e-3, custom 4.4e-3); small_fft's
+        // pruned L=2048 branch adds the anti-alias filter's passband ripple
+        // and alias residue, so it gates at 3e-2. custom/small are
+        // bank-major.
+        let custom = *mode_name != "dense_tflite";
+        let tol = if *mode_name == "small_fft" { 3e-2 } else { 1e-2 };
         let o0 = read_f32(&mount_dir.join(format!("out_{tag}_front_2048.bin")), OUT_LEN);
         let o1 = read_f32(&mount_dir.join(format!("out_{tag}_front_1024.bin")), OUT_LEN);
         ok &= check_golden(&o0, &golden_2048, &format!("{mode_name} L=2048"), tol, custom);
@@ -111,26 +117,25 @@ fn main() {
             kv["avg_us"] / 1000,
         );
     }
-    if stats.len() == 2 {
-        let dense = &stats[0].1;
-        let custom = &stats[1].1;
-        let static_delta = (dense["arena_bytes"] + dense["blob_bytes"]) as i64
-            - (custom["arena_bytes"] + custom["blob_bytes"]) as i64;
-        let free_delta = custom["free_bytes"] as i64 - dense["free_bytes"] as i64;
+    if stats.len() >= 2 {
+        let base = &stats[0].1;
         println!();
-        println!(
-            "custom_ops saves {} KiB at compile time (arena+blob); the device \
-             measured {} KiB more free memory after load",
-            static_delta / 1024,
-            free_delta / 1024
-        );
-        let (d_us, c_us) = (dense["avg_us"], custom["avg_us"]);
-        println!(
-            "frontend time: {} ms -> {} ms ({:+.1}%)",
-            d_us / 1000,
-            c_us / 1000,
-            (c_us as f64 - d_us as f64) * 100.0 / d_us as f64
-        );
+        for (name, kv) in stats.iter().skip(1) {
+            let static_delta = (base["arena_bytes"] + base["blob_bytes"]) as i64
+                - (kv["arena_bytes"] + kv["blob_bytes"]) as i64;
+            let free_delta = kv["free_bytes"] as i64 - base["free_bytes"] as i64;
+            let (d_us, c_us) = (base["avg_us"], kv["avg_us"]);
+            println!(
+                "{name} vs {}: {} ms -> {} ms ({:+.1}%); saves {} KiB arena+blob, \
+                 device sees {} KiB more free",
+                stats[0].0,
+                d_us / 1000,
+                c_us / 1000,
+                (c_us as f64 - d_us as f64) * 100.0 / d_us as f64,
+                static_delta / 1024,
+                free_delta / 1024
+            );
+        }
     }
 
     if !ok {
@@ -152,8 +157,8 @@ fn parse_mode() -> String {
             .clone(),
         None => "both".to_string(),
     };
-    if !["dense_tflite", "custom_ops", "both"].contains(&mode.as_str()) {
-        eprintln!("--mode must be dense_tflite, custom_ops or both");
+    if !["dense_tflite", "custom_ops", "small_fft", "all", "both"].contains(&mode.as_str()) {
+        eprintln!("--mode must be dense_tflite, custom_ops, small_fft or all");
         std::process::exit(2);
     }
     mode

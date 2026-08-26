@@ -33,6 +33,11 @@ fn main() {
         cmd.arg("--features").arg("custom-frontend");
     }
     println!("cargo:rerun-if-env-changed=BIRDNET_CUSTOM_FRONTEND");
+    // BIRDNET_SMALL_FFT composes with the custom frontend (FFT pruning pass).
+    if let Ok(val) = std::env::var("BIRDNET_SMALL_FFT") {
+        cmd.env("BIRDNET_SMALL_FFT", val);
+    }
+    println!("cargo:rerun-if-env-changed=BIRDNET_SMALL_FFT");
 
     // Forward the species-pruning knobs to the device build, which is what
     // actually invokes prune_classifier.py. Cargo would pass these through

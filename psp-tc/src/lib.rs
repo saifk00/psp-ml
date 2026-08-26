@@ -10,6 +10,7 @@ pub mod parse;
 pub use builder::PspModelBuilder;
 pub use codegen::ModelStats;
 pub use mel::{make_mel, mel_spectrogram, CBMatrix, ColumnBand};
+pub use mel::{plan_small_fft, stft_mel_frontend_small_fft, SmallFftPlan};
 
 use ir::PspModel;
 use std::fs;

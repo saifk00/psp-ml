@@ -230,14 +230,32 @@ fn build_custom_frontend(repo_root: &Path, out_dir: &Path, model: &Path) {
     let mut b = psp_tc::PspModelBuilder::new();
     let raw = b.input(vec![1, INPUT_SAMPLES]);
     let norm = psp_tc::mel::birdnet_normalize(&mut b, raw);
-    let outs = psp_tc::mel::stft_mel_frontend(
-        &mut b,
-        norm,
-        N_WINDOWS,
-        SAMPLING_RATE,
-        N_BANKS,
-        &branches,
-    );
+    // BIRDNET_SMALL_FFT=1: additionally apply the FFT-pruning pass — shrink
+    // each branch's FFT to the columns its mel banks read (anti-alias
+    // filtered, same bin grid). Prunes the L=2048 branch to a 512-point
+    // transform; leaves L=1024 unchanged.
+    println!("cargo:rerun-if-env-changed=BIRDNET_SMALL_FFT");
+    let small_fft = std::env::var("BIRDNET_SMALL_FFT").is_ok_and(|v| v != "0");
+    let outs = if small_fft {
+        println!("cargo:warning=birdnet: small-FFT pruning pass enabled");
+        psp_tc::stft_mel_frontend_small_fft(
+            &mut b,
+            norm,
+            N_WINDOWS,
+            SAMPLING_RATE,
+            N_BANKS,
+            &branches,
+        )
+    } else {
+        psp_tc::mel::stft_mel_frontend(
+            &mut b,
+            norm,
+            N_WINDOWS,
+            SAMPLING_RATE,
+            N_BANKS,
+            &branches,
+        )
+    };
     for out in outs {
         b.output(out);
     }

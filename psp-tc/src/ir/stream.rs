@@ -143,9 +143,9 @@ fn is_batch_independent(model: &PspModel, op: &PspOp) -> bool {
         // Gather: batch-independent if not gathering along dim 0
         PspOp::Gather { axis, .. } => *axis != 0,
 
-        // StridedViewStft: frames overlap in the input signal, so dim 0 of
-        // the output is not independently sliceable from dim 0 of the input.
-        PspOp::StridedViewStft { .. } => false,
+        // StridedViewStft / FirDecimate: the whole 1D signal feeds every
+        // output row, so dim 0 is not independently sliceable.
+        PspOp::StridedViewStft { .. } | PspOp::FirDecimate { .. } => false,
 
         // Row-wise / elementwise builder ops.
         PspOp::FullyConnectedCB { .. } | PspOp::SquarePow { .. } => true,

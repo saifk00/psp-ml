@@ -17,6 +17,7 @@ default = ["local"]
 local = []
 mode-dense = []
 mode-custom = []
+mode-small = []
 
 [dependencies]
 psp-rt = { path = "../../../psp-rt" }

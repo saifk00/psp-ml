@@ -17,13 +17,17 @@
 
 #[cfg(all(
     not(feature = "local"),
-    not(any(feature = "mode-dense", feature = "mode-custom"))
+    not(any(feature = "mode-dense", feature = "mode-custom", feature = "mode-small"))
 ))]
 compile_error!(
-    "device build needs a mode: --no-default-features --features mode-dense (or mode-custom)"
+    "device build needs a mode: --no-default-features --features mode-dense (or mode-custom, mode-small)"
 );
-#[cfg(all(feature = "mode-dense", feature = "mode-custom"))]
-compile_error!("mode-dense and mode-custom are one-per-PRX; build twice instead");
+#[cfg(any(
+    all(feature = "mode-dense", feature = "mode-custom"),
+    all(feature = "mode-dense", feature = "mode-small"),
+    all(feature = "mode-custom", feature = "mode-small"),
+))]
+compile_error!("mode features are one-per-PRX; build separately instead");
 
 #[cfg(not(feature = "local"))]
 use core::ffi::c_void;
@@ -48,6 +52,12 @@ mod dense {
 #[allow(dead_code)]
 mod custom {
     include!(concat!(env!("OUT_DIR"), "/custom/frontend_custom.rs"));
+}
+
+#[cfg(any(feature = "local", feature = "mode-small"))]
+#[allow(dead_code)]
+mod small {
+    include!(concat!(env!("OUT_DIR"), "/small/frontend_small.rs"));
 }
 
 const N_SAMPLES: usize = 144_000;
@@ -125,6 +135,13 @@ const MODE_ARENA: usize = CUSTOM_ARENA_BYTES;
 #[cfg(all(not(feature = "local"), feature = "mode-custom"))]
 const MODE_BLOB: usize = CUSTOM_BLOB_BYTES;
 
+#[cfg(all(not(feature = "local"), feature = "mode-small"))]
+const MODE: &str = "small_fft";
+#[cfg(all(not(feature = "local"), feature = "mode-small"))]
+const MODE_ARENA: usize = SMALL_ARENA_BYTES;
+#[cfg(all(not(feature = "local"), feature = "mode-small"))]
+const MODE_BLOB: usize = SMALL_BLOB_BYTES;
+
 #[cfg(not(feature = "local"))]
 fn write_file(path: &[u8], data: &[u8]) {
     let fd = unsafe {
@@ -176,6 +193,8 @@ fn app_main() {
     let avg_us = run_frontend!(dense, dprint_line, get_tick, tick_res);
     #[cfg(feature = "mode-custom")]
     let avg_us = run_frontend!(custom, dprint_line, get_tick, tick_res);
+    #[cfg(feature = "mode-small")]
+    let avg_us = run_frontend!(small, dprint_line, get_tick, tick_res);
 
     psp_rt::dprintln!("  frontend: {} us avg over {} runs", avg_us, RUNS);
 
@@ -188,6 +207,11 @@ fn app_main() {
     let (p0, p1): (&[u8], &[u8]) = (
         b"host0:/out_custom_front_2048.bin\0",
         b"host0:/out_custom_front_1024.bin\0",
+    );
+    #[cfg(feature = "mode-small")]
+    let (p0, p1): (&[u8], &[u8]) = (
+        b"host0:/out_small_front_2048.bin\0",
+        b"host0:/out_small_front_1024.bin\0",
     );
     let out0 = unsafe { &*core::ptr::addr_of!(OUT_2048) };
     let out1 = unsafe { &*core::ptr::addr_of!(OUT_1024) };
@@ -289,15 +313,16 @@ fn main() {
             None => "both".to_string(),
         }
     };
-    if !["dense_tflite", "custom_ops", "both"].contains(&mode.as_str()) {
-        panic!("--mode must be dense_tflite, custom_ops or both, got {mode}");
+    if !["dense_tflite", "custom_ops", "small_fft", "all", "both"].contains(&mode.as_str()) {
+        panic!("--mode must be dense_tflite, custom_ops, small_fft or all, got {mode}");
     }
+    let run_all = mode == "all" || mode == "both";
 
     let golden_2048 = load_golden("golden_mel_2048.bin");
     let golden_1024 = load_golden("golden_mel_1024.bin");
     let mut ok = true;
 
-    if mode != "custom_ops" {
+    if mode == "dense_tflite" || run_all {
         println!("dense_tflite (arena {DENSE_ARENA_BYTES} B, blob {DENSE_BLOB_BYTES} B):");
         let us = run_frontend!(dense, println_line, local_get_tick, tick_res);
         println!("  frontend: {us} us avg over {RUNS} runs");
@@ -306,12 +331,24 @@ fn main() {
         ok &= check_golden(o1, &golden_1024, "L=1024", 1e-2, false);
     }
 
-    if mode != "dense_tflite" {
+    if mode == "custom_ops" || run_all {
         println!("custom_ops (arena {CUSTOM_ARENA_BYTES} B, blob {CUSTOM_BLOB_BYTES} B):");
         let us = run_frontend!(custom, println_line, local_get_tick, tick_res);
         println!("  frontend: {us} us avg over {RUNS} runs");
         let (o0, o1) = unsafe { (&*core::ptr::addr_of!(OUT_2048), &*core::ptr::addr_of!(OUT_1024)) };
         ok &= check_golden(o0, &golden_2048, "L=2048", 1e-2, true);
+        ok &= check_golden(o1, &golden_1024, "L=1024", 1e-2, true);
+    }
+
+    if mode == "small_fft" || run_all {
+        println!("small_fft (arena {SMALL_ARENA_BYTES} B, blob {SMALL_BLOB_BYTES} B):");
+        let us = run_frontend!(small, println_line, local_get_tick, tick_res);
+        println!("  frontend: {us} us avg over {RUNS} runs");
+        let (o0, o1) = unsafe { (&*core::ptr::addr_of!(OUT_2048), &*core::ptr::addr_of!(OUT_1024)) };
+        // The pruned L=2048 branch adds the anti-alias filter's passband
+        // ripple and (attenuated) alias residue on top of custom_ops's
+        // error; the L=1024 branch is untouched by the pass.
+        ok &= check_golden(o0, &golden_2048, "L=2048", 3e-2, true);
         ok &= check_golden(o1, &golden_1024, "L=1024", 1e-2, true);
     }
 

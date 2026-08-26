@@ -1313,6 +1313,7 @@ fn render_kernel_call(
             scratch,
             n,
             hop,
+            in_stride,
             frames,
         } => {
             let input_expr = writer.read(*input);
@@ -1329,8 +1330,20 @@ fn render_kernel_call(
             let scratch_ident =
                 Ident::new(&format!("scratch_{op_idx}_{scratch}"), Span::call_site());
             quote! {
-                rfft_strided_batch(#input_expr, #window_expr, #stw_expr, #utw_expr, #scratch_ident, #output_expr, #n, #hop, #frames);
+                rfft_strided_batch(#input_expr, #window_expr, #stw_expr, #utw_expr, #scratch_ident, #output_expr, #n, #hop, #in_stride, #frames);
             }
+        }
+
+        KernelCall::FirDecimate {
+            input,
+            taps,
+            output,
+            factor,
+        } => {
+            let in_expr = writer.read(*input);
+            let taps_expr = writer.read(*taps);
+            let out_expr = writer.write(*output);
+            quote! { fir_decimate(#in_expr, #taps_expr, #out_expr, #factor); }
         }
 
         KernelCall::FullyConnected {

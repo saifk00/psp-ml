@@ -119,6 +119,22 @@ impl PspModelBuilder {
             "need n_windows > 1 and fft_length {fft_length} <= n_samples {n_samples}"
         );
         let hop = (n_samples - fft_length) / (n_windows - 1);
+        self.strided_view_stft_with(input, window, fft_length, n_windows, hop, 1)
+    }
+
+    /// `strided_view_stft` with the hop and inner stride given explicitly —
+    /// the small-FFT pass frames a decimated signal, where the hop is the
+    /// original hop divided by the stored decimation and elements within a
+    /// frame are `in_stride` apart (see `psp_rt::kernels::rfft_strided_batch`).
+    pub fn strided_view_stft_with(
+        &mut self,
+        input: TensorId,
+        window: Option<TensorId>,
+        fft_length: usize,
+        n_windows: usize,
+        hop: usize,
+        in_stride: usize,
+    ) -> TensorId {
         let output = self.graph.add_tensor(
             vec![n_windows, fft_length / 2 + 1],
             DType::F32,
@@ -130,7 +146,26 @@ impl PspModelBuilder {
             output,
             fft_length,
             hop,
+            in_stride,
             n_windows,
+        });
+        output
+    }
+
+    /// FIR lowpass + decimation of a 1D signal (see
+    /// `psp_rt::kernels::fir_decimate`). Returns the `[len/factor]` output.
+    pub fn fir_decimate(&mut self, input: TensorId, taps: &[f32], factor: usize) -> TensorId {
+        let n: usize = self.graph.tensor(input).shape.iter().product();
+        assert_eq!(n % factor, 0, "signal length {n} not divisible by {factor}");
+        let taps_t = self.constant_f32(vec![taps.len()], taps);
+        let output = self
+            .graph
+            .add_tensor(vec![n / factor], DType::F32, TensorKind::Intermediate);
+        self.graph.ops.push(PspOp::FirDecimate {
+            input,
+            taps: taps_t,
+            output,
+            factor,
         });
         output
     }

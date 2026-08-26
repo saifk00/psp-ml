@@ -249,7 +249,20 @@ pub enum PspOp {
         output: TensorId,
         fft_length: usize,
         hop: usize,
+        /// Spacing of samples within a frame (1 = contiguous window). The
+        /// small-FFT pass reads its decimated signal at stride 2.
+        in_stride: usize,
         n_windows: usize,
+    },
+
+    /// FIR lowpass + decimation (`PspModelBuilder` graphs): the anti-alias
+    /// step ahead of a pruned strided STFT. `output[n] = Σ taps · input`
+    /// around `n·factor`. See `psp_rt::kernels::fir_decimate`.
+    FirDecimate {
+        input: TensorId,
+        taps: TensorId,
+        output: TensorId,
+        factor: usize,
     },
 
     /// Matmul against a column-banded matrix (`PspModelBuilder` graphs): the
@@ -624,17 +637,31 @@ impl std::fmt::Display for PspOp {
                 output,
                 fft_length,
                 hop,
+                in_stride,
                 n_windows,
             } => {
                 write!(
                     f,
-                    "StridedViewStft(t{}{} → t{}; n={} hop={} windows={})",
+                    "StridedViewStft(t{}{} → t{}; n={} hop={} stride={} windows={})",
                     input,
                     window.map_or(String::new(), |w| format!(", t{w}")),
                     output,
                     fft_length,
                     hop,
+                    in_stride,
                     n_windows
+                )
+            }
+            PspOp::FirDecimate {
+                input,
+                taps,
+                output,
+                factor,
+            } => {
+                write!(
+                    f,
+                    "FirDecimate(t{}, taps t{} → t{}; /{})",
+                    input, taps, output, factor
                 )
             }
             PspOp::FullyConnectedCB {
@@ -774,6 +801,7 @@ impl PspOp {
                 ..
             } => vec![*input, *band_meta, *band_data],
             PspOp::SquarePow { input, .. } => vec![*input],
+            PspOp::FirDecimate { input, taps, .. } => vec![*input, *taps],
             PspOp::Pad {
                 input, paddings, ..
             } => vec![*input, *paddings],
@@ -862,6 +890,7 @@ impl PspOp {
             | PspOp::Rfft { output, .. }
             | PspOp::StridedViewStft { output, .. }
             | PspOp::FullyConnectedCB { output, .. }
+            | PspOp::FirDecimate { output, .. }
             | PspOp::SquarePow { output, .. } => *output,
             PspOp::SplitV { .. } => panic!("SplitV has multiple outputs; use outputs()"),
         }
@@ -965,6 +994,16 @@ impl PspOp {
             }
             PspOp::SquarePow { input, output, .. } => {
                 r(input);
+                r(output);
+            }
+            PspOp::FirDecimate {
+                input,
+                taps,
+                output,
+                ..
+            } => {
+                r(input);
+                r(taps);
                 r(output);
             }
             PspOp::ElementWise {

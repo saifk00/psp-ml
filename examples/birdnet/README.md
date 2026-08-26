@@ -82,6 +82,7 @@ is silent: it runs on wrong offsets and returns garbage. Staging beside the
 | `PSP_PROFILE` | unset | build with hardware counters (`hwprofile`). |
 | `BIRDNET_TAP` | unset | local runs dump every op's output tensor to `device/tap/`. Not supported with the custom frontend. |
 | `BIRDNET_CUSTOM_FRONTEND` | unset | replace the model's spectrogram frontend with the custom-op one (`StridedViewStft` + banded mel): `build.rs` severs the .tflite at the branch-merge CONCAT and compiles only the conv backbone, plus a builder-generated frontend module; `main.rs` runs the two forwards in sequence. Composes with `TOPK`. Measured (TOPK=500, cardinal fixture): 5617 → 4865 ms (−13.4%), golden PASS. |
+| `BIRDNET_SMALL_FFT` | unset | with the custom frontend, also apply the FFT-pruning pass (`psp_tc::plan_small_fft`): the L=2048 branch computes a 512-point FFT over the anti-alias-decimated signal instead of 2048 (same 23.44 Hz bins, only the 128 columns mel reads). Measured (TOPK=500): 4865 → 4668 ms, golden PASS, identical max Δraw. |
 
 Picking `TOPK`: ask the pruner. Only ~405 species clear 0.01 likelihood
 anywhere in `eastern-na`, so a much larger `TOPK` buys rows that can never fire.

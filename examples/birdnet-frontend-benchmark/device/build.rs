@@ -102,6 +102,29 @@ fn main() {
     let custom = psp_tc::compile_graph(&mut model, &custom_dir, "frontend_custom")
         .unwrap_or_else(|e| panic!("psp-tc codegen (custom) failed: {e}"));
 
+    // Small-FFT mode: the same custom frontend with the FFT-pruning pass —
+    // where the mel banks read only a low prefix of the bins, the FFT
+    // shrinks to the rounded needed size and the signal is anti-alias
+    // filtered + read at a stride so the bin grid is unchanged.
+    let mut b = psp_tc::PspModelBuilder::new();
+    let samples = b.input(vec![1, N_SAMPLES]);
+    let outs = psp_tc::stft_mel_frontend_small_fft(
+        &mut b,
+        samples,
+        N_WINDOWS,
+        SAMPLING_RATE,
+        N_BANKS,
+        &branches,
+    );
+    for out in outs {
+        b.output(out);
+    }
+    let mut model = b.finish();
+    let small_dir = out_dir.join("small");
+    std::fs::create_dir_all(&small_dir).unwrap();
+    let small = psp_tc::compile_graph(&mut model, &small_dir, "frontend_small")
+        .unwrap_or_else(|e| panic!("psp-tc codegen (small) failed: {e}"));
+
     std::fs::copy(assets.join("samples.bin"), out_dir.join("samples.bin")).unwrap();
 
     let output_bytes = 2 * N_WINDOWS * N_BANKS * 4;
@@ -112,11 +135,15 @@ fn main() {
          pub const DENSE_BLOB_BYTES: usize = {};\n\
          pub const CUSTOM_ARENA_BYTES: usize = {};\n\
          pub const CUSTOM_BLOB_BYTES: usize = {};\n\
+         pub const SMALL_ARENA_BYTES: usize = {};\n\
+         pub const SMALL_BLOB_BYTES: usize = {};\n\
          pub const OUTPUT_BYTES: usize = {output_bytes};\n",
         dense.arena_size_floats * 4,
         dense.blob_bytes,
         custom.arena_size_floats * 4,
         custom.blob_bytes,
+        small.arena_size_floats * 4,
+        small.blob_bytes,
     );
     std::fs::write(out_dir.join("bench_config.rs"), config).unwrap();
 
@@ -129,6 +156,11 @@ fn main() {
         "cargo:warning=frontend-bench custom: arena {} B + blob {} B",
         custom.arena_size_floats * 4,
         custom.blob_bytes
+    );
+    println!(
+        "cargo:warning=frontend-bench small:  arena {} B + blob {} B",
+        small.arena_size_floats * 4,
+        small.blob_bytes
     );
 }
 

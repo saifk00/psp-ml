@@ -170,6 +170,16 @@ pub fn extract_tensor_refs(kernel: &KernelCall) -> Vec<TensorRef> {
             refs.push(r(*input));
             refs.push(w(*output));
         }
+        KernelCall::FirDecimate {
+            input,
+            taps,
+            output,
+            ..
+        } => {
+            refs.push(r(*input));
+            refs.push(r(*taps));
+            refs.push(w(*output));
+        }
         KernelCall::RfftStridedBatch {
             input,
             window,
