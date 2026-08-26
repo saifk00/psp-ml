@@ -208,6 +208,70 @@ fn report_hw_profile(
             generated::OP_NAMES[best]
         );
     }
+
+    // Aggregate by kernel name: where the whole run's cycles and stalls go,
+    // in milliseconds at 333 MHz. The per-op table above shows the flat
+    // profile; this is the sum that actually answers "how much time is
+    // quantization / memory waits".
+    const MAX_KINDS: usize = 32;
+    let mut names: [&str; MAX_KINDS] = [""; MAX_KINDS];
+    let mut agg = [[0u64; 4]; MAX_KINDS]; // cpuck, mem-stall, cop0-stall, d-miss
+    let mut n_kinds = 0usize;
+    for i in 0..generated::NUM_OPS {
+        let name = generated::OP_NAMES[i];
+        let mut k = n_kinds;
+        for (j, n) in names.iter().enumerate().take(n_kinds) {
+            if *n == name {
+                k = j;
+                break;
+            }
+        }
+        if k == n_kinds && n_kinds < MAX_KINDS {
+            names[k] = name;
+            n_kinds += 1;
+        }
+        if k < MAX_KINDS {
+            agg[k][0] += profile[i].cpuck;
+            agg[k][1] += profile[i].memory;
+            agg[k][2] += profile[i].copz;
+            agg[k][3] += profile[i].d_miss;
+        }
+    }
+    const KHZ: u64 = 333_000; // cycles per millisecond
+    let (mut tot_mem, mut tot_cop) = (0u64, 0u64);
+    for k in 0..n_kinds {
+        tot_mem += agg[k][1];
+        tot_cop += agg[k][2];
+    }
+    psp_rt::dprintln!("");
+    psp_rt::dprintln!(
+        "=== by kernel (ms at 333 MHz): total {} ms, mem-stall {} ms, cop0-stall {} ms ===",
+        total / KHZ,
+        tot_mem / KHZ,
+        tot_cop / KHZ
+    );
+    psp_rt::dprintln!("kernel                 ms   mem-stall  cop0-stall   d-miss(k)");
+    let mut printed = [false; MAX_KINDS];
+    for _ in 0..n_kinds {
+        let mut best = usize::MAX;
+        for k in 0..n_kinds {
+            if !printed[k] && (best == usize::MAX || agg[k][0] > agg[best][0]) {
+                best = k;
+            }
+        }
+        if best == usize::MAX {
+            break;
+        }
+        printed[best] = true;
+        psp_rt::dprintln!(
+            "{:18} {:6} {:9} {:11} {:10}",
+            names[best],
+            agg[best][0] / KHZ,
+            agg[best][1] / KHZ,
+            agg[best][2] / KHZ,
+            agg[best][3] / 1000
+        );
+    }
 }
 
 // ============================================================================
