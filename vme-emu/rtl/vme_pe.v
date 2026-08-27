@@ -21,7 +21,8 @@
 // resolved by vme_top); the read address streams likewise leave this
 // module and come back post-ICN_SRCMAP as `buf_rdata`/`*_rv`.
 module vme_pe #(
-    parameter MAX_DRAIN = 64
+    parameter MAX_DRAIN = 64,
+    parameter LANE = 0
 ) (
     input  wire         clk,
     input  wire         rst,
@@ -75,7 +76,7 @@ module vme_pe #(
         .w_fmt0  (rbase_cfg[4*32 +: 32]), .w_fmt1  (rbase_cfg[5*32 +: 32]),
         .addr(base_addr), .addr_valid(base_avalid), .done(agu_done[1])
     );
-    vme_agu u_wr (
+    vme_agu #(.IS_WRITE(1)) u_wr (
         .clk(clk), .rst(rst), .trigger(trigger),
         .w_mode  (wr_cfg[0*32 +: 32]), .w_count (wr_cfg[1*32 +: 32]),
         .w_inner0(wr_cfg[2*32 +: 32]), .w_inner1(wr_cfg[3*32 +: 32]),
@@ -89,22 +90,22 @@ module vme_pe #(
     wire [31:0] fu0_back_d,  fu0_front_d, fu1_back_d, fu1_front_d;
     wire        fu0_back_v,  fu0_front_v, fu1_back_v, fu1_front_v;
 
-    vme_operand u_op0b (.clk(clk), .sel(fu0_cfg[26:22]),
+    vme_operand #(.LANE(LANE)) u_op0b (.clk(clk), .sel(fu0_cfg[26:22]),
         .buf_rdata(buf_rdata), .top_rv(top_rv), .base_rv(base_rv),
         .stg_data(stg_data), .stg_valid(stg_valid),
         .tcode(tskew_code), .bcode(bskew_code),
         .data(fu0_back_d), .valid(fu0_back_v));
-    vme_operand u_op0f (.clk(clk), .sel(fu0_cfg[31:27]),
+    vme_operand #(.LANE(LANE)) u_op0f (.clk(clk), .sel(fu0_cfg[31:27]),
         .buf_rdata(buf_rdata), .top_rv(top_rv), .base_rv(base_rv),
         .stg_data(stg_data), .stg_valid(stg_valid),
         .tcode(tskew_code), .bcode(bskew_code),
         .data(fu0_front_d), .valid(fu0_front_v));
-    vme_operand u_op1b (.clk(clk), .sel(fu1_cfg[26:22]),
+    vme_operand #(.LANE(LANE)) u_op1b (.clk(clk), .sel(fu1_cfg[26:22]),
         .buf_rdata(buf_rdata), .top_rv(top_rv), .base_rv(base_rv),
         .stg_data(stg_data), .stg_valid(stg_valid),
         .tcode(tskew_code), .bcode(bskew_code),
         .data(fu1_back_d), .valid(fu1_back_v));
-    vme_operand u_op1f (.clk(clk), .sel(fu1_cfg[31:27]),
+    vme_operand #(.LANE(LANE)) u_op1f (.clk(clk), .sel(fu1_cfg[31:27]),
         .buf_rdata(buf_rdata), .top_rv(top_rv), .base_rv(base_rv),
         .stg_data(stg_data), .stg_valid(stg_valid),
         .tcode(tskew_code), .bcode(bskew_code),

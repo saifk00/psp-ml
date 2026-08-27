@@ -13,7 +13,9 @@
 // The top-bank code delays top-bank reads, the base-bank code base-bank
 // reads; staging taps are never delayed here (their alignment is the
 // producer's write/read skew ladder).
-module vme_operand (
+module vme_operand #(
+    parameter LANE = 0   // which PE this operand path belongs to
+) (
     input  wire         clk,
     input  wire [4:0]   sel,
     input  wire [255:0] buf_rdata,   // 8 x 32, internal index 0-3 BASE, 4-7 TOP
@@ -30,7 +32,11 @@ module vme_operand (
     wire [3:0] tap     = sel[3:0];
     wire [2:0] bi      = sel[3:1];               // selector index space
     wire       is_base = bi[2];
-    wire [2:0] ibuf    = {~bi[2], bi[1:0]};      // Table 2.2 index space
+    // Base-bank reads have own-lane affinity: PE n reads BASE_n no matter
+    // what the selector index says -- measured on silicon (BSEL naming
+    // BASE_1 from PE0 does not deliver BASE_1; the manual's full-crossbar
+    // claim is wrong for the base bank).  Top-bank reads select by index.
+    wire [2:0] ibuf    = is_base ? {1'b0, LANE[1:0]} : {1'b1, bi[1:0]};
 
     wire [31:0] raw  = is_stg ? stg_data[tap * 32 +: 32]
                               : buf_rdata[ibuf * 32 +: 32];
@@ -49,17 +55,22 @@ module vme_operand (
         endcase
     endfunction
 
-    wire [2:0] dly = is_stg ? 3'd0 : (is_base ? f_dec(bcode) : f_dec(tcode));
+    // Buffer reads take BUF_EXTRA more cycles than the RAM register alone:
+    // silicon calibration split the 6-cycle addr-to-capture path as
+    // read = 3, FU = 3.  Staging taps bypass this.
+    localparam BUF_EXTRA = 3'd2;
+    wire [3:0] dly = is_stg ? 4'd0
+                   : {1'b0, BUF_EXTRA} + {1'b0, (is_base ? f_dec(bcode) : f_dec(tcode))};
 
-    reg [32:0] pipe [0:3];
+    reg [32:0] pipe [0:6];
     integer i;
-    initial for (i = 0; i < 4; i = i + 1) pipe[i] = 33'd0;
+    initial for (i = 0; i < 7; i = i + 1) pipe[i] = 33'd0;
     always @(posedge clk) begin
         pipe[0] <= {rawv, raw};
-        for (i = 3; i > 0; i = i - 1) pipe[i] <= pipe[i - 1];
+        for (i = 6; i > 0; i = i - 1) pipe[i] <= pipe[i - 1];
     end
 
-    wire [32:0] outp = (dly == 3'd0) ? {rawv, raw} : pipe[dly - 3'd1];
+    wire [32:0] outp = (dly == 4'd0) ? {rawv, raw} : pipe[dly - 4'd1];
     assign data  = outp[31:0];
     assign valid = outp[32];
 endmodule

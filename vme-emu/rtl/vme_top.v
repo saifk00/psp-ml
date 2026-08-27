@@ -126,7 +126,7 @@ module vme_top #(
                                      rb_rdata[3][p*32 +: 32], rb_rdata[2][p*32 +: 32],
                                      rb_rdata[1][p*32 +: 32], rb_rdata[0][p*32 +: 32]};
 
-        vme_pe #(.MAX_DRAIN(MAX_DRAIN)) u_pe (
+        vme_pe #(.MAX_DRAIN(MAX_DRAIN), .LANE(p)) u_pe (
             .clk(clk), .rst(rst), .trigger(trig),
             .fu0_cfg(ctx[p]),    .fu0_a(ctx[8+2*p]),  .fu0_b(ctx[9+2*p]),
             .fu1_cfg(ctx[4+p]),  .fu1_a(ctx[16+2*p]), .fu1_b(ctx[17+2*p]),

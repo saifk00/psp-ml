@@ -23,7 +23,13 @@
 //   makes Table 7.5's "0 1 2 3 ..." example come out; see README).
 // t(n) is the FMT transform: identity, REV (COUNT-n), replicate (0), or
 // bit-reversal over BRVW bits.  Transforms apply to linear mode.
-module vme_agu (
+module vme_agu #(
+    // Read AGUs ignore MODE[23:16] on real hardware (2026-08-27 staging
+    // probe: sweeping a read skew never moved the data; only the write
+    // skew did).  Reads always start at trigger; alignment is done in
+    // element-position space via start offsets.
+    parameter IS_WRITE = 0
+) (
     input  wire        clk,
     input  wire        rst,
     input  wire        trigger,
@@ -39,7 +45,7 @@ module vme_agu (
 );
     wire        en     = w_mode[31];
     wire [6:0]  mode   = w_mode[30:24];
-    wire [7:0]  skew   = w_mode[23:16];
+    wire [7:0]  skew   = IS_WRITE ? w_mode[23:16] : 8'd0;
     wire [15:0] offs   = w_mode[15:0];
     wire [15:0] step   = w_count[31:16];
     wire [15:0] count  = w_count[15:0];

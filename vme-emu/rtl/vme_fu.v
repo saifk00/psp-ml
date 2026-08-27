@@ -28,7 +28,14 @@
 //   10 LOAD  acc preloaded from constant a at trigger
 //   11 ZERO  acc zeroed at trigger
 // (MACI/SAD/ROR64 own the accumulator internally and ignore HOLD.)
-module vme_fu (
+module vme_fu #(
+    // Extra result-pipeline stages after the compute register.  Calibrated
+    // against silicon (2026-08-27 skew probes): a buffer-read FU0 result is
+    // captured by a write port skewed 6 cycles after address issue =
+    // 3 (buffer read path) + 1 (compute register) + 2 (this), and each
+    // staging hop adds the FU half only (3 cycles).
+    parameter RESULT_PIPE = 2
+) (
     input  wire        clk,
     input  wire        rst,
     input  wire        trigger,
@@ -39,9 +46,20 @@ module vme_fu (
     input  wire        back_v,
     input  wire [31:0] front,
     input  wire        front_v,   // sampled, not interlocked
-    output reg  [31:0] result,
-    output reg         result_v
+    output wire [31:0] result,
+    output wire        result_v
 );
+    reg [31:0] result_c;
+    reg        result_v_c;
+    reg [32:0] rpipe [0:RESULT_PIPE-1];
+    integer pi;
+    initial for (pi = 0; pi < RESULT_PIPE; pi = pi + 1) rpipe[pi] = 33'd0;
+    always @(posedge clk) begin
+        rpipe[0] <= {result_v_c, result_c};
+        for (pi = RESULT_PIPE - 1; pi > 0; pi = pi - 1) rpipe[pi] <= rpipe[pi - 1];
+    end
+    assign result   = (RESULT_PIPE == 0) ? result_c   : rpipe[RESULT_PIPE-1][31:0];
+    assign result_v = (RESULT_PIPE == 0) ? result_v_c : rpipe[RESULT_PIPE-1][32];
     wire [1:0] klass = cfg[21:20];
     wire [3:0] fn    = cfg[19:16];
     wire [1:0] opm   = cfg[15:14];
@@ -255,13 +273,13 @@ module vme_fu (
 
     always @(posedge clk) begin
         if (rst) begin
-            result <= 32'd0; result_v <= 1'b0;
+            result_c <= 32'd0; result_v_c <= 1'b0;
             acc <= 64'd0; prev_out <= 32'd0;
             prev_back <= 32'd0; prev_back2 <= 32'd0;
             prev_front <= 32'd0; prev_front2 <= 32'd0;
             runmax <= 32'd0; par <= 32'd0; n <= 17'd0;
         end else if (trigger) begin
-            result_v    <= 1'b0;
+            result_v_c  <= 1'b0;
             n           <= 17'd0;
             prev_out    <= 32'd0;
             prev_back   <= const_b;     // MULD: back[-1] = b
@@ -272,9 +290,9 @@ module vme_fu (
             par         <= 32'd0;
             acc         <= (accm == 2'b10) ? sA : 64'd0;  // LOAD a / zero
         end else begin
-            result_v <= en;
+            result_v_c <= en;
             if (en) begin
-                result      <= res_smp;
+                result_c    <= res_smp;
                 prev_out    <= res_smp;
                 prev_back2  <= prev_back;
                 prev_back   <= back;

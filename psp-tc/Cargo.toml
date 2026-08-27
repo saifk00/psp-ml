@@ -12,10 +12,16 @@ path = "src/lib.rs"
 name = "psp-tc"
 path = "src/bin/psp-tc.rs"
 
+[[bin]]
+name = "vme-dump"
+path = "src/bin/vme-dump.rs"
+
 [dependencies]
 # psp-rt supplies the packed-B layout used by `gemm_bt_packed`, so the
 # compile-time packer here cannot drift from the runtime kernel.
 psp-rt = { path = "../psp-rt" }
+# vme-dump reads the machine-image format this crate's vme-assembler defines.
+vme-assembler = { path = "vme-assembler" }
 flatbuffers = "24.3"
 quote = "1"
 proc-macro2 = "1"

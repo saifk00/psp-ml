@@ -27,7 +27,7 @@ pub mod timing;
 #[cfg(test)]
 mod tests;
 
-pub use assemble::{context_words, generate_config, validate, MachineImage};
+pub use assemble::{context_words, generate_config, validate, MachineImage, VmeResult};
 pub use config::{
     AguParams, Buffer, BufferInit, BufferSlot, Fu, FunctionalUnit, Operation, Pe,
     ProcessingElement, Replay, Source, Transform, VmeConfig, BUFFER_WORDS,
@@ -57,6 +57,12 @@ pub enum VmeError {
     MissingCount { pe: usize },
     /// A descriptor or AGU field is out of range.
     FieldRange { fu: String, field: &'static str, value: u32, max: u32 },
+    /// A base-bank read names a buffer that is not the element's own:
+    /// measured on silicon, PE n's base-bank port reads BASE_n regardless
+    /// of the selector index (the manual's full-crossbar claim is wrong for
+    /// the base bank).  Stage that input in a TOP buffer, or in this PE's
+    /// own BASE_n at a disjoint offset.
+    BaseAffinity { fu: String, buffer: Buffer, pe: usize },
     /// PE `writer` writes BASE_n unconditionally, and something reads that
     /// buffer in the same pass -- the read races the write.  Stage the
     /// input in a different buffer.
@@ -64,10 +70,26 @@ pub enum VmeError {
     /// The staging graph has a cycle; feed a loop through a buffer across
     /// two passes instead.
     StagingCycle,
-    /// Two streams into one unit cannot be aligned by port skews alone
-    /// (e.g. two staging taps arriving on different cycles).  Restage one
-    /// leg, or route one operand through a buffer.
+    /// Two streams into one unit cannot be aligned (e.g. one port needed
+    /// at two different offset shifts).  Restage one leg, or route one
+    /// operand through a buffer.
     SkewConflict { fu: String, a: String, a_cycle: u32, b: String, b_cycle: u32 },
+    /// A staging source is wired to the front operand where it cannot be
+    /// aligned: staging must be the back (pacing) operand, since a buffer
+    /// partner can be advanced by an offset shift but a tap cannot.
+    FrontStaging { fu: String, producer: String },
+    /// FU1's back operand names a buffer.  Measured on silicon: a
+    /// buffer-fed FU1 (FU0 idle) produces nothing at any skew -- the
+    /// secondary unit consumes the staging bus, not the read ports
+    /// (a buffer *front* on FU1 is untested; the back is what paces).
+    Fu1BufferBack { pe: usize, buffer: Buffer },
+    /// A staging consumer's buffer leg needs its data rotated for
+    /// alignment, which requires the port's start offset to be 0.
+    ShiftedOffset { pe: usize, port: &'static str },
+    /// A read-port skew was requested, but read AGUs ignore the skew field
+    /// on real hardware -- alignment happens via start-offset shifts, which
+    /// the assembler derives automatically.
+    ReadSkewUnsupported { pe: usize, port: &'static str },
     /// A derived or manual skew exceeds the 8-bit MODE field.
     SkewRange { fu: String, skew: u32 },
 }
@@ -93,6 +115,12 @@ impl fmt::Display for VmeError {
             VmeError::FieldRange { fu, field, value, max } => {
                 write!(f, "{fu}: {field} = {value} exceeds {max}")
             }
+            VmeError::BaseAffinity { fu, buffer, pe } => write!(
+                f,
+                "{fu}: {buffer:?} is not PE{pe}'s own base buffer; the base-bank read \
+                 port has own-lane affinity on real hardware -- stage this input in a \
+                 TOP buffer or in BASE_{pe} at a disjoint offset"
+            ),
             VmeError::WriteClobber { writer, buffer, reader } => write!(
                 f,
                 "PE{writer} writes {buffer:?} while PE{reader} reads it; stage that input elsewhere"
@@ -109,6 +137,22 @@ impl fmt::Display for VmeError {
             VmeError::SkewRange { fu, skew } => {
                 write!(f, "{fu}: derived write skew {skew} exceeds the 8-bit MODE field")
             }
+            VmeError::FrontStaging { fu, producer } => write!(
+                f,
+                "{fu}: staging source {producer} must be the back operand (staging                  fronts cannot be aligned; swap the operands or restage via a buffer)"
+            ),
+            VmeError::Fu1BufferBack { pe, buffer } => write!(
+                f,
+                "PE{pe}.FU1: back operand {buffer:?} is a buffer, but the secondary                  unit only consumes the staging bus (measured); route the buffer                  through FU0 and feed FU1 its tap"
+            ),
+            VmeError::ShiftedOffset { pe, port } => write!(
+                f,
+                "PE{pe}.{port}: a staging-aligned read must start at offset 0 (its                  staged data is rotated for alignment instead)"
+            ),
+            VmeError::ReadSkewUnsupported { pe, port } => write!(
+                f,
+                "PE{pe}.{port}: read AGUs ignore the skew field on real hardware;                  remove the override (alignment is derived via offset shifts)"
+            ),
         }
     }
 }

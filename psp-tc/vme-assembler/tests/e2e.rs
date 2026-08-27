@@ -43,7 +43,9 @@ fn sext24(x: i64) -> i32 {
     (((x & 0xFF_FFFF) ^ 0x80_0000) - 0x80_0000) as i32
 }
 
-/// Rounded rescaled multiply, entirely derived-skew.
+/// Rounded rescaled multiply, entirely derived-skew, in the
+/// silicon-verified shape: front = TOP_0 data, back = own BASE_0 at a
+/// disjoint offset.
 #[test]
 fn e2e_vmul_round() {
     if vme_emu().is_none() {
@@ -57,15 +59,17 @@ fn e2e_vmul_round() {
             b[i] = i as i32 + 1;
         }
     });
-    vme.buffer_mut(Buffer::Base1).set_callback(|b| {
+    vme.buffer_mut(Buffer::Base0).set_callback(|b| {
         for i in 0..N {
-            b[i] = 3 * i as i32 - 20;
+            b[256 + i] = 3 * i as i32 - 20;
         }
     });
     let pe0 = vme.pe_mut(Pe::Pe0);
-    pe0.fu0().set_back(Source::Buf(Buffer::Top0));
-    pe0.fu0().set_front(Source::Buf(Buffer::Base1));
+    pe0.fu0().set_front(Source::Buf(Buffer::Top0));
+    pe0.fu0().set_back(Source::Buf(Buffer::Base0));
     pe0.fu0().set_op(Operation::new(Opcode::VMul).k(4).round());
+    pe0.read_base.offset = 256;
+    pe0.allow_write_clobber = true;
 
     let out = run(&generate_config(&vme).unwrap(), "vmul");
     let base0 = out.read_buffer(Buffer::Base0);
@@ -96,7 +100,7 @@ fn e2e_staging_pipeline_with_fu1() {
             b[i] = 2 * i as i32 - 9;
         }
     });
-    vme.buffer_mut(Buffer::Base2).set_callback(|b| {
+    vme.buffer_mut(Buffer::Top2).set_callback(|b| {
         for i in 0..N {
             b[i] = 100 - 7 * i as i32;
         }
@@ -108,7 +112,7 @@ fn e2e_staging_pipeline_with_fu1() {
     pe0.write_disabled = true; // product travels by staging only
     let pe1 = vme.pe_mut(Pe::Pe1);
     pe1.fu0().set_back(Source::Primary(Pe::Pe0));
-    pe1.fu0().set_front(Source::Buf(Buffer::Base2));
+    pe1.fu0().set_front(Source::Buf(Buffer::Top2));
     pe1.fu0().set_op(Operation::new(Opcode::Add));
     pe1.fu1().set_back(Source::Primary(Pe::Pe1));
     pe1.fu1().set_op(Operation::new(Opcode::Clamp).a(120).b(-50));
@@ -136,12 +140,16 @@ fn e2e_segment_replay() {
             b[i] = i as i32 + 2;
         }
     });
-    vme.buffer_mut(Buffer::Base1).set_data(&[-15, -5, 5, 15]);
+    vme.buffer_mut(Buffer::Base0).set_callback(|b| {
+        b[256..260].copy_from_slice(&[-15, -5, 5, 15]);
+    });
     let pe0 = vme.pe_mut(Pe::Pe0);
-    pe0.fu0().set_back(Source::Buf(Buffer::Top0));
-    pe0.fu0().set_front(Source::Buf(Buffer::Base1));
+    pe0.fu0().set_front(Source::Buf(Buffer::Top0));
+    pe0.fu0().set_back(Source::Buf(Buffer::Base0));
     pe0.fu0().set_op(Operation::new(Opcode::VMul));
+    pe0.read_base.offset = 256;
     pe0.read_base.replay = Some(Replay { seg_len: 4, stride: 0 });
+    pe0.allow_write_clobber = true;
 
     let out = run(&generate_config(&vme).unwrap(), "replay");
     let base0 = out.read_buffer(Buffer::Base0);

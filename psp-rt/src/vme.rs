@@ -63,6 +63,14 @@ pub struct VmeJob {
     pub ctx: [u32; VME_CTX_WORDS],
     /// Input words referenced by the stages.
     pub data: [u32; VME_DATA_WORDS],
+    /// Appended in plugin v1.1: run a full 1 MB machine image (vme-emu /
+    /// vme-assembler format) instead of the stage/readback fields. The ME
+    /// stages all eight ring buffers from the image, loads the context from
+    /// its mapped offset (0xF8000), runs, and reads every buffer back into
+    /// the image.
+    pub image_mode: u32,
+    /// Uncached-user address of the machine image when `image_mode` is set.
+    pub image_addr: u32,
 }
 
 /// Encoders for the VME datapath — the "assembler" behind [`vme_asm!`].
@@ -350,6 +358,9 @@ pub struct Job(*mut VmeJob);
 
 #[cfg(target_os = "psp")]
 impl Job {
+    /// The v1.1 capability marker `VmeInit` leaves in `image_addr` ("VME1").
+    const IMAGE_CAPS: u32 = 0x564D_4531;
+
     /// Wrap the shared job. Returns `None` before [`init`] has run.
     pub fn get() -> Option<Job> {
         let a = shared_addr();
@@ -398,5 +409,46 @@ impl Job {
     /// Result of the last run.
     pub fn result(&self) -> u32 {
         unsafe { core::ptr::read_volatile(&raw const (*self.0).result) }
+    }
+
+    /// Whether the installed plugin supports machine-image mode: v1.1's
+    /// `VmeInit` leaves a capability marker in `image_addr`. **Check this
+    /// before [`Job::set_image`]** — a v1.0 plugin allocated the smaller
+    /// job block, and writing the appended fields against it lands past
+    /// the allocation.
+    pub fn has_image_mode(&self) -> bool {
+        // The marker survives until the first set_image; after that,
+        // image_mode == 1 is itself proof of a v1.1 plugin (only v1.1 code
+        // paths ever set it), covering sessions after the first one this
+        // boot. Clean sessions call restore_image_caps on exit to put the
+        // marker back.
+        let caps = unsafe { core::ptr::read_volatile(&raw const (*self.0).image_addr) };
+        let mode = unsafe { core::ptr::read_volatile(&raw const (*self.0).image_mode) };
+        caps == Self::IMAGE_CAPS || mode == 1
+    }
+
+    /// Put the capability marker back (and leave image mode off) so the
+    /// *next* program this boot can detect the plugin. Call before exiting
+    /// a program that used [`Job::set_image`].
+    pub fn restore_image_caps(&self) {
+        unsafe {
+            core::ptr::write_volatile(&raw mut (*self.0).image_mode, 0);
+            core::ptr::write_volatile(&raw mut (*self.0).image_addr, Self::IMAGE_CAPS);
+        }
+    }
+
+    /// Switch the next runs to machine-image mode: `addr` is the
+    /// uncached-user address of a 1 MB image (vme-emu / vme-assembler
+    /// format). Needs plugin v1.1 — gate on [`Job::has_image_mode`].
+    pub fn set_image(&self, addr: u32) {
+        unsafe {
+            core::ptr::write_volatile(&raw mut (*self.0).image_addr, addr);
+            core::ptr::write_volatile(&raw mut (*self.0).image_mode, 1);
+        }
+    }
+
+    /// Back to the legacy stage/readback mode.
+    pub fn clear_image(&self) {
+        unsafe { core::ptr::write_volatile(&raw mut (*self.0).image_mode, 0) };
     }
 }

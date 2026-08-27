@@ -1,0 +1,11 @@
+[package]
+name = "vme-conformance"
+edition = "2021"
+
+[[bin]]
+name = "vme-conformance"
+path = "src/main.rs"
+
+[target.'cfg(target_os = "psp")'.dependencies]
+psp = "0.3"
+psp-rt = { path = "../../../psp-rt" }

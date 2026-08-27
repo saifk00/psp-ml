@@ -3,8 +3,14 @@
 // Every test builds a complete 106-word context image, stores it word by
 // word through the memory-mapped context window (the section 11.3 "fine
 // path"), stages input data in buffer memory, writes TRIGGER to DMA_CTRL,
-// polls DMA_STAT[11], and reads results back out of BASE_0 -- i.e. it
-// drives the emulator exactly the way me-core-lib drives the real array.
+// polls DMA_STAT[11], and reads results back out of the BASE bank -- i.e.
+// it drives the emulator exactly the way me-core-lib drives the real array.
+//
+// Shapes and skews follow what the 2026-08-27 silicon probe established:
+// front = TOP bank (index-selected), back = the element's own BASE_n
+// (base-bank reads have own-lane affinity), write skew 6 for an FU0 result
+// (11 for FU1), coefficients staged at a disjoint offset (256) of the
+// written buffer.
 //
 // Tests:
 //   A  VMUL with rounding      dual-stream multiply, R and K descriptor bits
@@ -13,6 +19,7 @@
 //   D  bit-reversed addressing FMT1.BRV / BRVW
 //   E  drain + negative offset the section 7.7 drain construction
 //   F  segment replay          counter B: coefficients against a data stream
+//   G  cross-PE staging        PE1 consumes PE0's product, skew ladder
 `timescale 1ns/1ps
 module tb_vme;
     reg clk = 0;
@@ -122,9 +129,13 @@ module tb_vme;
         sext24 = {{8{x[23]}}, x[23:0]};
     endfunction
 
-    // descriptor field constants (Table 5.1 / Appendix C)
-    localparam FSEL_BASE1 = 32'h5000_0000;
+    // descriptor field constants (Table 5.1 / Appendix C).  Base-bank reads
+    // have own-lane affinity, so PE0's back is always BSEL BASE_0.
+    localparam FSEL_TOP0  = 32'h0000_0000;
+    localparam FSEL_TOP1  = 32'h1000_0000;
+    localparam FSEL_TOP2  = 32'h2000_0000;
     localparam BSEL_TOP0  = 32'h0000_0000;
+    localparam BSEL_BASE0 = 32'h0200_0000;
     localparam BSEL_STG0  = 32'h0400_0000;
     localparam OP_VMUL    = 32'h0022_0000;
     localparam OP_MACI    = 32'h0024_0000;
@@ -133,6 +144,13 @@ module tb_vme;
     localparam OP_MOV_I   = 32'h0000_4000;
     localparam RBIT       = 32'h0000_0040;
     localparam MODE_LIN   = 32'h8400_0000;
+    // silicon-calibrated: write skew = 6 for a buffer-fed FU0 (read 3 +
+    // FU 3), +3 per staging hop.  Read AGUs have no skew (the hardware
+    // ignores the field); cross-stream alignment is a -3-word start-offset
+    // shift per hop on the buffer leg.
+    localparam WSKEW_FU0  = 32'h0006_0000;
+    localparam WSKEW_FU1  = 32'h0009_0000;
+    localparam COFF       = 11'd256;   // coefficient offset in BASE_0
 
     reg signed [63:0] va, vb, prod, acc64;
     reg [31:0] tmp;
@@ -144,17 +162,17 @@ module tb_vme;
         repeat (2) @(negedge clk);
 
         // ==========================================================
-        // Test A: VMUL, K=4, R=1 -- BASE_0[i] = round((TOP_0*BASE_1)>>4)
+        // Test A: VMUL, K=4, R=1 -- BASE_0[i] = round((TOP_0*coeff)>>4)
         // ==========================================================
         for (i = 0; i < 16; i = i + 1) begin
-            hw(buf_addr(3'd4, i[10:0]), i + 1);          // TOP_0
-            hw(buf_addr(3'd1, i[10:0]), 3 * i - 20);     // BASE_1
+            hw(buf_addr(3'd4, i[10:0]), i + 1);              // TOP_0
+            hw(buf_addr(3'd0, COFF + i[10:0]), 3 * i - 20);  // BASE_0 coeffs
         end
         ctx_default;
-        c[0]        = FSEL_BASE1 | BSEL_TOP0 | OP_VMUL | RBIT | 32'd4;
+        c[0]        = FSEL_TOP0 | BSEL_BASE0 | OP_VMUL | RBIT | 32'd4;
         c[RTOP]     = MODE_LIN;          c[RTOP + 1]  = 32'h0001_000F;
-        c[RBASE]    = MODE_LIN;          c[RBASE + 1] = 32'h0001_000F;
-        c[WR]       = MODE_LIN | 32'h0002_0000;  // write skew 2 (FU0 latency)
+        c[RBASE]    = MODE_LIN | COFF;   c[RBASE + 1] = 32'h0001_000F;
+        c[WR]       = MODE_LIN | WSKEW_FU0;
         c[WR + 1]   = 32'h0001_000F;
         ctx_flush;
         run_and_wait;
@@ -165,13 +183,13 @@ module tb_vme;
         end
 
         // ==========================================================
-        // Test B: MACI dot product -- BASE_0[i] = sum(TOP_0[0..i]*BASE_1[0..i])
+        // Test B: MACI dot product -- BASE_0[i] = sum(TOP_0[0..i]*coeff[0..i])
         // ==========================================================
         ctx_default;
-        c[0]      = FSEL_BASE1 | BSEL_TOP0 | OP_MACI;    // K=0, b=0
-        c[RTOP]   = MODE_LIN;           c[RTOP + 1]  = 32'h0001_000F;
-        c[RBASE]  = MODE_LIN;           c[RBASE + 1] = 32'h0001_000F;
-        c[WR]     = MODE_LIN | 32'h0002_0000;
+        c[0]      = FSEL_TOP0 | BSEL_BASE0 | OP_MACI;    // K=0, b=0
+        c[RTOP]   = MODE_LIN;          c[RTOP + 1]  = 32'h0001_000F;
+        c[RBASE]  = MODE_LIN | COFF;   c[RBASE + 1] = 32'h0001_000F;
+        c[WR]     = MODE_LIN | WSKEW_FU0;
         c[WR + 1] = 32'h0001_000F;
         ctx_flush;
         run_and_wait;
@@ -186,18 +204,18 @@ module tb_vme;
         // Test C: FU0 ADD, FU1 CLAMP on STG_0, FU1 drives the write port
         // ==========================================================
         for (i = 0; i < 16; i = i + 1) begin
-            hw(buf_addr(3'd4, i[10:0]), 7 * i - 40);     // TOP_0
-            hw(buf_addr(3'd1, i[10:0]), 5 * i);          // BASE_1
+            hw(buf_addr(3'd4, i[10:0]), 7 * i - 40);         // TOP_0
+            hw(buf_addr(3'd0, COFF + i[10:0]), 5 * i);       // BASE_0 coeffs
         end
         ctx_default;
-        c[0]      = FSEL_BASE1 | BSEL_TOP0 | OP_ADD;     // sum, K=0
+        c[0]      = FSEL_TOP0 | BSEL_BASE0 | OP_ADD;     // sum, K=0
         c[4]      = BSEL_STG0 | OP_CLAMP;                // clamp(a=ceil, b=floor)
         c[16]     = 32'd100;                             // FU1 a: ceiling
         c[17]     = -32'd30;                             // FU1 b: floor
         c[27]     = 32'h8000_0000;                       // FU1EN: PE0
-        c[RTOP]   = MODE_LIN;           c[RTOP + 1]  = 32'h0001_000F;
-        c[RBASE]  = MODE_LIN;           c[RBASE + 1] = 32'h0001_000F;
-        c[WR]     = MODE_LIN | 32'h0003_0000;    // write skew 3 (FU1 latency)
+        c[RTOP]   = MODE_LIN;          c[RTOP + 1]  = 32'h0001_000F;
+        c[RBASE]  = MODE_LIN | COFF;   c[RBASE + 1] = 32'h0001_000F;
+        c[WR]     = MODE_LIN | WSKEW_FU1;
         c[WR + 1] = 32'h0001_000F;
         ctx_flush;
         run_and_wait;
@@ -217,7 +235,7 @@ module tb_vme;
         c[0]        = OP_MOV_I;                          // MOV back (TOP_0)
         c[RTOP]     = MODE_LIN;         c[RTOP + 1] = 32'h0001_000F;
         c[RTOP + 5] = 32'hA400_0004;                     // FMT1: BITREV(4)
-        c[WR]       = MODE_LIN | 32'h0002_0000;
+        c[WR]       = MODE_LIN | WSKEW_FU0;
         c[WR + 1]   = 32'h0001_000F;
         ctx_flush;
         run_and_wait;
@@ -235,7 +253,7 @@ module tb_vme;
         ctx_default;
         c[0]        = OP_MOV_I;
         c[RTOP]     = MODE_LIN;         c[RTOP + 1] = 32'h0001_001F;
-        c[WR]       = MODE_LIN | 32'h0002_0000;
+        c[WR]       = MODE_LIN | WSKEW_FU0;
         c[WR + 1]   = 32'h0001_001F;                     // 32 elements
         c[WR + 4]   = 32'h0000_0010;                     // FMT0: DRAIN = 16
         c[WR + 5]   = 32'h0020_0000;                     // FMT1: END token
@@ -245,19 +263,19 @@ module tb_vme;
             check("E/drain", i[10:0] + 11'd16, 32'h0BEE0 + i);
 
         // ==========================================================
-        // Test F: segment replay -- BASE_0[i] = TOP_0[i] * BASE_1[i mod 4]
+        // Test F: segment replay -- BASE_0[i] = TOP_0[i] * coeff[i mod 4]
         // ==========================================================
         for (i = 0; i < 16; i = i + 1)
-            hw(buf_addr(3'd4, i[10:0]), i + 2);          // TOP_0 data stream
+            hw(buf_addr(3'd4, i[10:0]), i + 2);              // TOP_0 data
         for (i = 0; i < 4; i = i + 1)
-            hw(buf_addr(3'd1, i[10:0]), 10 * i - 15);    // BASE_1 coefficients
+            hw(buf_addr(3'd0, COFF + i[10:0]), 10 * i - 15); // BASE_0 coeffs
         ctx_default;
-        c[0]         = FSEL_BASE1 | BSEL_TOP0 | OP_VMUL; // K=0
+        c[0]         = FSEL_TOP0 | BSEL_BASE0 | OP_VMUL; // K=0
         c[RTOP]      = MODE_LIN;        c[RTOP + 1]  = 32'h0001_000F;
-        c[RBASE]     = MODE_LIN;        c[RBASE + 1] = 32'h0001_000F;
+        c[RBASE]     = MODE_LIN | COFF; c[RBASE + 1] = 32'h0001_000F;
         c[RBASE + 2] = 32'h0001_0003;                    // INNER0: seg len 4
         c[RBASE + 4] = 32'h0002_0000;                    // FMT0: RING
-        c[WR]        = MODE_LIN | 32'h0002_0000;
+        c[WR]        = MODE_LIN | WSKEW_FU0;
         c[WR + 1]    = 32'h0001_000F;
         ctx_flush;
         run_and_wait;
@@ -267,22 +285,25 @@ module tb_vme;
         end
 
         // ==========================================================
-        // Test G: cross-PE staging pipeline -- PE0 multiplies, PE1 reads
-        // the product off staging tap 0, adds BASE_2, and writes BASE_1.
-        // A two-stage skew ladder: PE1's base read +1, PE1's write +3.
+        // Test G: cross-PE staging pipeline -- PE0 multiplies TOP_0 x TOP_1,
+        // PE1 reads the product off staging tap 0, adds TOP_2, writes BASE_1.
+        // Silicon rules: the TOP_2 leg is aligned by DISPLACING its data +3
+        // positions (tap el m pairs buffer position m+3); every read port
+        // runs the extended length 19 (the shared read enable halts at the
+        // minimum); PE1's write skew = tap availability + one hop (9).
         // ==========================================================
         for (i = 0; i < 16; i = i + 1) begin
-            hw(buf_addr(3'd4, i[10:0]), i + 1);          // TOP_0
-            hw(buf_addr(3'd5, i[10:0]), 2 * i - 9);      // TOP_1
-            hw(buf_addr(3'd2, i[10:0]), 100 - 7 * i);    // BASE_2
+            hw(buf_addr(3'd4, i[10:0]), i + 1);              // TOP_0
+            hw(buf_addr(3'd5, i[10:0]), 2 * i - 9);          // TOP_1
+            hw(buf_addr(3'd6, i[10:0] + 11'd3), 100 - 7 * i); // TOP_2 displaced +3
         end
         ctx_default;
-        c[0]      = 32'h1000_0000 | BSEL_TOP0 | OP_VMUL; // PE0: TOP_0 * TOP_1
-        c[RTOP]   = MODE_LIN;           c[RTOP + 1] = 32'h0001_000F;
-        c[1]      = 32'h6000_0000 | BSEL_STG0 | OP_ADD;  // PE1: STG_0 + BASE_2
-        c[57]     = MODE_LIN | 32'h0001_0000;            // PE1 RBASE skew 1
-        c[58]     = 32'h0001_000F;
-        c[63]     = MODE_LIN | 32'h0003_0000;            // PE1 WR skew 3
+        c[0]      = FSEL_TOP1 | BSEL_TOP0 | OP_VMUL;     // PE0: TOP_0 * TOP_1
+        c[RTOP]   = MODE_LIN;           c[RTOP + 1] = 32'h0001_0012;
+        c[1]      = FSEL_TOP2 | BSEL_STG0 | OP_ADD;      // PE1: STG_0 + TOP_2
+        c[51]     = MODE_LIN;                            // PE1 RTOP, offset 0
+        c[52]     = 32'h0001_0012;                       // all reads: 19 elems
+        c[63]     = MODE_LIN | WSKEW_FU1;                // PE1 WR skew 9
         c[64]     = 32'h0001_000F;
         ctx_flush;
         run_and_wait;

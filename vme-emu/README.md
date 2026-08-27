@@ -92,38 +92,38 @@ modelled — the host port *is* the data path in simulation, so `LOAD`/`STORE`/
 `FILL`/`CTXLOAD` reduce to plain writes. Only `TRIGGER` and the two status
 bits carry over.
 
-## Timing of this model
+## Timing of this model (silicon-calibrated)
 
-The manual is explicit that the array has no interlock, scoreboard or stall:
-synchronisation is per-port cycle skew, and a mis-skewed context reads stale
-data and produces plausible-but-wrong output. This model reproduces that
-contract with a short, *known* pipeline (the real depth is "approximately
-ten stages"; here it is documented and exact):
+The manual says synchronisation is per-port cycle skew.  Hardware probes
+(2026-08-27, `examples/vme-conformance/host/src/bin/probe.rs`) showed the
+real machine is narrower than that, and this RTL now reproduces the
+measured behaviour exactly -- the three conformance tests pass bit-exact
+against silicon:
 
-```
-cycle 0: AGU emits address        (after MODE[23:16] skew cycles)
-cycle 1: buffer read data valid
-cycle 2: FU0 result registered    -> staging taps 0-3
-cycle 3: FU1 result registered    -> staging taps 4-7
-```
+- **Only the write AGU's skew field works.**  Read AGUs ignore
+  MODE[23:16]; every read port starts at trigger.
+- The address-issue-to-write-capture path for a buffer-fed FU0 is
+  **6 cycles** (read path 3 + FU 3); each staging hop adds the FU half:
+  a tap consumer's write skew is producer's + 3 (9 for one hop, and FU1
+  consuming its own PE's FU0 is such a hop).
+- **Base-bank reads have own-lane affinity**: PE n's back port reads
+  BASE_n regardless of the BSEL index.  TOP-bank reads select by index,
+  and TOP offsets work (including negative/wrapping ones).
+- **All read ports advance on a shared enable that halts when the
+  shortest read stream ends**, so the assembler emits every read port
+  with the same extended length.
+- A staging consumer's buffer leg pairs tap element `m` with buffer
+  *position* `m + 3` (its offset field proved unreliable for moving that
+  pairing), so alignment is done by **rotating the staged data** forward
+  3 positions per hop -- `vme-assembler` does this in the image.
 
-The write port stores whatever the selected FU's result register holds on
-the cycle its WR AGU emits an address. Hence the skew ladder every context
-needs:
-
-- **WR skew = read skew + 2** when FU0 drives the write port, **+ 3** for FU1.
-  (`vme-assembler`'s `timing.rs` encodes exactly this model and derives the
-  skews automatically; its e2e tests run assembled images through `vme-emu`
-  when it is built, so a pipeline change here fails there until re-tuned.)
-- A consumer mixing a buffer stream with a staging stream leads the staging
-  stream by 1 cycle per FU stage; cancel it with the buffer-side AGU skew or
-  an `ICN_SKEW` bank code (000/100/101/110/111 → 0/1/2/3/4 cycles), which is
-  exactly what that register exists for.
-- `FMT0.DRAIN` on a write port (only with `FMT1.END` set, as documented)
-  adds DRAIN cycles of delay to the write *data* path: the first DRAIN
-  offsets of the address sequence receive junk and valid element j lands at
-  offset j+DRAIN, which the final stage cancels with a negative start offset
-  (`0x1_0000 − prologue`) — the section 7.7 construction, verified by test E.
+`vme_assembler::timing` encodes exactly this model (BUFFER_LATENCY = 6,
+STAGING_HOP = 3) and derives write skews, read lengths and data rotations
+automatically; its e2e tests run assembled images through `vme-emu` when
+it is built, and `vme-conformance-host` diffs the RTL against the real
+block.  `FMT0.DRAIN` on a write port (with `FMT1.END`) still adds DRAIN
+cycles of write-data delay, displacing valid data by +DRAIN offsets (the
+section 7.7 construction, testbench test E).
 
 ## Interpretation decisions
 

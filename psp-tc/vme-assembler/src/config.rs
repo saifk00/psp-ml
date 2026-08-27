@@ -262,8 +262,10 @@ pub struct AguParams {
     pub step: u16,
     pub replay: Option<Replay>,
     pub transform: Transform,
-    /// Manual cycle-skew override.  `None`: the assembler derives it from
-    /// the dataflow graph and the RTL latency model ([`crate::timing`]).
+    /// Manual cycle-skew override -- write ports only (read AGUs ignore
+    /// the skew field on real hardware; setting this on a read port is a
+    /// validation error).  `None`: derived from the dataflow graph and the
+    /// silicon-calibrated model ([`crate::timing`]).
     pub skew: Option<u8>,
     /// Write port only: pipeline drain in elements.  Emits FMT0.DRAIN and
     /// the FMT1 END token; valid element `j` then lands at sequence
@@ -290,6 +292,12 @@ pub struct ProcessingElement {
     /// visible only on the staging bus).  Default: writes whenever a
     /// functional unit is configured.
     pub write_disabled: bool,
+    /// Allow reading the buffer this element writes (BASE_n).  Legitimate
+    /// when the read and write regions are disjoint offsets -- the proven
+    /// MAC demo reads its coefficients from BASE_0[256..] while streaming
+    /// results into BASE_0[0..].  Off by default: with overlapping regions
+    /// the read races the write.
+    pub allow_write_clobber: bool,
 }
 
 impl ProcessingElement {
