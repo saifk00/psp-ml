@@ -1334,6 +1334,63 @@ fn render_kernel_call(
             }
         }
 
+        KernelCall::VmeConv1x1 {
+            input,
+            weights,
+            w_scales,
+            bias,
+            ctx_full,
+            ctx_rem,
+            output,
+            pixels,
+            k,
+            co,
+            p_full,
+            weights_off,
+            in_scale,
+            in_zp,
+        } => {
+            let in_expr = writer.read(*input);
+            let w_expr = writer.read(*weights); // int8 constant -> &[i8] view
+            let ws_expr = writer.read(*w_scales);
+            let bias_tok = match bias {
+                Some(b) => {
+                    let b_expr = writer.read(*b);
+                    quote!(Some(#b_expr))
+                }
+                None => quote!(None),
+            };
+            // Contexts are u32 words stored bit-cast in the f32 blob; hand
+            // the kernel an &[i32] view (the Gather reinterpret pattern).
+            let ctxf_expr = writer.read(*ctx_full);
+            let ctxr_tok = match ctx_rem {
+                Some(c) => {
+                    let c_expr = writer.read(*c);
+                    quote!(unsafe { core::slice::from_raw_parts(#c_expr.as_ptr() as *const i32, 106usize) })
+                }
+                None => quote!(&[]),
+            };
+            let out_expr = writer.write(*output);
+            quote! {
+                vme_conv1x1_i8(
+                    #in_expr,
+                    #pixels,
+                    #k,
+                    #in_scale,
+                    #in_zp,
+                    #w_expr,
+                    #ws_expr,
+                    #bias_tok,
+                    #out_expr,
+                    #co,
+                    unsafe { core::slice::from_raw_parts(#ctxf_expr.as_ptr() as *const i32, 106usize) },
+                    #ctxr_tok,
+                    #p_full,
+                    #weights_off,
+                );
+            }
+        }
+
         KernelCall::FirDecimate {
             input,
             taps,

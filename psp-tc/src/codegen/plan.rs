@@ -389,6 +389,26 @@ pub enum KernelCall {
         frames: usize,
     },
 
+    /// VME-offloaded int8 1x1 conv (see `psp_rt::kernels::vme_conv1x1_i8`
+    /// and psp-tc's `vme_conv` module). `ctx_full`/`ctx_rem` are baked
+    /// 106-word array contexts (I32 constants).
+    VmeConv1x1 {
+        input: TensorId,
+        weights: TensorId,
+        w_scales: TensorId,
+        bias: Option<TensorId>,
+        ctx_full: TensorId,
+        ctx_rem: Option<TensorId>,
+        output: TensorId,
+        pixels: usize,
+        k: usize,
+        co: usize,
+        p_full: usize,
+        weights_off: usize,
+        in_scale: f32,
+        in_zp: i32,
+    },
+
     /// FIR lowpass + decimation. See `psp_rt::kernels::fir_decimate`.
     FirDecimate {
         input: TensorId,

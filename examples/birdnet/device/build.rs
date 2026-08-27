@@ -41,6 +41,7 @@ fn main() {
         "BIRDNET_BBOX",
         "BIRDNET_PYTHON",
         "BIRDNET_GENERATED_OVERRIDE",
+        "PSP_TC_FORCE_VME",
     ] {
         println!("cargo:rerun-if-env-changed={var}");
     }

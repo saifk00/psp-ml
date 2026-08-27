@@ -504,6 +504,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "vme-conv-bench"
+version = "0.1.0"
+dependencies = [
+ "psp",
+ "psp-rt",
+ "psp-tc",
+]
+
+[[package]]
+name = "vme-conv-bench-host"
+version = "0.1.0"
+dependencies = [
+ "psplink-connection",
+]
+
+[[package]]
 name = "vme-emu-sys"
 version = "0.1.0"
 dependencies = [

@@ -8,6 +8,8 @@
 pub mod checks;
 
 pub mod naive;
+mod vme_conv;
+pub use vme_conv::*;
 
 #[cfg(target_os = "psp")]
 use psp::vfpu_asm;

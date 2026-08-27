@@ -6,6 +6,7 @@ pub mod ir;
 pub mod mel;
 pub mod memory_planner;
 pub mod parse;
+pub mod vme_conv;
 
 pub use builder::PspModelBuilder;
 pub use codegen::ModelStats;

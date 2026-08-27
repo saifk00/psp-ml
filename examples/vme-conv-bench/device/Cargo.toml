@@ -1,0 +1,17 @@
+[package]
+name = "vme-conv-bench"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "vme-conv-bench"
+path = "src/main.rs"
+
+[dependencies]
+psp-rt = { path = "../../../psp-rt" }
+
+[target.'cfg(target_os = "psp")'.dependencies]
+psp = "0.3"
+
+[build-dependencies]
+psp-tc = { path = "../../../psp-tc" }

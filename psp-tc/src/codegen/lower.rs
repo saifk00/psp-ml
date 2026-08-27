@@ -251,6 +251,30 @@ fn lower_ops(
             continue;
         }
 
+        // VME offload: an int8 1x1 stride-1 unpadded conv goes to the Media
+        // Engine when the measured cost model says it beats the VFPU
+        // fake-quant path (today: never — the image-mode job overhead is
+        // ~150x the per-job compute; see `crate::vme_conv::VME_COST`.
+        // PSP_TC_FORCE_VME=1 forces the offload for end-to-end validation).
+        // Handled before the immutable-graph match because the baked array
+        // contexts are appended constants.
+        if let PspOp::Conv2d {
+            input,
+            weights,
+            bias,
+            output,
+            weight_scales: Some(w_scales),
+            params,
+        } = &op
+        {
+            if let Some(plan) = vme_conv_applicable(model, *input, *weights, params) {
+                ops.push(lower_vme_conv1x1(
+                    model, allocs, *input, *weights, *w_scales, *bias, *output, plan,
+                )?);
+                continue;
+            }
+        }
+
         // Same for the strided-view STFT (twiddles are appended constants).
         if let PspOp::StridedViewStft {
             input,
@@ -1411,6 +1435,110 @@ fn append_rfft_twiddles(
         append_constant_f32(model, allocs, vec![(n_complex - 1) * 2], &unpack_twiddles);
 
     (stage_tw_id, unpack_tw_id)
+}
+
+/// Decide whether a Conv2d goes to the VME: int8 1x1, stride 1, no
+/// padding, no fused activation, per-tensor-quantized input, and the
+/// measured cost model (or the force flag) says yes.
+fn vme_conv_applicable(
+    model: &PspModel,
+    input: TensorId,
+    weights: TensorId,
+    params: &crate::ir::psp::Conv2dParams,
+) -> Option<crate::vme_conv::VmeConv1x1Plan> {
+    let graph = &model.graph;
+    let w = graph.tensor(weights);
+    if w.dtype != DType::I8 {
+        return None;
+    }
+    let ws = &w.shape;
+    let is = &graph.tensor(input).shape;
+    if ws.len() != 4 || is.len() != 4 || ws[1] != 1 || ws[2] != 1 {
+        return None;
+    }
+    if params.stride_h != 1
+        || params.stride_w != 1
+        || params.pad_top != 0
+        || params.pad_bottom != 0
+        || params.pad_left != 0
+        || params.pad_right != 0
+        || params.fused_activation.is_some()
+    {
+        return None;
+    }
+    // The input must carry per-tensor quantization (the quant rewrite
+    // guarantees it for int8 convs; be defensive anyway).
+    graph.tensor(input).quant.as_ref()?.scalar().ok()?;
+    let pixels = is[0] * is[1] * is[2];
+    let (k, co) = (ws[3], ws[0]);
+    if !crate::vme_conv::vme_conv1x1_profitable(pixels, k, co) {
+        return None;
+    }
+    crate::vme_conv::plan_vme_conv1x1(k)
+}
+
+/// Lower an int8 1x1 conv to the VME kernel: bake the job contexts as
+/// blob constants and emit the call.
+#[allow(clippy::too_many_arguments)]
+fn lower_vme_conv1x1(
+    model: &mut PspModel,
+    allocs: &mut Vec<TensorAlloc>,
+    input: TensorId,
+    weights: TensorId,
+    w_scales: TensorId,
+    bias: Option<TensorId>,
+    output: TensorId,
+    plan: crate::vme_conv::VmeConv1x1Plan,
+) -> Result<OpPlan, String> {
+    let graph = &model.graph;
+    let is = graph.tensor(input).shape.clone();
+    let ws = graph.tensor(weights).shape.clone();
+    let (pixels, k, co) = (is[0] * is[1] * is[2], ws[3], ws[0]);
+    let (in_scale, in_zp) = graph
+        .tensor(input)
+        .quant
+        .as_ref()
+        .and_then(|q| q.scalar().ok())
+        .ok_or("VmeConv1x1: input missing per-tensor quantization")?;
+
+    let as_f32 = |ctx: &[u32]| -> Vec<f32> { ctx.iter().map(|w| f32::from_bits(*w)).collect() };
+    let ctx_full_id = append_constant_f32(model, allocs, vec![plan.ctx.len()], &as_f32(&plan.ctx));
+    let rem = pixels % plan.pixels_per_job;
+    let ctx_rem_id = if rem > 0 {
+        let ctx = crate::vme_conv::vme_conv1x1_ctx(k, rem).map_err(|e| format!("VmeConv1x1: {e}"))?;
+        Some(append_constant_f32(model, allocs, vec![ctx.len()], &as_f32(&ctx)))
+    } else {
+        None
+    };
+
+    println!(
+        "vme: conv2d 1x1 int8 [{co}x{k}] over {pixels} px -> Media Engine          ({} jobs of {} pixels)",
+        pixels.div_ceil(plan.pixels_per_job) * co.div_ceil(crate::vme_conv::LANES),
+        plan.pixels_per_job
+    );
+
+    Ok(OpPlan {
+        scratch: vec![],
+        sub_ops: vec![SubOpPlan {
+            name: "vme_conv".into(),
+            kernels: vec![KernelCall::VmeConv1x1 {
+                input,
+                weights,
+                w_scales,
+                bias,
+                ctx_full: ctx_full_id,
+                ctx_rem: ctx_rem_id,
+                output,
+                pixels,
+                k,
+                co,
+                p_full: plan.pixels_per_job,
+                weights_off: plan.weights_off,
+                in_scale,
+                in_zp,
+            }],
+        }],
+    })
 }
 
 /// Lower `StridedViewStft`: one `rfft_strided_batch` call reading frames as

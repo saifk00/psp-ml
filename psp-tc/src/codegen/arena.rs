@@ -180,6 +180,28 @@ pub fn extract_tensor_refs(kernel: &KernelCall) -> Vec<TensorRef> {
             refs.push(r(*taps));
             refs.push(w(*output));
         }
+        KernelCall::VmeConv1x1 {
+            input,
+            weights,
+            w_scales,
+            bias,
+            ctx_full,
+            ctx_rem,
+            output,
+            ..
+        } => {
+            refs.push(r(*input));
+            refs.push(r(*weights));
+            refs.push(r(*w_scales));
+            if let Some(b) = bias {
+                refs.push(r(*b));
+            }
+            refs.push(r(*ctx_full));
+            if let Some(c) = ctx_rem {
+                refs.push(r(*c));
+            }
+            refs.push(w(*output));
+        }
         KernelCall::RfftStridedBatch {
             input,
             window,

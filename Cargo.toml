@@ -35,6 +35,8 @@ members = [
     "examples/vme-conformance/host",
     "examples/vme-install/device",
     "examples/vme-install/host",
+    "examples/vme-conv-bench/device",
+    "examples/vme-conv-bench/host",
     "examples/birdnet-stft-benchmark/device",
     "examples/birdnet-stft-benchmark/host",
     "examples/birdnet-mel-benchmark/device",
