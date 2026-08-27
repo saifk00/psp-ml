@@ -17,6 +17,11 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+/// Overridable via BIRDNET_MODEL (path relative to the repo root) — e.g.
+/// the Zenodo FP32 build `models/birdnet/audio-model-fp32.tflite`, which
+/// skips the whole fake-quant machinery (no QUANTIZE/DEQUANTIZE ops, f32
+/// weights). Same graph otherwise; the pruner and the frontend severing
+/// are dtype-agnostic.
 const FULL_MODEL: &str = "models/birdnet/audio-model-int8.tflite";
 const FULL_LABELS: &str = "models/birdnet/labels/en_us.txt";
 const PRUNER: &str = "examples/birdnet/prune_classifier.py";
@@ -42,6 +47,7 @@ fn main() {
         "BIRDNET_PYTHON",
         "BIRDNET_GENERATED_OVERRIDE",
         "PSP_TC_FORCE_VME",
+        "BIRDNET_MODEL",
     ] {
         println!("cargo:rerun-if-env-changed={var}");
     }
@@ -86,7 +92,13 @@ fn main() {
 ///
 /// Unset TOPK means the stock 6522-class model and the full labels file.
 fn select_model(repo_root: &Path, out_dir: &Path) -> PathBuf {
-    let full_model = repo_root.join(FULL_MODEL);
+    let model_rel = std::env::var("BIRDNET_MODEL").unwrap_or_else(|_| FULL_MODEL.to_string());
+    let full_model = repo_root.join(&model_rel);
+    assert!(
+        full_model.exists(),
+        "BIRDNET_MODEL {} not found",
+        full_model.display()
+    );
     let full_labels = repo_root.join(FULL_LABELS);
 
     let topk = match std::env::var("TOPK") {

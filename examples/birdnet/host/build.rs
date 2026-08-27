@@ -42,7 +42,7 @@ fn main() {
     // Forward the species-pruning knobs to the device build, which is what
     // actually invokes prune_classifier.py. Cargo would pass these through
     // anyway, but being explicit keeps the contract visible from the host side.
-    for var in ["TOPK", "BIRDNET_REGION", "BIRDNET_BBOX", "BIRDNET_PYTHON"] {
+    for var in ["TOPK", "BIRDNET_REGION", "BIRDNET_BBOX", "BIRDNET_PYTHON", "BIRDNET_MODEL"] {
         if let Ok(val) = std::env::var(var) {
             cmd.env(var, val);
         }
