@@ -9,6 +9,7 @@ const fn ceil_vfpu_q(x: usize) -> usize {
     (x + VFPU_Q - 1) & !(VFPU_Q - 1)
 }
 
+#[derive(Clone, Copy)]
 struct Conv2dKernelParams {
     input: Tensor4d,
     filter: Tensor4d,
@@ -19,6 +20,67 @@ struct Conv2dKernelParams {
     has_relu: bool,
     /// Per-output-channel dequant scales when the filter is int8.
     weight_scales: Option<TensorId>,
+}
+
+/// Validate a Conv2d's tensors and collect the kernel parameters — shared
+/// by the pre-match lowering (which may append a compile-time-packed
+/// weight constant) and kept close to the shapes it checks.
+fn build_conv2d_params(
+    graph: &crate::ir::Graph<crate::ir::PspOp>,
+    i: usize,
+    input: TensorId,
+    weights: TensorId,
+    bias: Option<TensorId>,
+    output: TensorId,
+    weight_scales: Option<TensorId>,
+    params: &crate::ir::psp::Conv2dParams,
+) -> Result<Conv2dKernelParams, String> {
+    let in_shape = &graph.tensor(input).shape;
+    let w_shape = &graph.tensor(weights).shape;
+    if graph.tensor(weights).dtype == DType::I8 && weight_scales.is_none() {
+        return Err(format!(
+            "Op {i}: int8 conv weights without scales (quant rewrite not run?)"
+        ));
+    }
+    let out_shape = &graph.tensor(output).shape;
+
+    if in_shape.len() != 4 || w_shape.len() != 4 || out_shape.len() != 4 {
+        return Err(format!(
+            "Op {i}: Conv2d expects 4D tensors (input={}, weights={}, output={})",
+            in_shape.len(),
+            w_shape.len(),
+            out_shape.len()
+        ));
+    }
+
+    if let Some(Activation::Relu6) = params.fused_activation {
+        return Err(format!("Op {i}: Relu6 not supported for Conv2d"));
+    }
+
+    Ok(Conv2dKernelParams {
+        input: Tensor4d {
+            id: input,
+            shape: [in_shape[0], in_shape[1], in_shape[2], in_shape[3]],
+        },
+        filter: Tensor4d {
+            id: weights,
+            shape: [w_shape[0], w_shape[1], w_shape[2], w_shape[3]],
+        },
+        bias,
+        output: Tensor4d {
+            id: output,
+            shape: [out_shape[0], out_shape[1], out_shape[2], out_shape[3]],
+        },
+        stride: [params.stride_h, params.stride_w],
+        padding: [
+            params.pad_top,
+            params.pad_bottom,
+            params.pad_left,
+            params.pad_right,
+        ],
+        has_relu: matches!(params.fused_activation, Some(Activation::Relu)),
+        weight_scales,
+    })
 }
 
 impl Conv2dKernelParams {
@@ -263,16 +325,36 @@ fn lower_ops(
             weights,
             bias,
             output,
-            weight_scales: Some(w_scales),
+            weight_scales,
             params,
         } = &op
         {
-            if let Some(plan) = vme_conv_applicable(model, *input, *weights, params) {
-                ops.push(lower_vme_conv1x1(
-                    model, allocs, *input, *weights, *w_scales, *bias, *output, plan,
-                )?);
-                continue;
+            if let Some(w_scales) = weight_scales {
+                if let Some(plan) = vme_conv_applicable(model, *input, *weights, params) {
+                    ops.push(lower_vme_conv1x1(
+                        model, allocs, *input, *weights, *w_scales, *bias, *output, plan,
+                    )?);
+                    continue;
+                }
             }
+            let conv2d = build_conv2d_params(
+                &model.graph, i, *input, *weights, *bias, *output, *weight_scales, params,
+            )?;
+            let plan = if use_vfpu_conv2d {
+                // f32 constant weights: repack into the GEMM's B layout at
+                // compile time (the FC path's trick) so `pack_weights`
+                // vanishes from the run; int8/streamed weights keep the
+                // runtime pack (packing int8 at compile time would store
+                // the dequantized f32 copy and quadruple those weights).
+                match lower_conv2d_vfpu_prepacked(model, allocs, streamed, conv2d) {
+                    Some(p) => p,
+                    None => lower_conv2d_vfpu(conv2d),
+                }
+            } else {
+                lower_conv2d_naive(conv2d)
+            };
+            ops.push(plan);
+            continue;
         }
 
         // Same for the strided-view STFT (twiddles are appended constants).
@@ -295,72 +377,7 @@ fn lower_ops(
 
         let graph = &model.graph;
         let plan = match &op {
-            PspOp::Conv2d {
-                input,
-                weights,
-                bias,
-                output,
-                weight_scales,
-                params,
-            } => {
-                let in_shape = &graph.tensor(*input).shape;
-                let w_shape = &graph.tensor(*weights).shape;
-                if graph.tensor(*weights).dtype == DType::I8 && weight_scales.is_none() {
-                    return Err(format!(
-                        "Op {i}: int8 conv weights without scales (quant rewrite not run?)"
-                    ));
-                }
-                let out_shape = &graph.tensor(*output).shape;
-
-                if in_shape.len() != 4 || w_shape.len() != 4 || out_shape.len() != 4 {
-                    return Err(format!(
-                        "Op {i}: Conv2d expects 4D tensors (input={}, weights={}, output={})",
-                        in_shape.len(),
-                        w_shape.len(),
-                        out_shape.len()
-                    ));
-                }
-
-                if let Some(Activation::Relu6) = params.fused_activation {
-                    return Err(format!("Op {i}: Relu6 not supported for Conv2d"));
-                }
-
-                let in4 = Tensor4d {
-                    id: *input,
-                    shape: [in_shape[0], in_shape[1], in_shape[2], in_shape[3]],
-                };
-                let w4 = Tensor4d {
-                    id: *weights,
-                    shape: [w_shape[0], w_shape[1], w_shape[2], w_shape[3]],
-                };
-                let out4 = Tensor4d {
-                    id: *output,
-                    shape: [out_shape[0], out_shape[1], out_shape[2], out_shape[3]],
-                };
-                let stride = [params.stride_h, params.stride_w];
-                let padding = [
-                    params.pad_top,
-                    params.pad_bottom,
-                    params.pad_left,
-                    params.pad_right,
-                ];
-                let has_relu = matches!(params.fused_activation, Some(Activation::Relu));
-                let conv2d_params = Conv2dKernelParams {
-                    input: in4,
-                    filter: w4,
-                    bias: *bias,
-                    output: out4,
-                    stride,
-                    padding,
-                    has_relu,
-                    weight_scales: *weight_scales,
-                };
-                if use_vfpu_conv2d {
-                    lower_conv2d_vfpu(conv2d_params)
-                } else {
-                    lower_conv2d_naive(conv2d_params)
-                }
-            }
+            PspOp::Conv2d { .. } => unreachable!("handled above"),
 
             PspOp::DepthwiseConv2d {
                 input,
@@ -1085,6 +1102,127 @@ fn lower_conv2d_naive(conv2d: Conv2dKernelParams) -> OpPlan {
     }
 }
 
+/// `lower_conv2d_vfpu` with the weight repack hoisted to compile time:
+/// when the filter is a non-streamed f32 constant, run `pack_b_panel` here
+/// and bake the packed panel into the blob (the original is dropped by
+/// `prune_dead_constants`), so the per-inference `pack_weights` pass — 61
+/// packs, ~0.5 s on the FP32 model — disappears. Blob cost is only the
+/// pack's padding (Co to x8, K to x4). Returns `None` for shapes the
+/// runtime pack must keep (int8 dequant-in-pack, streamed weights).
+fn lower_conv2d_vfpu_prepacked(
+    model: &mut PspModel,
+    allocs: &mut Vec<TensorAlloc>,
+    streamed: &std::collections::HashSet<TensorId>,
+    conv2d: Conv2dKernelParams,
+) -> Option<OpPlan> {
+    if conv2d.weight_scales.is_some() || streamed.contains(&conv2d.filter.id) {
+        return None;
+    }
+    let w = model.graph.tensor(conv2d.filter.id);
+    if w.dtype != DType::F32 {
+        return None;
+    }
+    let TensorKind::Constant { offset, len } = w.kind else {
+        return None;
+    };
+
+    let [n, _, _, _] = conv2d.input.shape;
+    let [co, kh, kw, ci] = conv2d.filter.shape;
+    let [_, ho, wo, _] = conv2d.output.shape;
+    let gemm_m = n * ho * wo;
+    let gemm_k = kh * kw * ci;
+    if len != co * gemm_k * 4 {
+        return None;
+    }
+    let k_padded = ceil_vfpu_q(gemm_k);
+    let m_padded = ceil_vfpu_q(gemm_m);
+
+    // Repack B once, here, with the runtime crate's own packer so the two
+    // cannot drift apart (same contract as lower_fc_vfpu).
+    let src: Vec<f32> = model.model_data[offset..offset + len]
+        .chunks_exact(4)
+        .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
+        .collect();
+    let mut packed = vec![0.0f32; psp_rt::kernels::gemm_bp_len(co, gemm_k)];
+    psp_rt::kernels::pack_b_panel(&src, &mut packed, co, gemm_k);
+    let packed_id = append_constant_f32(model, allocs, vec![packed.len()], &packed);
+
+    let scratch = vec![
+        // 0: im2col output
+        ScratchBuffer {
+            size: m_padded * k_padded,
+            load_from: None,
+        },
+        // 1/2: GEMM packing and accumulator scratch
+        ScratchBuffer {
+            size: psp_rt::kernels::gemm_ap_len(GEMM_MC, GEMM_KC),
+            load_from: None,
+        },
+        ScratchBuffer {
+            size: psp_rt::kernels::gemm_cp_len(GEMM_MC, co),
+            load_from: None,
+        },
+    ];
+
+    let mut sub_ops = vec![
+        SubOpPlan {
+            name: "im2col".into(),
+            kernels: vec![KernelCall::Im2colPadded {
+                input: conv2d.input,
+                kernel_size: [kh, kw],
+                stride: conv2d.stride,
+                padding: conv2d.padding,
+                output_hw: [ho, wo],
+                output: 0,
+            }],
+        },
+        SubOpPlan {
+            name: "gemm_vfpu".into(),
+            kernels: vec![KernelCall::GemmBtPacked {
+                a: GemmOperand::Scratch(0),
+                lda: k_padded,
+                b: GemmOperand::Tensor(packed_id),
+                output: conv2d.output.id,
+                m: gemm_m,
+                k: gemm_k,
+                n: co,
+                ap: 1,
+                cp: 2,
+                mc: GEMM_MC,
+                kc: GEMM_KC,
+            }],
+        },
+    ];
+
+    if conv2d.bias.is_some() || conv2d.has_relu {
+        let name = if conv2d.has_relu {
+            "bias_add_relu"
+        } else {
+            "bias_add"
+        };
+        let mut kernels = Vec::new();
+        if let Some(bias_id) = conv2d.bias {
+            kernels.push(KernelCall::BiasAdd {
+                output: conv2d.output.id,
+                bias: bias_id,
+                rows: gemm_m,
+                cols: co,
+            });
+        }
+        if conv2d.has_relu {
+            kernels.push(KernelCall::Relu {
+                output: conv2d.output.id,
+            });
+        }
+        sub_ops.push(SubOpPlan {
+            name: name.into(),
+            kernels,
+        });
+    }
+
+    Some(OpPlan { scratch, sub_ops })
+}
+
 fn lower_conv2d_vfpu(conv2d: Conv2dKernelParams) -> OpPlan {
     let [n, _, _, ci] = conv2d.input.shape;
     let [co, kh, kw, _] = conv2d.filter.shape;
@@ -1732,38 +1870,66 @@ mod tests {
     }
 
     #[test]
-    fn vfpu_conv2d_packs_f32_weights() {
+    fn vfpu_conv2d_prepacks_f32_weights_at_compile_time() {
+        // f32 constant weights: no runtime pack — the GEMM's B is a baked
+        // constant holding exactly pack_b_panel of the source, and no
+        // scratch buffer carries a ScratchLoad (pack_weights is gone).
         let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
+        let src: Vec<f32> = {
+            let w = model.graph.tensor(1); // filter is tensor 1 in the fixture
+            let TensorKind::Constant { offset, len } = w.kind else {
+                panic!("fixture filter not constant")
+            };
+            model.model_data[offset..offset + len]
+                .chunks_exact(4)
+                .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
+                .collect()
+        };
         let plan = lower(&mut model).unwrap();
-        let scratch = &plan.ops[0].scratch[1]; // weight scratch
-        match &scratch.load_from {
-            Some(ScratchLoad {
-                copy: CopyStrategy::PackB { n, k },
-                ..
-            }) => {
-                assert_eq!(*n, 8);
-                assert_eq!(*k, 25);
-            }
-            other => panic!("Expected PackB, got {:?}", other),
-        }
-        assert_eq!(scratch.size, psp_rt::kernels::gemm_bp_len(8, 25));
+        let op = &plan.ops[0];
+        assert!(
+            op.scratch.iter().all(|sb| sb.load_from.is_none()),
+            "no runtime weight pack expected"
+        );
+        let packed_id = match &op.sub_ops[1].kernels[0] {
+            KernelCall::GemmBtPacked { b: GemmOperand::Tensor(id), .. } => *id,
+            other => panic!("Expected packed-constant B, got {:?}", other),
+        };
+        let mut want = vec![0.0f32; psp_rt::kernels::gemm_bp_len(8, 25)];
+        psp_rt::kernels::pack_b_panel(&src, &mut want, 8, 25);
+        let t = model.graph.tensor(packed_id);
+        let TensorKind::Constant { offset, len } = t.kind else {
+            panic!("packed B not constant")
+        };
+        let got: Vec<f32> = model.model_data[offset..offset + len]
+            .chunks_exact(4)
+            .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
+            .collect();
+        assert_eq!(got, want, "baked panel must equal the runtime packer's output");
     }
 
     #[test]
     fn vfpu_conv2d_scratch_sizes() {
-        // Conv1: M=784, K=25, K_pad=28 → im2col=784*28=21952.
-        // The weight scratch is now a packed B panel, which rounds K up to a
-        // multiple of 8 and N up to a multiple of 8: 1 nb * 8 kt * 8 * 4 = 256.
+        // Conv1: M=784, K=25, K_pad=28 → im2col=784*28=21952. Weights are
+        // prepacked into the blob, so the remaining scratch is im2col plus
+        // the GEMM's A-panel and accumulator buffers.
         let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
         let plan = lower(&mut model).unwrap();
+        assert_eq!(plan.ops[0].scratch.len(), 3);
         assert_eq!(plan.ops[0].scratch[0].size, 21952);
-        assert_eq!(plan.ops[0].scratch[1].size, psp_rt::kernels::gemm_bp_len(8, 25));
+        assert_eq!(
+            plan.ops[0].scratch[1].size,
+            psp_rt::kernels::gemm_ap_len(GEMM_MC, GEMM_KC)
+        );
+        assert_eq!(
+            plan.ops[0].scratch[2].size,
+            psp_rt::kernels::gemm_cp_len(GEMM_MC, 8)
+        );
 
-        // Conv2: M=196, K_pad=200 → im2col=196*200=39200, weights=16*200=3200
+        // Conv2: M=196, K_pad=200 → im2col=196*200=39200
         let mut model = make_conv2d_model(14, 14, 8, 16, 5, 5, 2, 1, true, true);
         let plan = lower(&mut model).unwrap();
         assert_eq!(plan.ops[0].scratch[0].size, 39200);
-        assert_eq!(plan.ops[0].scratch[1].size, 3200);
     }
 
     #[test]
