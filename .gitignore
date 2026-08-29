@@ -1,3 +1,4 @@
+.env
 pspdev
 scrap
 .tflite
@@ -39,3 +40,9 @@ kernel-plugin/*.prx
 kernel-plugin/*.S
 kernel-plugin/*.a
 __pycache__/
+
+# pspbird classifier blobs, published to the host0: mount by pspbird-host.
+examples/birdnet/blobs/
+
+# Species photos fetched by examples/birdnet/fetch_images.py (only the script is committed).
+examples/birdnet/images/

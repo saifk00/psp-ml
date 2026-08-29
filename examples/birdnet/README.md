@@ -1,11 +1,14 @@
 # birdnet
 
-BirdNET v2.4 (int8) running on the PSP: 3 s of 48 kHz audio in, one logit per
-species out. Optionally pruned to the species that can actually occur where the
-device is deployed, which is what takes it from 41 MB to 16 MB.
+BirdNET v2.4 running on the PSP: 3 s of 48 kHz audio in, one logit per
+species out. By default the FP32 model, pruned to the 500 species most likely
+in `eastern-na` (513 classes with the non-bird ones), with the custom
+strided-STFT frontend and its small-FFT pass — the configuration that measured
+3760 ms on hardware. Every knob below opts *out* of one of those.
 
 ```bash
-TOPK=400 cargo run -p birdnet-host --release
+cargo run -p birdnet-host --release
+TOPK=0 BIRDNET_MODEL=models/birdnet/audio-model-int8.tflite cargo run -p birdnet-host --release  # stock 6522 classes
 ```
 
 ## Files
@@ -73,7 +76,7 @@ is silent: it runs on wrong offsets and returns garbage. Staging beside the
 
 | env var | default | effect |
 |---|---|---|
-| `TOPK` | unset (no pruning) | keep the N most likely species. `TOPK=400` → 413 classes (400 + 13 non-bird), 17.8 MB blob. |
+| `TOPK` | `500` | keep the N most likely species (N + 13 non-bird classes). `TOPK=0` disables pruning: the stock 6522-class model, which only fits with the int8 `BIRDNET_MODEL`. |
 | `BIRDNET_REGION` | `eastern-na` | named bounding box: `eastern-na`, `eastern-na-wide`, `western-na`, `north-america`, `europe`. |
 | `BIRDNET_BBOX` | unset | `"lat0,lat1,lon0,lon1"`, overrides `BIRDNET_REGION`. |
 | `BIRDNET_PYTHON` | unset (uses `uv run`) | interpreter for the pruner, when uv can't resolve its deps. |
@@ -81,9 +84,9 @@ is silent: it runs on wrong offsets and returns garbage. Staging beside the
 | `BIRDNET_GENERATED_OVERRIDE` | unset | hand-edited `generated.rs`, for prototyping codegen changes. |
 | `PSP_PROFILE` | unset | build with hardware counters (`hwprofile`). |
 | `BIRDNET_TAP` | unset | local runs dump every op's output tensor to `device/tap/`. Not supported with the custom frontend. |
-| `BIRDNET_CUSTOM_FRONTEND` | unset | replace the model's spectrogram frontend with the custom-op one (`StridedViewStft` + banded mel): `build.rs` severs the .tflite at the branch-merge CONCAT and compiles only the conv backbone, plus a builder-generated frontend module; `main.rs` runs the two forwards in sequence. Composes with `TOPK`. Measured (TOPK=500, cardinal fixture): 5617 → 4865 ms (−13.4%), golden PASS. |
-| `BIRDNET_MODEL` | `models/birdnet/audio-model-int8.tflite` | repo-relative path of the model to compile. The Zenodo FP32 build (`audio-model-fp32.tflite`, record 15050749, `BirdNET_v2.4_tflite.zip`) has no QUANTIZE/DEQUANTIZE ops and f32 weights — with TOPK pruning it fits (29.4 MB resident, 14 MB headroom) and drops the whole fake-quant tax. Measured (TOPK=500): dense 5617 → 5160 ms; custom+small-FFT 4668 → **4296 ms**, golden top-5 exact. The int8 model remains the default because unpruned it is the only one that fits (40.4 vs 51.7 MB). |
-| `BIRDNET_SMALL_FFT` | unset | with the custom frontend, also apply the FFT-pruning pass (`psp_tc::plan_small_fft`): the L=2048 branch computes a 512-point FFT over the anti-alias-decimated signal instead of 2048 (same 23.44 Hz bins, only the 128 columns mel reads). Measured (TOPK=500): 4865 → 4668 ms, golden PASS, identical max Δraw. |
+| `BIRDNET_CUSTOM_FRONTEND` | `1` | replace the model's spectrogram frontend with the custom-op one (`StridedViewStft` + banded mel): `build.rs` severs the .tflite at the branch-merge CONCAT and compiles only the conv backbone, plus a builder-generated frontend module; `main.rs` runs the two forwards in sequence. Composes with `TOPK`. Measured (TOPK=500, cardinal fixture): 5617 → 4865 ms (−13.4%), golden PASS. |
+| `BIRDNET_MODEL` | `models/birdnet/audio-model-fp32.tflite` | repo-relative path of the model to compile. The default is the Zenodo FP32 build (record 15050749, `BirdNET_v2.4_tflite.zip`): no QUANTIZE/DEQUANTIZE ops, f32 weights, so none of the fake-quant tax. Measured (TOPK=500): dense 5617 → 5160 ms; custom+small-FFT 4668 → 4296 ms, golden top-5 exact; with compile-time conv prepacking **3760 ms**. `audio-model-int8.tflite` is the same graph with int8 weights and the only one that fits unpruned (40.4 vs 51.7 MB) — pair it with `TOPK=0`. `models/birdnet_reference.py` honours the same variable so `golden.json` matches. |
+| `BIRDNET_SMALL_FFT` | `1` | with the custom frontend, also apply the FFT-pruning pass (`psp_tc::plan_small_fft`): the L=2048 branch computes a 512-point FFT over the anti-alias-decimated signal instead of 2048 (same 23.44 Hz bins, only the 128 columns mel reads). Measured (TOPK=500): 4865 → 4668 ms, golden PASS, identical max Δraw. |
 
 Picking `TOPK`: ask the pruner. Only ~405 species clear 0.01 likelihood
 anywhere in `eastern-na`, so a much larger `TOPK` buys rows that can never fire.

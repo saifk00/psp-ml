@@ -32,6 +32,7 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>, weights_name: &str) -> T
     let arena = plan.arena.as_ref();
 
     let weight_statics = render_weight_statics(plan, weights_name);
+    let external_statics = render_external_statics(plan);
     let weight_views = render_weight_views(plan, &writer);
     let arena_static = render_arena_static(arena);
     let tensor_allocs = render_tensor_allocs(plan, &writer, arena, plan.stream.as_ref());
@@ -95,6 +96,8 @@ pub fn render(plan: &CodegenPlan, graph: &Graph<PspOp>, weights_name: &str) -> T
         use psp_rt::kernels::*;
 
         #arena_static
+
+        #external_statics
 
         #output_consts
 
@@ -445,6 +448,13 @@ fn render_weight_statics(plan: &CodegenPlan, weights_name: &str) -> TokenStream 
     let hostfs_path = proc_macro2::Literal::byte_string(
         format!("host0:/{weights_name}\0").as_bytes(),
     );
+    // Beside the module itself: `psp_rt::module!` chdir()s to the directory
+    // the PRX/EBOOT was launched from, so this is `host1:/<name>` under
+    // psplink (the staged copy next to the .prx) and the EBOOT's own folder
+    // on a memory stick. Tried first so a standalone app needs no hostfs.
+    let local_path = proc_macro2::Literal::byte_string(
+        format!("{weights_name}\0").as_bytes(),
+    );
     let hostfs_msg = format!("FATAL: could not open host0:/{weights_name}");
     let hostfs_stream_msg = format!("FATAL: could not open host0:/{weights_name} for streaming");
     let open_panic_msg = format!("{weights_name} open failed");
@@ -488,9 +498,12 @@ fn render_weight_statics(plan: &CodegenPlan, weights_name: &str) -> TokenStream 
                 consume: &mut dyn FnMut(usize, &[f32]),
             ) {
                 use psp::sys::{sceIoClose, sceIoLseek, sceIoOpen, sceIoRead, IoOpenFlags, IoWhence};
-                let fd = unsafe {
-                    sceIoOpen(#hostfs_path.as_ptr(), IoOpenFlags::RD_ONLY, 0)
+                let mut fd = unsafe {
+                    sceIoOpen(#local_path.as_ptr(), IoOpenFlags::RD_ONLY, 0)
                 };
+                if fd.0 < 0 {
+                    fd = unsafe { sceIoOpen(#hostfs_path.as_ptr(), IoOpenFlags::RD_ONLY, 0) };
+                }
                 if fd.0 < 0 {
                     psp_rt::dprintln!(#hostfs_stream_msg);
                     panic!("weight stream open failed");
@@ -653,13 +666,14 @@ fn render_weight_statics(plan: &CodegenPlan, weights_name: &str) -> TokenStream 
                     max_block.saturating_sub(WEIGHT_BYTES)
                 );
 
-                let fd = unsafe {
-                    sceIoOpen(
-                        #hostfs_path.as_ptr(),
-                        IoOpenFlags::RD_ONLY,
-                        0,
-                    )
+                let mut fd = unsafe {
+                    sceIoOpen(#local_path.as_ptr(), IoOpenFlags::RD_ONLY, 0)
                 };
+                if fd.0 < 0 {
+                    fd = unsafe {
+                        sceIoOpen(#hostfs_path.as_ptr(), IoOpenFlags::RD_ONLY, 0)
+                    };
+                }
                 if fd.0 < 0 {
                     psp_rt::dprintln!(#hostfs_msg);
                     panic!(#open_panic_msg); // surfaces as the panic exit sentinel
@@ -747,7 +761,23 @@ fn render_weight_views(plan: &CodegenPlan, writer: &TensorExprWriter) -> TokenSt
         }
     }
 
+    for alloc in &plan.allocs {
+        if let TensorAlloc::External { id, name, size } = alloc {
+            let var_ident = writer.ident(*id);
+            let static_ident = external_static(name);
+            view_entries.push(quote! {
+                let #var_ident: &[f32] = unsafe {
+                    core::slice::from_raw_parts(
+                        core::ptr::addr_of!(#static_ident) as *const f32,
+                        #size,
+                    )
+                };
+            });
+        }
+    }
+
     quote! {
+        #[allow(unused_variables)]
         let tensor_data = tensor_data_f32();
         #(#view_entries)*
     }
@@ -873,7 +903,51 @@ fn render_tensor_allocs(
                     };
                 });
             }
-            TensorAlloc::Constant { .. } => {}
+            TensorAlloc::Constant { .. } | TensorAlloc::External { .. } => {}
+        }
+    }
+    quote!(#(#entries)*)
+}
+
+// ---------------------------------------------------------------------------
+// External weight slots
+// ---------------------------------------------------------------------------
+
+/// Slot static name for an external tensor: `EXT_<NAME>` (upper-cased).
+fn external_static(name: &str) -> Ident {
+    Ident::new(&format!("EXT_{}", name.to_uppercase()), Span::call_site())
+}
+
+/// The `.bss` statics behind `TensorKind::External` tensors plus their
+/// accessors. The accessor hands out the whole slot mutably so the caller can
+/// `sceIoRead` straight into it; `EXT_<NAME>_LEN` says how many floats.
+fn render_external_statics(plan: &CodegenPlan) -> TokenStream {
+    let mut entries = Vec::new();
+    for alloc in &plan.allocs {
+        if let TensorAlloc::External { name, size, .. } = alloc {
+            let static_ident = external_static(name);
+            let len_ident = Ident::new(
+                &format!("EXT_{}_LEN", name.to_uppercase()),
+                Span::call_site(),
+            );
+            let accessor = Ident::new(name, Span::call_site());
+            let doc = format!(
+                "Runtime-filled weight slot `{name}` ({size} floats, zero until loaded)."
+            );
+            entries.push(quote! {
+                static mut #static_ident: Aligned16<#size> = Aligned16([0.0f32; #size]);
+                pub const #len_ident: usize = #size;
+                #[doc = #doc]
+                #[allow(static_mut_refs)]
+                pub fn #accessor() -> &'static mut [f32] {
+                    unsafe {
+                        core::slice::from_raw_parts_mut(
+                            core::ptr::addr_of_mut!(#static_ident) as *mut f32,
+                            #size,
+                        )
+                    }
+                }
+            });
         }
     }
     quote!(#(#entries)*)

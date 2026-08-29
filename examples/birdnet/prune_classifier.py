@@ -411,6 +411,75 @@ def prune(model_path: str, all_labels: list[str], keep: list[int],
     print(f"  [{i}] <- original index {src}: {name}")
 
 
+# Classifier blob for the runtime-loaded external-weight FC (see
+# design/2026-08-24_pspbird-app.md and examples/birdnet/src/psp_bird.rs).
+# Little-endian; W starts 16-byte aligned so the device can read it straight
+# into the VFPU-aligned slot.
+#
+#   0   magic       b"PBRD"
+#   4   version     u32 = 1
+#   8   n_classes   u32
+#   12  in_features u32 (1024)
+#   16  labels_len  u32 (bytes)
+#   20  reserved    u32 x3 (zero)
+#   32  W           f32[n_classes * in_features], row-major
+#       bias        f32[n_classes]
+#       labels      utf-8, '\n'-separated, no trailing newline
+BLOB_MAGIC = b"PBRD"
+BLOB_VERSION = 1
+BLOB_HEADER = 32
+
+
+def _dequant_rows(model, tensor, rows: np.ndarray) -> np.ndarray:
+  """Rows of a constant tensor as f32, dequantized when it is stored int8
+  (per-channel scale/zero-point along axis 0) or int32 (bias, per-channel
+  scale)."""
+  arr = _buffer_array(model, tensor, _tflite_dtype(tensor))
+  sub = np.ascontiguousarray(arr[rows])
+  if sub.dtype == np.float32:
+    return sub
+  q = tensor.quantization
+  if q is None or q.scale is None or len(q.scale) == 0:
+    raise ValueError(f"tensor '{tensor.name.decode()}' is {sub.dtype} without scales")
+  scale = np.asarray(q.scale, dtype=np.float32)
+  zp = np.asarray(q.zeroPoint if q.zeroPoint is not None else [0], dtype=np.int64)
+  if len(scale) > 1:
+    scale = scale[rows]
+    zp = zp[rows] if len(zp) > 1 else zp
+  shape = (-1,) + (1,) * (sub.ndim - 1)
+  return ((sub.astype(np.int64) - zp.reshape(shape)) * scale.reshape(shape)).astype(np.float32)
+
+
+def write_blob(model_path: str, all_labels: list[str], keep: list[int],
+               resolved: list[str], out_path: str, tensor_name: str | None) -> None:
+  with open(model_path, "rb") as f:
+    buf = bytearray(f.read())
+  model = schema.ModelT.InitFromObj(schema.Model.GetRootAs(buf, 0))
+  sg = model.subgraphs[0]
+  _, fc_op = find_classifier(model, sg, len(all_labels), tensor_name)
+  keep_np = np.asarray(keep, dtype=np.int64)
+
+  w = _dequant_rows(model, sg.tensors[fc_op.inputs[1]], keep_np)
+  n, k = w.shape
+  if len(fc_op.inputs) > 2 and fc_op.inputs[2] >= 0:
+    b = _dequant_rows(model, sg.tensors[fc_op.inputs[2]], keep_np)
+  else:
+    b = np.zeros(n, dtype=np.float32)
+  labels = "\n".join(resolved).encode("utf-8")
+
+  header = BLOB_MAGIC + np.array(
+      [BLOB_VERSION, n, k, len(labels), 0, 0, 0], dtype="<u4").tobytes()
+  assert len(header) == BLOB_HEADER
+  with open(out_path, "wb") as f:
+    f.write(header)
+    f.write(w.astype("<f4").tobytes())
+    f.write(b.astype("<f4").tobytes())
+    f.write(labels)
+  import os
+  print(f"wrote {out_path}: [{n}, {k}] f32 weights + bias + {len(resolved)} labels "
+        f"({os.path.getsize(out_path)/1e6:.2f} MB)")
+
+
 def main() -> None:
   p = argparse.ArgumentParser(
       description=__doc__,
@@ -450,10 +519,22 @@ def main() -> None:
                  help="drop Dog/Engine/Noise/etc (kept by default)")
   g.add_argument("--write-labels", default=None,
                  help="write the selected labels (default: <output>.labels.txt)")
+  p.add_argument("--write-blob", default=None,
+                 help="write the selected classifier rows (f32, dequantized), "
+                      "bias and labels as a PBRD blob for runtime loading; "
+                      "with --no-tflite this is the only output")
+  p.add_argument("--no-tflite", action="store_true",
+                 help="skip writing the pruned .tflite (blob/labels only)")
   p.add_argument("--write-indices", default=None,
                  help="write the kept classes' ORIGINAL indices, one per line. "
                       "Lets a consumer remap full-model reference output onto "
                       "the pruned model's outputs.")
+
+  p.add_argument("--list-regions", action="store_true",
+                 help="print the preset region names, one per line, and exit")
+  if "--list-regions" in sys.argv:
+    print("\n".join(sorted(REGIONS)))
+    return
 
   args = p.parse_args()
   by_meta = args.top_n is not None or args.min_score > 0.0 or args.report
@@ -499,7 +580,12 @@ def main() -> None:
                                   args.min_score, not args.no_keep_nonbird)
     labels_out = args.write_labels or out + ".labels.txt"
 
-  prune(args.model, all_labels, keep, resolved, out, args.tensor_name)
+  if not args.no_tflite:
+    prune(args.model, all_labels, keep, resolved, out, args.tensor_name)
+
+  if args.write_blob:
+    write_blob(args.model, all_labels, keep, resolved, args.write_blob,
+               args.tensor_name)
 
   if labels_out:
     with open(labels_out, "w", encoding="utf-8") as f:

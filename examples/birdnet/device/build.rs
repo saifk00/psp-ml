@@ -17,12 +17,15 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// Overridable via BIRDNET_MODEL (path relative to the repo root) — e.g.
-/// the Zenodo FP32 build `models/birdnet/audio-model-fp32.tflite`, which
-/// skips the whole fake-quant machinery (no QUANTIZE/DEQUANTIZE ops, f32
-/// weights). Same graph otherwise; the pruner and the frontend severing
-/// are dtype-agnostic.
-const FULL_MODEL: &str = "models/birdnet/audio-model-int8.tflite";
+/// Overridable via BIRDNET_MODEL (path relative to the repo root). The
+/// default is the Zenodo FP32 build: no QUANTIZE/DEQUANTIZE ops, f32
+/// weights, so none of the fake-quant tax (measured 4296 vs 5160 ms at
+/// TOPK=500). `audio-model-int8.tflite` is the same graph with int8 weights
+/// and is the only one that fits *unpruned* (40.4 vs 51.7 MB) — pass it
+/// with TOPK=0. The pruner and the frontend severing are dtype-agnostic.
+const FULL_MODEL: &str = "models/birdnet/audio-model-fp32.tflite";
+/// Default pruning. `TOPK=0` disables it (the stock 6522-class model).
+const DEFAULT_TOPK: u32 = 500;
 const FULL_LABELS: &str = "models/birdnet/labels/en_us.txt";
 const PRUNER: &str = "examples/birdnet/prune_classifier.py";
 const SLICER: &str = "examples/birdnet-stft-benchmark/slice_stft.py";
@@ -54,7 +57,24 @@ fn main() {
     println!("cargo:rerun-if-changed={}", repo_root.join(FULL_MODEL).display());
     println!("cargo:rerun-if-changed={}", repo_root.join(FULL_LABELS).display());
     println!("cargo:rerun-if-changed={}", repo_root.join(PRUNER).display());
+    println!("cargo:rerun-if-changed={}", repo_root.join(SLICER).display());
     println!("cargo:rerun-if-changed=../cardinal_3s.wav");
+
+    // A library-only build for `imfile` (pspbird-imview, `cargo test
+    // --features imfile-pack`) needs no generated code and no model; only
+    // this crate's binaries include! it, and neither is built as a
+    // dependency.
+    if std::env::var("CARGO_FEATURE_IMFILE").is_ok() && std::env::var("CARGO_FEATURE_APP").is_err() {
+        return;
+    }
+
+    // The app (`pspbird` binary, `app` feature) is a different compile: a
+    // headless backbone plus runtime-loaded classifier blobs. Nothing the
+    // benchmark binary includes is built for it.
+    if std::env::var("CARGO_FEATURE_APP").is_ok() {
+        build_app(&repo_root, &out_dir);
+        return;
+    }
 
     // 1. Model selection. Also writes labels.txt (and, when pruned,
     //    kept_indices.txt) into OUT_DIR alongside it.
@@ -65,7 +85,10 @@ fn main() {
     //    severed at the branch-merge CONCAT, plus a builder-generated
     //    frontend module in OUT_DIR/frontend/.
     if std::env::var("CARGO_FEATURE_CUSTOM_FRONTEND").is_ok() {
-        build_custom_frontend(&repo_root, &out_dir, &model);
+        // BIRDNET_SMALL_FFT=1: additionally apply the FFT-pruning pass.
+        println!("cargo:rerun-if-env-changed=BIRDNET_SMALL_FFT");
+        let small_fft = std::env::var("BIRDNET_SMALL_FFT").is_ok_and(|v| v != "0");
+        build_custom_frontend(&repo_root, &out_dir, &model, false, small_fft);
     } else {
         psp_tc::compile_tflite(&model, &out_dir, None)
             .unwrap_or_else(|e| panic!("psp-tc codegen failed: {e}"));
@@ -90,7 +113,7 @@ fn main() {
 /// Returns the .tflite psp-tc should compile, and writes the labels that go
 /// with it (plus `kept_indices.txt` when pruned) into `out_dir`.
 ///
-/// Unset TOPK means the stock 6522-class model and the full labels file.
+/// TOPK=0 means the stock 6522-class model and the full labels file.
 fn select_model(repo_root: &Path, out_dir: &Path) -> PathBuf {
     let model_rel = std::env::var("BIRDNET_MODEL").unwrap_or_else(|_| FULL_MODEL.to_string());
     let full_model = repo_root.join(&model_rel);
@@ -101,23 +124,16 @@ fn select_model(repo_root: &Path, out_dir: &Path) -> PathBuf {
     );
     let full_labels = repo_root.join(FULL_LABELS);
 
-    let topk = match std::env::var("TOPK") {
-        Ok(v) if !v.trim().is_empty() => v,
-        _ => {
-            // Unpruned: labels are the full list, and no index map -- deleting
-            // it matters, or a stale map from a previous pruned build would be
-            // applied to full-width output.
-            std::fs::copy(&full_labels, out_dir.join("labels.txt"))
-                .expect("failed to read models/birdnet/labels/en_us.txt");
-            let _ = std::fs::remove_file(out_dir.join("kept_indices.txt"));
-            return full_model;
-        }
-    };
-    let topk: u32 = topk
-        .trim()
-        .parse()
-        .unwrap_or_else(|e| panic!("TOPK must be a positive integer, got {topk:?} ({e})"));
-    assert!(topk > 0, "TOPK must be > 0");
+    let topk = topk_from_env();
+    if topk == 0 {
+        // Unpruned: labels are the full list, and no index map -- deleting
+        // it matters, or a stale map from a previous pruned build would be
+        // applied to full-width output.
+        std::fs::copy(&full_labels, out_dir.join("labels.txt"))
+            .expect("failed to read models/birdnet/labels/en_us.txt");
+        let _ = std::fs::remove_file(out_dir.join("kept_indices.txt"));
+        return full_model;
+    }
 
     let pruned = out_dir.join("audio-model-pruned.tflite");
     let mut cmd = pruner_command(&repo_root.join(PRUNER));
@@ -156,6 +172,17 @@ fn select_model(repo_root: &Path, out_dir: &Path) -> PathBuf {
     pruned
 }
 
+/// TOPK, defaulting to `DEFAULT_TOPK`; 0 means no pruning.
+fn topk_from_env() -> u32 {
+    match std::env::var("TOPK") {
+        Ok(v) if !v.trim().is_empty() => v
+            .trim()
+            .parse()
+            .unwrap_or_else(|e| panic!("TOPK must be an integer (0 = unpruned), got {v:?} ({e})")),
+        _ => DEFAULT_TOPK,
+    }
+}
+
 const PYTHON_HELP: &str = "Install uv, or set BIRDNET_PYTHON to a python that \
                            already has the pruner's deps (ai-edge-litert or \
                            tensorflow, plus numpy).";
@@ -184,7 +211,19 @@ fn pruner_command(script: &Path) -> Command {
 /// from the frontend's bank-major outputs); then generate the frontend
 /// module — normalisation, strided-view STFTs, banded mel projections —
 /// with the builder.
-fn build_custom_frontend(repo_root: &Path, out_dir: &Path, model: &Path) {
+///
+/// `headless` also cuts the classifier off: the backbone then ends at the
+/// pooled `[1, 1024]` embedding (the app supplies its own classifier).
+/// `small_fft` applies the FFT-pruning pass — shrink each branch's FFT to
+/// the columns its mel banks read (anti-alias filtered, same bin grid);
+/// prunes the L=2048 branch to a 512-point transform, leaves L=1024 alone.
+fn build_custom_frontend(
+    repo_root: &Path,
+    out_dir: &Path,
+    model: &Path,
+    headless: bool,
+    small_fft: bool,
+) {
     let assets = repo_root.join(STFT_ASSETS);
     let needed = ["window_2048.bin", "window_1024.bin", "manifest.json"];
     if !needed.iter().all(|f| assets.join(f).exists()) {
@@ -199,7 +238,9 @@ fn build_custom_frontend(repo_root: &Path, out_dir: &Path, model: &Path) {
     // pruning composes with the custom frontend.
     let backbone = out_dir.join("backbone.tflite");
     let mut cmd = pruner_command(&repo_root.join(SLICER));
-    cmd.arg("sever-backbone").arg(model).arg(&backbone);
+    cmd.arg(if headless { "sever-backbone-headless" } else { "sever-backbone" })
+        .arg(model)
+        .arg(&backbone);
     let status = cmd
         .current_dir(repo_root)
         .status()
@@ -243,12 +284,6 @@ fn build_custom_frontend(repo_root: &Path, out_dir: &Path, model: &Path) {
     let mut b = psp_tc::PspModelBuilder::new();
     let raw = b.input(vec![1, INPUT_SAMPLES]);
     let norm = psp_tc::mel::birdnet_normalize(&mut b, raw);
-    // BIRDNET_SMALL_FFT=1: additionally apply the FFT-pruning pass — shrink
-    // each branch's FFT to the columns its mel banks read (anti-alias
-    // filtered, same bin grid). Prunes the L=2048 branch to a 512-point
-    // transform; leaves L=1024 unchanged.
-    println!("cargo:rerun-if-env-changed=BIRDNET_SMALL_FFT");
-    let small_fft = std::env::var("BIRDNET_SMALL_FFT").is_ok_and(|v| v != "0");
     let outs = if small_fft {
         println!("cargo:warning=birdnet: small-FFT pruning pass enabled");
         psp_tc::stft_mel_frontend_small_fft(
@@ -279,6 +314,143 @@ fn build_custom_frontend(repo_root: &Path, out_dir: &Path, model: &Path) {
         .unwrap_or_else(|e| panic!("psp-tc codegen (custom frontend) failed: {e}"));
 
     println!("cargo:warning=birdnet: custom frontend enabled (backbone severed at the branch concat)");
+}
+
+/// PBRD classifier blob header (see `write_blob` in prune_classifier.py).
+const BLOB_MAGIC: &[u8; 4] = b"PBRD";
+const BLOB_HEADER: usize = 32;
+const EMBEDDING: usize = 1024;
+
+/// The `pspbird` app build (`app` feature). Everything lands in
+/// `OUT_DIR/app/`:
+///
+///   frontend/custom_frontend.rs   builder frontend, small-FFT variant
+///   generated.rs + weights.bin    headless backbone -> [1, 1024] embedding
+///   classifier.rs                 external-weight FC [N, 1024], N frozen
+///   blobs/<region>.bin            one PBRD blob per pruner region
+///   regions.rs                    REGIONS table, OUTPUT_CLASSES, APP_TOPK
+///
+/// Same model/TOPK defaults as the benchmark (FP32, 500; the classifier
+/// blobs are f32 either way). TOPK fixes the classifier width for *every*
+/// region: the slot is sized once, and each blob must match it — checked
+/// here at build time and again on load.
+fn build_app(repo_root: &Path, out_dir: &Path) {
+    let app_dir = out_dir.join("app");
+    std::fs::create_dir_all(&app_dir).unwrap();
+    let model_rel = std::env::var("BIRDNET_MODEL").unwrap_or_else(|_| FULL_MODEL.to_string());
+    let model = repo_root.join(&model_rel);
+    assert!(model.exists(), "BIRDNET_MODEL {} not found", model.display());
+    let topk = topk_from_env();
+    assert!(topk > 0, "the app needs a pruned classifier; TOPK=0 is the benchmark's unpruned mode");
+
+    // 1. Frontend + headless backbone.
+    build_custom_frontend(repo_root, &app_dir, &model, true, true);
+
+    // 2. One classifier blob per region the pruner knows.
+    let regions = {
+        let out = pruner_command(&repo_root.join(PRUNER))
+            .arg("--list-regions")
+            .current_dir(repo_root)
+            .output()
+            .unwrap_or_else(|e| panic!("failed to launch the pruner ({e}). {PYTHON_HELP}"));
+        assert!(out.status.success(), "prune_classifier.py --list-regions failed. {PYTHON_HELP}");
+        String::from_utf8(out.stdout)
+            .unwrap()
+            .lines()
+            .map(|l| l.trim().to_owned())
+            .filter(|l| !l.is_empty())
+            .collect::<Vec<String>>()
+    };
+    assert!(!regions.is_empty(), "the pruner listed no regions");
+    let blob_dir = app_dir.join("blobs");
+    std::fs::create_dir_all(&blob_dir).unwrap();
+    let mut n_classes: Option<usize> = None;
+    for region in &regions {
+        let blob = blob_dir.join(format!("{region}.bin"));
+        let status = pruner_command(&repo_root.join(PRUNER))
+            .arg(&model)
+            .arg(repo_root.join(FULL_LABELS))
+            .arg("--top-n")
+            .arg(topk.to_string())
+            .arg("--region")
+            .arg(region)
+            .arg("--no-tflite")
+            .arg("--write-blob")
+            .arg(&blob)
+            .current_dir(repo_root)
+            .status()
+            .unwrap_or_else(|e| panic!("failed to launch the pruner ({e}). {PYTHON_HELP}"));
+        assert!(status.success(), "prune_classifier.py failed for {region}. {PYTHON_HELP}");
+        let (n, k) = read_blob_header(&blob);
+        assert_eq!(k, EMBEDDING, "{region}: blob in_features {k} != {EMBEDDING}");
+        match n_classes {
+            None => n_classes = Some(n),
+            Some(prev) => assert_eq!(prev, n, "{region}: blob has {n} classes, others {prev}"),
+        }
+    }
+    let n_classes = n_classes.unwrap();
+    println!("cargo:warning=pspbird: {} regions x {n_classes} classes (TOPK={topk})", regions.len());
+
+    // 3. The classifier: an FC whose weights and bias are runtime slots.
+    let mut b = psp_tc::PspModelBuilder::new();
+    let emb = b.input(vec![1, EMBEDDING]);
+    let w = b.external_f32(vec![n_classes, EMBEDDING], "weights");
+    let bias = b.external_f32(vec![n_classes], "bias");
+    let logits = b.fully_connected(emb, w, Some(bias));
+    b.output(logits);
+    let mut cls = b.finish();
+    psp_tc::compile_graph(&mut cls, &app_dir, "classifier")
+        .unwrap_or_else(|e| panic!("psp-tc codegen (classifier) failed: {e}"));
+
+    // 4. The table the app selects from.
+    let mut rs = String::new();
+    rs.push_str(&format!("pub const OUTPUT_CLASSES: usize = {n_classes};
+"));
+    rs.push_str(&format!("pub const APP_TOPK: u32 = {topk};
+"));
+    rs.push_str(&format!(
+        "/// (display name, blob file name) per region, pruner order.
+pub const REGIONS: [(&str, &str); {}] = [
+",
+        regions.len()
+    ));
+    for r in &regions {
+        rs.push_str(&format!("    ({r:?}, {:?}),
+", format!("{r}.bin")));
+    }
+    rs.push_str("];
+");
+    write(&app_dir.join("regions.rs"), rs.as_bytes());
+
+    // 5. Stage the blobs — and the backbone's weights.bin, which at 24.7 MB
+    //    (f32 convs, prepacked) is past psp-tc's include_bytes! threshold and
+    //    is read from host0:/weights.bin by init() — beside the .prx for the
+    //    host runner to publish. Same reasoning as stage_for_deploy().
+    let profile = std::env::var("PROFILE").unwrap();
+    let stage_dir = out_dir
+        .ancestors()
+        .find(|p| p.file_name().is_some_and(|n| n == profile.as_str()))
+        .unwrap_or_else(|| panic!("no `{profile}` component in OUT_DIR {}", out_dir.display()));
+    std::fs::copy(app_dir.join("weights.bin"), stage_dir.join("weights.bin"))
+        .expect("failed to stage weights.bin beside the prx");
+    let stage_blobs = stage_dir.join("blobs");
+    let _ = std::fs::remove_dir_all(&stage_blobs);
+    std::fs::create_dir_all(&stage_blobs).unwrap();
+    for r in &regions {
+        let name = format!("{r}.bin");
+        std::fs::copy(blob_dir.join(&name), stage_blobs.join(&name)).expect("failed to stage blob");
+    }
+}
+
+/// `(n_classes, in_features)` from a PBRD blob, validating the header.
+fn read_blob_header(path: &Path) -> (usize, usize) {
+    let mut f = std::fs::File::open(path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+    let mut h = [0u8; BLOB_HEADER];
+    std::io::Read::read_exact(&mut f, &mut h).expect("blob shorter than its header");
+    assert_eq!(&h[0..4], BLOB_MAGIC, "{}: bad magic", path.display());
+    let u = |o: usize| u32::from_le_bytes(h[o..o + 4].try_into().unwrap()) as usize;
+    assert_eq!(u(4), 1, "{}: unsupported blob version", path.display());
+    (u(8), u(12))
 }
 
 /// Prototyping hook: swap in a hand-edited `generated.rs` to measure a codegen

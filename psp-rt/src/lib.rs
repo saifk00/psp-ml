@@ -163,21 +163,37 @@ pub fn __reap_threads(worker: ::psp::sys::SceUid, dormant: bool) {
 ///     psp_rt::dprintln!("Hello from PSP!");
 /// }
 /// ```
+///
+/// `app_main` has a wall-clock budget, 240 s by default (see the timeout
+/// discussion in `module_start`). Interactive programs that wait on the user
+/// need a longer one — `timeout_secs = N` sets it, and the host runner's
+/// idle timeout must be raised to match (`load_program_with_idle_timeout`).
+/// `timeout_secs = 0` removes the bound entirely: right for an app that
+/// ships as an EBOOT and runs until HOME, wrong for anything run under
+/// psplink from a script (a hang then needs a power-cycle).
+///
+/// ```ignore
+/// psp_rt::module!("pspbird", 1, 0, timeout_secs = 3600);
+/// ```
 #[macro_export]
 macro_rules! module {
     ($name:expr, $version_major:expr, $version_minor:expr) => {
-        $crate::__module_impl!($name, $version_major, $version_minor, 0);
+        $crate::__module_impl!($name, $version_major, $version_minor, 0, 240);
+    };
+
+    ($name:expr, $version_major:expr, $version_minor:expr, timeout_secs = $timeout:expr) => {
+        $crate::__module_impl!($name, $version_major, $version_minor, 0, $timeout);
     };
 
     ($name:expr, $version_major:expr, $version_minor:expr, $mod_attr:expr) => {
-        $crate::__module_impl!($name, $version_major, $version_minor, $mod_attr);
+        $crate::__module_impl!($name, $version_major, $version_minor, $mod_attr, 240);
     };
 }
 
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __module_impl {
-    ($name:expr, $version_major:expr, $version_minor:expr, $mod_attr:expr) => {
+    ($name:expr, $version_major:expr, $version_minor:expr, $mod_attr:expr, $timeout_secs:expr) => {
         fn psp_main() {
             app_main();
         }
@@ -239,10 +255,11 @@ macro_rules! __module_impl {
             const PSP_RT_PANIC_STATUS: i32 = -1_i32; // 0xFFFF_FFFF as u32 — psplink_connection::load::PANIC_SENTINEL
             /// `app_main` overran its budget and was killed.
             const PSP_RT_TIMEOUT_STATUS: i32 = 2;
-            /// Wall-clock budget for `app_main`. Generous — the slowest thing
-            /// in-tree is ~30 s — because the only cost of a high limit is how
-            /// long you wait on a genuinely hung run.
-            const PSP_RT_TIMEOUT_SECS: u32 = 240;
+            /// Wall-clock budget for `app_main`. The default (240 s) is
+            /// generous — the slowest benchmark in-tree is ~30 s — because the
+            /// only cost of a high limit is how long you wait on a genuinely
+            /// hung run. Interactive apps pass their own via `timeout_secs`.
+            const PSP_RT_TIMEOUT_SECS: u32 = $timeout_secs;
 
             /// Set by `main_thread` just before it returns; read by
             /// `module_start` after the wait.
@@ -315,7 +332,12 @@ macro_rules! __module_impl {
                     // itself needs no second thread and does not depend on the
                     // scheduler preempting a thread spinning in a tight loop.
                     let mut timeout_us: u32 = PSP_RT_TIMEOUT_SECS * 1_000_000;
-                    let waited = ::psp::sys::sceKernelWaitThreadEnd(id, &mut timeout_us);
+                    let timeout_ptr: *mut u32 = if PSP_RT_TIMEOUT_SECS == 0 {
+                        core::ptr::null_mut()
+                    } else {
+                        &mut timeout_us
+                    };
+                    let waited = ::psp::sys::sceKernelWaitThreadEnd(id, timeout_ptr);
 
                     if waited < 0 {
                         // Timed out (or the wait itself failed) — the worker may

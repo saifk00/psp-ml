@@ -104,6 +104,14 @@ pub enum TensorAlloc {
         id: TensorId,
         size: usize,
     },
+    /// Runtime-filled weight slot: a `.bss` static named `EXT_<NAME>` with
+    /// a `pub fn <name>() -> &'static mut [f32]` accessor. Read-only inside
+    /// `forward()`, like a constant.
+    External {
+        id: TensorId,
+        name: String,
+        size: usize,
+    },
 }
 
 // ─── (2) Scratch buffers ────────────────────────────────────────

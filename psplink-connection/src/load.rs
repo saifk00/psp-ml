@@ -56,13 +56,26 @@ impl PSPConnection {
     pub fn load_program(
         &self,
         prx_path: &str,
+        on_stdout: impl FnMut(&[u8]),
+    ) -> Result<LoadOutcome, PspError> {
+        self.load_program_with_idle_timeout(prx_path, EVENT_TIMEOUT, on_stdout)
+    }
+
+    /// `load_program` with an explicit bound on how long the device may go
+    /// silent. Interactive programs (`pspbird`) sit waiting on the user for
+    /// far longer than a benchmark ever runs, so they need a larger one; the
+    /// device side's `psp_rt::module!(..., timeout_secs = N)` should agree.
+    pub fn load_program_with_idle_timeout(
+        &self,
+        prx_path: &str,
+        idle_timeout: Duration,
         mut on_stdout: impl FnMut(&[u8]),
     ) -> Result<LoadOutcome, PspError> {
         self.send_shell_command(&["ld", prx_path])?;
 
         let mut framer = ShellFramer::new();
         loop {
-            match self.recv_event(EVENT_TIMEOUT)? {
+            match self.recv_event(idle_timeout)? {
                 PspEvent::Stdout(bytes) | PspEvent::Stderr(bytes) => on_stdout(&bytes),
                 PspEvent::ShellRaw(bytes) => {
                     for marker in framer.push(&bytes) {

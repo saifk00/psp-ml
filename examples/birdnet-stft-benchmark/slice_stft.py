@@ -484,13 +484,31 @@ def main() -> None:
 N_WINDOWS = 511  # both branches; floor((144000-L)/(511-1)) framing
 
 
-def sever_backbone(model_path: str, out_path: str) -> None:
+def find_classifier_fc(model, sg):
+  """The FULLY_CONNECTED producing the per-class logits: the one with the
+  widest 2D weight (`[classes, 1024]`). Same rule as prune_classifier.py's
+  find_classifier, minus the label count."""
+  best = None
+  for op in sg.operators:
+    if opcode(model, op) != BO.FULLY_CONNECTED or len(op.inputs) < 2:
+      continue
+    shape = list(sg.tensors[op.inputs[1]].shape)
+    if len(shape) == 2 and (best is None or shape[0] > best[1]):
+      best = (op, shape[0])
+  assert best is not None, "no FULLY_CONNECTED classifier found"
+  return best[0]
+
+
+def sever_backbone(model_path: str, out_path: str, headless: bool = False) -> None:
   """Cut the conv backbone out of a (possibly TOPK-pruned) BirdNET model:
   everything from the two branches' 4D CONCAT onward. The severed model's
   input is the concat result `[1, 96, N_WINDOWS, 2]` (channel 0 = the
   L=2048 branch, channel 1 = L=1024, both mel-axis-REVERSEd then
   transposed — the caller assembles that from the custom frontend's
-  bank-major outputs). Outputs are the model's own outputs.
+  bank-major outputs). Outputs are the model's own outputs — or, with
+  `headless`, the classifier's *input*: the pooled `[1, 1024]` embedding,
+  so the classifier can be a runtime-loaded external-weight FC
+  (design/2026-08-24_pspbird-app.md).
   """
   buf = Path(model_path).read_bytes()
   model = schema.ModelT.InitFromObj(schema.Model.GetRootAs(buf, 0))
@@ -507,10 +525,19 @@ def sever_backbone(model_path: str, out_path: str) -> None:
       n_banks = shape[1]
   assert concat_out is not None, "no 4D branch-merge CONCAT found"
 
+  if headless:
+    fc = find_classifier_fc(model, sg)
+    outputs = [int(fc.inputs[0])]
+    emb = sg.tensors[outputs[0]]
+    print(f"headless: output is classifier input '{emb.name.decode()[:60]}' "
+          f"{list(emb.shape)}")
+  else:
+    outputs = list(sg.outputs)
+
   sliced = slice_subgraph(
       buf,
       concat_out,
-      list(sg.outputs),
+      outputs,
       input_shape=[1, n_banks, N_WINDOWS, 2],
   )
   Path(out_path).write_bytes(sliced)
@@ -520,5 +547,7 @@ def sever_backbone(model_path: str, out_path: str) -> None:
 if __name__ == "__main__":
   if len(sys.argv) > 1 and sys.argv[1] == "sever-backbone":
     sever_backbone(sys.argv[2], sys.argv[3])
+  elif len(sys.argv) > 1 and sys.argv[1] == "sever-backbone-headless":
+    sever_backbone(sys.argv[2], sys.argv[3], headless=True)
   else:
     main()

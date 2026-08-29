@@ -69,6 +69,11 @@ pub enum TensorKind {
     Constant { offset: usize, len: usize },
     /// Intermediate activation - scratch buffer
     Intermediate,
+    /// A weight slot filled at runtime (`PspModelBuilder::external_f32`):
+    /// a zeroed `.bss` static the generated module exposes by `name`, so the
+    /// caller can load whichever blob it likes into it before `forward()`.
+    /// Not part of the weight blob; never in the arena.
+    External { name: String },
 }
 
 #[derive(Debug)]

@@ -21,6 +21,7 @@ pub fn dump(model: &PspModel) -> String {
             TensorKind::Output => n_output += 1,
             TensorKind::Constant { .. } => n_const += 1,
             TensorKind::Intermediate => n_inter += 1,
+            TensorKind::External { .. } => n_inter += 1,
         }
     }
     let _ = writeln!(
@@ -38,6 +39,7 @@ pub fn dump(model: &PspModel) -> String {
             TensorKind::Output => "Output".to_string(),
             TensorKind::Constant { len, .. } => format!("Constant({} bytes)", len),
             TensorKind::Intermediate => "Intermediate".to_string(),
+            TensorKind::External { name } => format!("External({name})"),
         };
         let dtype = match t.dtype {
             DType::F32 => "F32",

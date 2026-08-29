@@ -265,6 +265,19 @@ fn lower_allocs(
                     size,
                 });
             }
+            TensorKind::External { name } => {
+                if !referenced.contains(&tensor.id) {
+                    continue;
+                }
+                if tensor.dtype != DType::F32 {
+                    return Err(format!("Tensor {} external slot must be F32", tensor.id));
+                }
+                allocs.push(TensorAlloc::External {
+                    id: tensor.id,
+                    name: name.clone(),
+                    size: tensor.shape.iter().product::<usize>(),
+                });
+            }
             TensorKind::Input => {}
         }
     }

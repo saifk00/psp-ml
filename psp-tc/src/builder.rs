@@ -89,6 +89,73 @@ impl PspModelBuilder {
         )
     }
 
+    /// Declare a runtime-filled F32 weight slot. Nothing goes into the blob;
+    /// the generated module owns a zeroed `.bss` static of `shape`'s size
+    /// and exposes `pub fn <name>() -> &'static mut [f32]` for the caller to
+    /// fill before `forward()`. `name` must be a valid Rust identifier.
+    pub fn external_f32(&mut self, shape: Vec<usize>, name: &str) -> TensorId {
+        assert!(
+            !name.is_empty()
+                && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+                && !name.starts_with(|c: char| c.is_ascii_digit()),
+            "external slot name {name:?} is not an identifier"
+        );
+        self.graph.add_tensor(
+            shape,
+            DType::F32,
+            TensorKind::External {
+                name: name.to_string(),
+            },
+        )
+    }
+
+    /// Dense layer `out = in · Wᵀ + b` with `weights` `[out_features,
+    /// in_features]` (TFLite's layout) and optional `bias` `[out_features]`.
+    /// Returns the `[rows, out_features]` output.
+    pub fn fully_connected(
+        &mut self,
+        input: TensorId,
+        weights: TensorId,
+        bias: Option<TensorId>,
+    ) -> TensorId {
+        let in_shape = self.graph.tensor(input).shape.clone();
+        let in_features = *in_shape.last().expect("fully_connected: scalar input");
+        let w_shape = self.graph.tensor(weights).shape.clone();
+        assert_eq!(
+            w_shape.len(),
+            2,
+            "fully_connected weights must be 2D, got {w_shape:?}"
+        );
+        assert_eq!(
+            w_shape[1], in_features,
+            "input has {in_features} features but the weights have {}",
+            w_shape[1]
+        );
+        let out_features = w_shape[0];
+        if let Some(b) = bias {
+            assert_eq!(
+                self.graph.tensor(b).shape.iter().product::<usize>(),
+                out_features,
+                "bias must have {out_features} elements"
+            );
+        }
+        let mut out_shape = in_shape;
+        *out_shape.last_mut().unwrap() = out_features;
+        let output = self
+            .graph
+            .add_tensor(out_shape, DType::F32, TensorKind::Intermediate);
+        self.graph.ops.push(PspOp::FullyConnected {
+            input,
+            weights,
+            bias,
+            output,
+            fused_activation: crate::ir::psp::FullyConnectedParams {
+                fused_activation: None,
+            },
+        });
+        output
+    }
+
     /// Shape of a tensor created through this builder.
     pub fn shape(&self, id: TensorId) -> &[usize] {
         &self.graph.tensor(id).shape
@@ -278,6 +345,28 @@ mod tests {
             })
             .collect();
         assert_eq!(hops, vec![278, 280]);
+    }
+
+    #[test]
+    fn external_fc_slot_is_bss_not_blob() {
+        let mut b = PspModelBuilder::new();
+        let emb = b.input(vec![1, 8]);
+        let w = b.external_f32(vec![3, 8], "weights");
+        let bias = b.external_f32(vec![3], "bias");
+        let out = b.fully_connected(emb, w, Some(bias));
+        b.output(out);
+        let mut model = b.finish();
+        assert_eq!(model.graph.tensor(out).shape, vec![1, 3]);
+
+        let generated =
+            crate::codegen::generate_code_named(&mut model, None, None, None, "fc.bin").unwrap();
+        // The slots are statics, so the blob holds nothing at all.
+        assert_eq!(generated.stats.blob_bytes, 0);
+        let code = generated.tokens.to_string();
+        assert!(code.contains("static mut EXT_WEIGHTS : Aligned16 < 24usize >"), "{code}");
+        assert!(code.contains("pub fn weights () -> & 'static mut [f32]"), "{code}");
+        assert!(code.contains("pub const EXT_BIAS_LEN : usize = 3usize"), "{code}");
+        assert!(code.contains("fully_connected ("), "{code}");
     }
 
     #[test]

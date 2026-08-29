@@ -1,0 +1,14 @@
+[package]
+name = "pspbird-host"
+edition = "2021"
+
+[[bin]]
+name = "pspbird-host"
+path = "src/main.rs"
+
+[dependencies]
+psplink-connection = { path = "../../../psplink-connection" }
+# birdnet::imfile::pack_images for the species-image pack. Only the
+# library with `imfile-pack`; birdnet's build.rs skips the model compile
+# for that feature set.
+birdnet = { path = "../device", features = ["imfile-pack"] }

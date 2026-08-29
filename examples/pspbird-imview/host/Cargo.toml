@@ -1,0 +1,13 @@
+[package]
+name = "pspbird-imview-host"
+edition = "2021"
+
+[[bin]]
+name = "pspbird-imview-host"
+path = "src/main.rs"
+
+[dependencies]
+psplink-connection = { path = "../../../psplink-connection" }
+# The packer half of birdnet::imfile (std, JPEG decode). `local` is
+# birdnet's default and is what makes the crate std on host.
+birdnet = { path = "../../birdnet/device", features = ["imfile-pack"] }

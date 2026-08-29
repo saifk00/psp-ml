@@ -25,18 +25,18 @@ fn main() {
     if profiling {
         cmd.arg("--features").arg("hwprofile");
     }
-    // BIRDNET_CUSTOM_FRONTEND=1: sever the model at the branch concat and run
-    // the custom-op frontend (StridedViewStft + banded mel) ahead of the
-    // backbone. See examples/birdnet/device's `custom-frontend` feature.
-    let custom_frontend = std::env::var("BIRDNET_CUSTOM_FRONTEND").is_ok_and(|v| v != "0");
-    if custom_frontend {
+    // The custom-op frontend (StridedViewStft + banded mel, model severed at
+    // the branch concat) and its small-FFT pass are the default: each won
+    // its A/B on hardware (5617 -> 4865 -> 4668 ms at TOPK=500) and the app
+    // ships with both. BIRDNET_CUSTOM_FRONTEND=0 / BIRDNET_SMALL_FFT=0 get
+    // the model's own dense frontend back (the BIRDNET_TAP tensor-id
+    // workflow needs the whole-model compile).
+    let on = |var: &str| std::env::var(var).map_or(true, |v| v != "0");
+    if on("BIRDNET_CUSTOM_FRONTEND") {
         cmd.arg("--features").arg("custom-frontend");
+        cmd.env("BIRDNET_SMALL_FFT", if on("BIRDNET_SMALL_FFT") { "1" } else { "0" });
     }
     println!("cargo:rerun-if-env-changed=BIRDNET_CUSTOM_FRONTEND");
-    // BIRDNET_SMALL_FFT composes with the custom frontend (FFT pruning pass).
-    if let Ok(val) = std::env::var("BIRDNET_SMALL_FFT") {
-        cmd.env("BIRDNET_SMALL_FFT", val);
-    }
     println!("cargo:rerun-if-env-changed=BIRDNET_SMALL_FFT");
 
     // Forward the species-pruning knobs to the device build, which is what
