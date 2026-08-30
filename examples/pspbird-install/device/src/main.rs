@@ -50,7 +50,7 @@ fn app_main() {
         }
         let name = &ent.d_name[..ent.d_name.iter().position(|&b| b == 0).unwrap_or(0)];
         let Ok(name) = core::str::from_utf8(name) else { continue };
-        if !name.ends_with(".bin") {
+        if !name.ends_with(".bin") && !name.ends_with(".img") {
             continue;
         }
         let mut src = heapless_path("blobs/", name);

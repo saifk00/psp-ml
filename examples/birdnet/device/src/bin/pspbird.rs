@@ -67,9 +67,23 @@ mod app {
     // ---- live mode: capture ring + inference thread -------------------
     /// 3 s of model input plus room for one inference's worth of new audio
     /// to land without overwriting the window being read.
-    const RING_LEN: usize = SAMPLE_RATE as usize * 8;
+    /// Whole mic chunks: the writer lands one chunk at `written % RING_LEN`
+    /// and must never straddle the end (44100 * 8 is not a multiple of
+    /// CHUNK, and would have written up to 1023 samples past the array).
+    const RING_CHUNKS: usize = SAMPLE_RATE as usize * 8 / CHUNK + 1;
+    const RING_LEN: usize = RING_CHUNKS * CHUNK;
     const WINDOW: usize = SAMPLE_RATE as usize * 3;
+    /// The window, rounded up to whole chunks, for the energy search.
+    const WINDOW_CHUNKS: usize = (WINDOW + CHUNK - 1) / CHUNK;
+    /// Consecutive windows must advance by at least this (~1.5 s): a call
+    /// is scored at most twice, with 50% overlap, not re-scored forever
+    /// because it stays the loudest thing in the ring.
+    const MIN_ADVANCE_CHUNKS: usize = WINDOW_CHUNKS / 2;
     static mut RING: [i16; RING_LEN] = [0; RING_LEN];
+    /// Per-chunk band-limited energy, written with the chunk and published
+    /// by the same RING_WRITTEN store: the inference thread's window picker
+    /// reads only entries below `written`.
+    static mut ENV: [u32; RING_CHUNKS] = [0; RING_CHUNKS];
     /// Samples ever written; the writer's ring index is this mod RING_LEN.
     static RING_WRITTEN: AtomicUsize = AtomicUsize::new(0);
     static LIVE_STOP: AtomicBool = AtomicBool::new(false);
@@ -89,11 +103,8 @@ mod app {
     /// Beside the module first (Memory Stick install), then the runner's
     /// mount -- same order as the classifier blobs.
     const PACK_PATHS: [&str; 2] = ["blobs/birds.img", "host0:/blobs/birds.img"];
-    /// Grid: `GRID_COLS` x `GRID_ROWS` thumbnails at the right edge, best
-    /// first, row-major.
-    const GRID_COLS: usize = 2;
-    const GRID_ROWS: usize = 3;
-    const GRID_TOP: usize = 12;
+    /// One column of thumbnails at the right edge, vertically centred:
+    /// `psp_bird::how_many` decides whether it holds 1, 2 or 3.
     const GRID_GAP: usize = 4;
     /// Largest thumbnail this build buffers (96x96 RGB565).
     const IMAGE_CAP: usize = 96 * 96 * 2;
@@ -118,7 +129,7 @@ mod app {
         match Pack::open(&PACK_PATHS) {
             Ok(pack) if pack.header.image_len() <= IMAGE_CAP => {
                 let w = pack.header.w as usize;
-                let grid_w = GRID_COLS * (w + GRID_GAP) + GRID_GAP;
+                let grid_w = w + 2 * GRID_GAP;
                 unsafe {
                     TEXT_COLS = (imfile::device::SCREEN_W - grid_w) / 6;
                 }
@@ -171,17 +182,23 @@ mod app {
         }
     }
 
-    /// Draw the top `GRID_COLS * GRID_ROWS` classes of `order` as a grid at
-    /// the right edge. Called after the page is shown (the page clears
-    /// the screen). Returns the time spent, in microseconds.
-    fn images_draw_grid(order: &[u16; OUTPUT_CLASSES]) -> i64 {
+    /// Draw the top `n` classes of `order` as one column at the right edge,
+    /// centred vertically: one in the middle, two stacked, three stacked.
+    /// Called after the page is shown (the page clears the screen).
+    /// Returns the time spent, in microseconds.
+    fn images_draw_column(order: &[u16; OUTPUT_CLASSES], n: usize) -> i64 {
         let Some(pack) = pack() else { return 0 };
+        if n == 0 {
+            return 0;
+        }
         let t0 = unsafe { sceKernelGetSystemTimeWide() };
         let (w, h) = (pack.header.w as usize, pack.header.h as usize);
-        let x0 = imfile::device::SCREEN_W - GRID_COLS * (w + GRID_GAP);
+        let x = imfile::device::SCREEN_W - w - GRID_GAP;
+        let total_h = n * h + (n - 1) * GRID_GAP;
+        let y0 = imfile::device::SCREEN_H.saturating_sub(total_h) / 2;
         let map = unsafe { &*core::ptr::addr_of!(IMAGE_MAP) };
         let img = image_buf(pack.header.image_len());
-        for (k, &class) in order.iter().take(GRID_COLS * GRID_ROWS).enumerate() {
+        for (k, &class) in order.iter().take(n).enumerate() {
             let idx = map[class as usize];
             if idx == imfile::NO_IMAGE {
                 continue;
@@ -190,9 +207,7 @@ mod app {
                 psp_rt::dprintln!("pspbird: images: read {} failed: {:?}", idx, e);
                 break;
             }
-            let x = x0 + (k % GRID_COLS) * (w + GRID_GAP);
-            let y = GRID_TOP + (k / GRID_COLS) * (h + GRID_GAP);
-            pack.draw(img, x, y);
+            pack.draw(img, x, y0 + k * (h + GRID_GAP));
         }
         unsafe { sceKernelGetSystemTimeWide() - t0 }
     }
@@ -587,9 +602,10 @@ mod app {
             line!(p, "{:5.1}%  {}", psp_bird::sigmoid(scores[i]) * 100.0, &label[..cut]);
         }
         p.show();
-        let us = images_draw_grid(order);
+        let n = psp_bird::how_many(scores, order);
+        let us = images_draw_column(order, n);
         if us > 0 && top == 0 {
-            psp_rt::dprintln!("pspbird: images: grid drawn in {} us", us);
+            psp_rt::dprintln!("pspbird: images: {} shown, drawn in {} us", n, us);
         }
         PAGE
     }
@@ -664,12 +680,63 @@ mod app {
     // Live mode.
     // ------------------------------------------------------------------
 
-    /// Resample the newest 3 s of the ring into MODEL_INPUT. Only reads
-    /// samples older than the write pointer; the ring is big enough that
-    /// the writer cannot lap them during the copy.
-    fn snapshot_window() -> &'static [f32; INPUT_SAMPLES] {
-        let written = RING_WRITTEN.load(Ordering::Acquire);
-        let start = written - WINDOW;
+    /// Band-limited energy of one mic chunk: one-pole high-pass at ~1 kHz
+    /// (most songbirds sit above it; wind and traffic below), then sum of
+    /// squares. `hp` carries the filter state across chunks.
+    fn chunk_energy(chunk: &[i16], hp: &mut (i32, i32)) -> u32 {
+        let (mut x1, mut y1) = *hp;
+        let mut acc: u64 = 0;
+        for &x in chunk {
+            let x = x as i32;
+            // y = x - x1 + r*y1, r = 0.86 -> fc ≈ (1-r)/2π · 44.1 kHz ≈ 1 kHz.
+            let y = x - x1 + (y1 * 220) / 256;
+            x1 = x;
+            y1 = y;
+            let q = (y >> 4) as i64;
+            acc += (q * q) as u64;
+        }
+        *hp = (x1, y1);
+        (acc >> 6).min(u32::MAX as u64) as u32
+    }
+
+    /// Choose the window to classify: the loudest 3 s in the ring whose
+    /// end is at least MIN_ADVANCE_CHUNKS past the previous window's end
+    /// (so a bird that sang 4 s ago is still scored on the burst, not on
+    /// the silence after it). Sliding-window sum over the chunk energies,
+    /// O(candidates): add the chunk entering, subtract the one leaving.
+    /// Returns the end (in chunks) and the energy, or None if no new
+    /// window is available yet.
+    fn pick_window(written: usize, last_end: usize) -> Option<(usize, u32)> {
+        let written_chunks = written / CHUNK;
+        // Oldest chunk that is still intact: the writer is one chunk past
+        // `written`, so leave two chunks of slack behind it.
+        let oldest = (written_chunks + 2).saturating_sub(RING_CHUNKS);
+        let lo = (last_end + MIN_ADVANCE_CHUNKS).max(oldest + WINDOW_CHUNKS).max(WINDOW_CHUNKS);
+        let hi = written_chunks;
+        if hi < lo {
+            return None;
+        }
+        let env = unsafe { &*core::ptr::addr_of!(ENV) };
+        let e = |c: usize| env[c % RING_CHUNKS] as u64;
+        let mut sum: u64 = (lo - WINDOW_CHUNKS..lo).map(e).sum();
+        let (mut best_end, mut best) = (lo, sum);
+        for end in lo + 1..=hi {
+            sum += e(end - 1);
+            sum -= e(end - 1 - WINDOW_CHUNKS);
+            // `>=`: on a tie prefer the newest, so silence still advances.
+            if sum >= best {
+                best = sum;
+                best_end = end;
+            }
+        }
+        Some((best_end, best.min(u32::MAX as u64) as u32))
+    }
+
+    /// Resample the 3 s ending at chunk `end` into MODEL_INPUT. Only reads
+    /// samples older than the write pointer; `pick_window` keeps the
+    /// window clear of the writer, and the copy takes ~10 ms.
+    fn snapshot_window(end: usize) -> &'static [f32; INPUT_SAMPLES] {
+        let start = end * CHUNK - WINDOW;
         let ring = unsafe { &*core::ptr::addr_of!(RING) };
         let dst = unsafe { &mut *core::ptr::addr_of_mut!(MODEL_INPUT) };
         let ratio = SAMPLE_RATE as f32 / 48_000.0;
@@ -684,24 +751,29 @@ mod app {
         dst
     }
 
-    /// The inference thread: whenever a full new window is available and
-    /// it is free, classify the newest 3 s and publish. Never queues — a
-    /// slow model costs coverage, not lag.
+    /// The inference thread: whenever it is free and enough new audio has
+    /// arrived, classify the loudest eligible 3 s (`pick_window`) and
+    /// publish. Never queues — a slow model costs coverage, not lag.
     unsafe extern "C" fn infer_thread(_argc: usize, _argv: *mut c_void) -> i32 {
-        let mut last_start = 0usize;
+        let mut last_end = 0usize;
         while !LIVE_STOP.load(Ordering::Relaxed) {
             let written = RING_WRITTEN.load(Ordering::Acquire);
-            if written < WINDOW || written - WINDOW < last_start + WINDOW {
+            let Some((end, energy)) = pick_window(written, last_end) else {
                 // Poll at ~mic-chunk rate: the UI thread owns the clock.
                 sceKernelDelayThread(25_000);
                 continue;
-            }
-            last_start = written - WINDOW;
-            let input = snapshot_window();
+            };
+            last_end = end;
+            let age_ms = (written / CHUNK - end) as u32 * (CHUNK as u32 * 1000 / SAMPLE_RATE);
+            let input = snapshot_window(end);
             let scores = &mut *core::ptr::addr_of_mut!(LIVE_SCORES);
             let t0 = sceKernelGetSystemTimeWide();
             psp_bird::classify_birds(input, scores);
             let ms = ((sceKernelGetSystemTimeWide() - t0) / 1000) as u32;
+            psp_rt::dprintln!(
+                "pspbird: window ended {} ms before pick, energy {}, {} ms",
+                age_ms, energy, ms
+            );
             LIVE_LAST_MS.store(ms, Ordering::Relaxed);
             LIVE_SEQ.fetch_add(1, Ordering::Release);
         }
@@ -744,6 +816,7 @@ mod app {
         let mut page = ROWS - 3;
         let mut redraw = true;
         let mut windows = 0u32;
+        let mut hp = (0i32, 0i32);
         let t_start = unsafe { sceKernelGetSystemTimeWide() };
         loop {
             // One mic chunk (~23 ms). The write index is published after
@@ -757,6 +830,9 @@ mod app {
                     ring[at..].as_mut_ptr() as *mut c_void,
                 );
             }
+            // Energy for the window picker, published with the chunk.
+            let env = unsafe { &mut *core::ptr::addr_of_mut!(ENV) };
+            env[at / CHUNK] = chunk_energy(&ring[at..at + CHUNK], &mut hp);
             RING_WRITTEN.store(w + CHUNK, Ordering::Release);
 
             let seq = LIVE_SEQ.load(Ordering::Acquire);

@@ -171,6 +171,40 @@ pub fn sigmoid(x: f32) -> f32 {
     1.0 / (1.0 + libm::expf(-x))
 }
 
+/// Below this confidence a class is not a detection at all (BirdNET's own
+/// default `min_conf`). The outputs are independent sigmoids, not a
+/// softmax, so this absolute floor has to come before any relative test:
+/// 5% / 2% / 2% has the same *shape* as 60% / 30% / 30% and means nothing.
+pub const MIN_CONF: f32 = 0.1;
+/// Most species shown at once.
+/// TODO: scale with what the page can fit instead of a fixed cap.
+pub const MAX_SHOWN: usize = 3;
+
+/// How many of the leading classes to present, given `order` (best first,
+/// from `sort_order`): 0 if nothing clears `MIN_CONF`, else the *effective
+/// number of species* among the top `MAX_SHOWN` survivors — the inverse
+/// Simpson index (Hill number of order 2) of their confidence shares,
+/// rounded. 90/1/1 -> 1, 60/30/5 -> 2, 60/30/30 -> 3.
+pub fn how_many(scores: &[f32; OUTPUT_CLASSES], order: &[u16]) -> usize {
+    let mut p = [0.0f32; MAX_SHOWN];
+    let mut n = 0;
+    for &i in order.iter().take(MAX_SHOWN) {
+        let c = sigmoid(scores[i as usize]);
+        if c < MIN_CONF {
+            break;
+        }
+        p[n] = c;
+        n += 1;
+    }
+    if n == 0 {
+        return 0;
+    }
+    let total: f32 = p[..n].iter().sum();
+    let simpson: f32 = p[..n].iter().map(|c| (c / total) * (c / total)).sum();
+    let effective = 1.0 / simpson;
+    (libm::roundf(effective) as usize).clamp(1, n)
+}
+
 // ---------------------------------------------------------------------------
 
 /// Path bytes for `prefix + file`, NUL-terminated.
