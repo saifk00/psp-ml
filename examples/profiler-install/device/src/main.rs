@@ -60,7 +60,7 @@ fn app_main() {
 
     dprintln!("");
     dprintln!("DONE. Power-cycle the PSP once, then profiling is available:");
-    dprintln!("  PSP_PROFILE=1 cargo run -p birdnet-host --release");
+    dprintln!("  PSP_PROFILE=1 cargo run -p pspbird-bench-host --release");
 }
 
 /// Read the plugin from the mounted host directory into `BUF`.
@@ -68,7 +68,7 @@ fn read_plugin() -> Option<usize> {
     let fd = unsafe { sceIoOpen(SRC.as_ptr(), IoOpenFlags::RD_ONLY, 0) };
     if fd.0 < 0 {
         dprintln!("FATAL: cannot open host0:/psp_ml_kernel.prx");
-        dprintln!("  the host mounts kernel-plugin/ as host0:; run `make -C kernel-plugin` first");
+        dprintln!("  the host mounts kernel-plugin/ as host0:; run `make -C plugins/kernel-plugin` first");
         return None;
     }
     let size = unsafe { sceIoLseek(fd, 0, IoWhence::End) } as usize;

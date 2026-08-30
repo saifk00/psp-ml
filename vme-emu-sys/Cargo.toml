@@ -1,9 +1,0 @@
-[package]
-name = "vme-emu-sys"
-version = "0.1.0"
-edition = "2021"
-description = "In-process VME RTL simulation: the Verilated vme-emu model linked as a static library, vme_emu(&MachineImage) -> VmeResult"
-links = "vme_rtl"
-
-[dependencies]
-vme-assembler = { path = "../psp-tc/vme-assembler" }

@@ -5,4 +5,4 @@ edition = "2021"
 
 [target.'cfg(target_os = "psp")'.dependencies]
 psp = "0.3"
-psp-rt = { path = "../../../psp-rt" }
+psp-rt = { path = "../../../toolchain/psp-rt" }

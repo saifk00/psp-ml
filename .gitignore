@@ -7,7 +7,7 @@ scrap
 .DS_Store
 *.bin
 .vscode
-models/
+models/birdnet/
 benchmarks.json
 # Kernel-check results, written by `test-kernels` on both host and device.
 test-results.json
@@ -20,29 +20,29 @@ out.log
 CLAUDE.md
 docs/
 
-examples/birdnet/results.txt
-examples/birdnet/golden.json
+apps/pspbird/results.txt
+apps/pspbird/golden.json
 
 # Written to the host0: mount by device/build.rs when TOPK prunes the
 # classifier; lets birdnet-host project golden.json onto the kept classes.
-examples/birdnet/kept_indices.txt
+apps/pspbird/kept_indices.txt
 
 # forward_debug tensor taps (~97 MB per run; regenerate with BIRDNET_TAP=1)
-examples/birdnet/device/tap/
+apps/pspbird/device/tap/
 
 # roofline benchmark output
 examples/roofline/**/roofline.json
 
 # kernel-plugin build artifacts
-kernel-plugin/*.o
-kernel-plugin/*.elf
-kernel-plugin/*.prx
-kernel-plugin/*.S
-kernel-plugin/*.a
+plugins/kernel-plugin*/*.o
+plugins/kernel-plugin*/*.elf
+plugins/kernel-plugin*/*.prx
+plugins/kernel-plugin*/*.S
+plugins/kernel-plugin*/*.a
 __pycache__/
 
 # pspbird classifier blobs, published to the host0: mount by pspbird-host.
-examples/birdnet/blobs/
+apps/pspbird/blobs/
 
-# Species photos fetched by examples/birdnet/fetch_images.py (only the script is committed).
-examples/birdnet/images/
+# Species photos fetched by apps/pspbird/fetch_images.py (only the script is committed).
+apps/pspbird/images/

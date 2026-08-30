@@ -1,0 +1,166 @@
+# PSPBird
+
+Bird-sound identification on the PSP: BirdNET v2.4 compiled to native VFPU
+code by `psp-tc`. Both the app and the benchmarking program live here.
+
+## The app
+
+```bash
+uv run models/fetch.py                        # model assets, one time
+cargo run -p pspbird-host --release           # build + deploy + run over psplink
+cargo run -p pspbird-host --release -- --pack DIR    # standalone install folder
+cargo run -p pspbird-install-host --release   # copy it onto ms0:/PSP/GAME/PSPBIRD over USB
+```
+
+Region menu (UP/DOWN + X picks which pruned classifier to load), then:
+
+- **CIRCLE — live mode**: the mic streams into a ring buffer while a
+  lower-priority VFPU thread classifies the newest 3 s window whenever it is
+  free (~3.9 s per window). Results replace the page as they land; species
+  photos are drawn for the leading detections (1–3, chosen by the effective
+  number of species in the top confidences). X stops.
+- **X — single-step**: record up to 15 s, SQUARE plays it back, CIRCLE
+  classifies, TRIANGLE re-records.
+- HOME exits.
+
+The classifier is not compiled into the model: build.rs freezes its shape
+(`TOPK=500` → 513 classes) and emits one weight blob per region
+(`prune_classifier.py --write-blob`); selecting a region reads that blob into
+runtime weight slots (`psp-tc`'s `TensorKind::External`). Regions cost 2.1 MB
+of storage each and no memory. Species photos: `fetch_images.py` builds
+`blobs/birds.img`; without it the app runs text-only.
+
+Layout: `device/` (both binaries), `host/` (app runner), `bench-host/`
+(benchmark runner), `install/` (Memory Stick installer), `imview/` (image-pack
+viewer).
+
+## The benchmark
+
+3 s of 48 kHz audio in, one logit per species out, verified against a TFLite
+golden run. Defaults are the measured-best configuration: FP32 model, pruned
+to the 500 species most likely in `eastern-na`, custom strided-STFT frontend
+with the small-FFT pass — 3760 ms on hardware. Every knob below opts *out* of
+one of those.
+
+```bash
+cargo run -p pspbird-bench-host --release
+TOPK=0 BIRDNET_MODEL=models/birdnet/audio-model-int8.tflite cargo run -p pspbird-bench-host --release  # stock 6522 classes
+```
+
+## Files
+
+| path | what it is |
+|---|---|
+| `device/` | the PSP crate. `build.rs` runs the pipeline below; `src/main.rs` is glue around the generated inference — top-k, benchmark JSON, PSP entry point. |
+| `host/` | the runner. `build.rs` cross-compiles `device/` via `cargo psp`; `src/main.rs` deploys, runs, and verifies against the golden. |
+| `prune_classifier.py` | the pruner. Lives here, not in `models/`, because only this example uses it — `models/` holds runners shared across examples. |
+| `cardinal_3s.wav` | the 3 s input, cut from a longer recording by `models/birdnet_reference.py`. Committed so the build is reproducible. |
+| `golden.json` | TFLite's answer for that input. What `host/` checks against. |
+| `AUDIO_CREDITS.txt` | provenance and licence for the audio. Required: `cardinal_3s.wav` is CC BY-NC-SA. |
+| `weights.bin` | **generated.** Written at deploy time by `host/`. Not in git. |
+| `kept_indices.txt` | **generated.** Present only when pruned. Not in git. |
+
+Model assets (`audio-model-int8.tflite`, `meta-model.tflite`, `labels/`) live in
+`models/birdnet/` and are gitignored — fetched by `uv run models/fetch.py`, shared with the
+reference runners.
+
+## Pipeline
+
+```
+models/birdnet/audio-model-int8.tflite   41 MB, 6522 classes
+        |
+        |  (1) prune_classifier.py, only when TOPK is set
+        |      meta-model.tflite: (lat,lon,week) -> per-species likelihood
+        v
+OUT_DIR/audio-model-pruned.tflite        16 MB, 413 classes
+        |  + labels.txt, kept_indices.txt
+        |
+        |  (2) psp_tc::compile_tflite
+        v
+OUT_DIR/generated.rs + weights.bin
+        |
+        |  (3) classes.rs  <- OUTPUT_CLASSES, so main.rs matches the model
+        |  (4) audio_f32.bin <- cardinal_3s.wav as f32
+        |
+        |  (5) staged beside birdnet.prx
+        v
+host/src/main.rs  copies weights.bin -> host0:  at deploy time
+        |
+        v
+PSP: reads host0:/weights.bin, runs, writes host0:/results.txt
+        |
+        v
+host/src/main.rs  compares results.txt against golden.json
+```
+
+**Why the class count is generated (step 3).** Pruning changes the model's
+output width. `OUTPUT_CLASSES` and the labels are both derived from whichever
+model step 1 selected, so they cannot drift from it.
+
+**Why the host publishes `weights.bin`, not the build (step 5).** Several build
+trees compile the device crate — the workspace `cargo build -p birdnet` and
+cargo-psp's own `--target-dir` — each with its own `OUT_DIR` and its own blob.
+When they all wrote into the shared `host0:` mount, the last one to run won, and
+could leave a blob that did not match the deployed `.prx`. The device's
+`init()` reads exactly `WEIGHT_BYTES` without checking the file, so a mismatch
+is silent: it runs on wrong offsets and returns garbage. Staging beside the
+`.prx` and copying at deploy time makes blob and code come from one place.
+
+## Knobs
+
+| env var | default | effect |
+|---|---|---|
+| `TOPK` | `500` | keep the N most likely species (N + 13 non-bird classes). `TOPK=0` disables pruning: the stock 6522-class model, which only fits with the int8 `BIRDNET_MODEL`. |
+| `BIRDNET_REGION` | `eastern-na` | named bounding box: `eastern-na`, `eastern-na-wide`, `western-na`, `north-america`, `europe`. |
+| `BIRDNET_BBOX` | unset | `"lat0,lat1,lon0,lon1"`, overrides `BIRDNET_REGION`. |
+| `BIRDNET_PYTHON` | unset (uses `uv run`) | interpreter for the pruner, when uv can't resolve its deps. |
+| `BIRDNET_WAV` | the XC468176 fixture | input for `models/birdnet_reference.py` when regenerating the golden. |
+| `BIRDNET_GENERATED_OVERRIDE` | unset | hand-edited `generated.rs`, for prototyping codegen changes. |
+| `PSP_PROFILE` | unset | build with hardware counters (`hwprofile`). |
+| `BIRDNET_TAP` | unset | local runs dump every op's output tensor to `device/tap/`. Not supported with the custom frontend. |
+| `BIRDNET_CUSTOM_FRONTEND` | `1` | replace the model's spectrogram frontend with the custom-op one (`StridedViewStft` + banded mel): `build.rs` severs the .tflite at the branch-merge CONCAT and compiles only the conv backbone, plus a builder-generated frontend module; `main.rs` runs the two forwards in sequence. Composes with `TOPK`. Measured (TOPK=500, cardinal fixture): 5617 → 4865 ms (−13.4%), golden PASS. |
+| `BIRDNET_MODEL` | `models/birdnet/audio-model-fp32.tflite` | repo-relative path of the model to compile. The default is the Zenodo FP32 build (record 15050749, `BirdNET_v2.4_tflite.zip`): no QUANTIZE/DEQUANTIZE ops, f32 weights, so none of the fake-quant tax. Measured (TOPK=500): dense 5617 → 5160 ms; custom+small-FFT 4668 → 4296 ms, golden top-5 exact; with compile-time conv prepacking **3760 ms**. `audio-model-int8.tflite` is the same graph with int8 weights and the only one that fits unpruned (40.4 vs 51.7 MB) — pair it with `TOPK=0`. `models/birdnet_reference.py` honours the same variable so `golden.json` matches. |
+| `BIRDNET_SMALL_FFT` | `1` | with the custom frontend, also apply the FFT-pruning pass (`psp_tc::plan_small_fft`): the L=2048 branch computes a 512-point FFT over the anti-alias-decimated signal instead of 2048 (same 23.44 Hz bins, only the 128 columns mel reads). Measured (TOPK=500): 4865 → 4668 ms, golden PASS, identical max Δraw. |
+
+Picking `TOPK`: ask the pruner. Only ~405 species clear 0.01 likelihood
+anywhere in `eastern-na`, so a much larger `TOPK` buys rows that can never fire.
+
+```bash
+uv run apps/pspbird/prune_classifier.py \
+  models/birdnet/audio-model-int8.tflite models/birdnet/labels/en_us.txt --report
+```
+
+`--min-score 0.01` selects by likelihood instead of by rank, and an explicit
+labels subset can be passed as a third positional argument in place of
+`--top-n`.
+
+## Why pruning is safe
+
+The classifier is `Dense(6522, linear)` and the sigmoid is applied *outside* the
+model, so each logit is an independent dot product `W[j]·x + b[j]`. Dropping
+rows of `W` cannot change any surviving logit — verified bit-identical against
+the unpruned model on every window of the test audio. This holds only because
+the activation is sigmoid; under softmax the shared denominator would make every
+surviving score change.
+
+It buys memory, not time. The classifier is ~62% of the blob's bytes but under
+1% of its MACs — a fully-connected layer uses each weight exactly once, while
+the convolutions reuse theirs across the whole feature map. Expect the blob to
+shrink by more than half and the runtime by tens of milliseconds.
+
+## Regenerating the golden
+
+```bash
+uv run models/birdnet_reference.py
+```
+
+Scores every 3 s window of `models/birdnet/cardinal_xc468176.wav`, picks the
+most confident, and rewrites `golden.json` + `cardinal_3s.wav`.
+
+The fixture is a **verified** Northern Cardinal (XC468176, recorded in Central
+Park, bird seen). The previous `cardinal.wav` was not: BirdNET scores it 0.0096
+for Northern Cardinal and calls it Pyrrhuloxia at 0.66, while scoring three
+independent ground-truth cardinal recordings 0.38–0.84. Every stage agreed with
+every other stage on that file — they were faithfully reproducing a wrong
+answer. A golden that only proves `device == TFLite` proves nothing about
+correctness; it has to be anchored to an input whose right answer is known.

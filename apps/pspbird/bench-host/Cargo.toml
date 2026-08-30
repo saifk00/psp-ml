@@ -1,0 +1,10 @@
+[package]
+name = "pspbird-bench-host"
+edition = "2021"
+
+[[bin]]
+name = "pspbird-bench-host"
+path = "src/main.rs"
+
+[dependencies]
+psplink-connection = { path = "../../../toolchain/psplink-connection" }

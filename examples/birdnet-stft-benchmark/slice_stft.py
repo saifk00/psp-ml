@@ -77,7 +77,7 @@ TFLITE_FILE_IDENTIFIER = b"TFL3"
 
 REPO = Path(__file__).resolve().parent.parent.parent
 MODEL = REPO / "models/birdnet/audio-model-int8.tflite"
-WAV = REPO / "examples/birdnet/cardinal_3s.wav"
+WAV = REPO / "apps/pspbird/cardinal_3s.wav"
 OUT_DIR = REPO / "models/birdnet/stft"
 
 BO = schema.BuiltinOperator

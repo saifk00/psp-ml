@@ -8,9 +8,9 @@ name = "vme-conformance-host"
 path = "src/main.rs"
 
 [dependencies]
-psplink-connection = { path = "../../../psplink-connection" }
-vme-assembler = { path = "../../../psp-tc/vme-assembler" }
-vme-emu-sys = { path = "../../../vme-emu-sys" }
+psplink-connection = { path = "../../../toolchain/psplink-connection" }
+vme-assembler = { path = "../../../toolchain/psp-tc/vme-assembler" }
+vme-emu-sys = { path = "../../../toolchain/vme-emu-sys" }
 
 [[bin]]
 name = "vme-skew-probe"

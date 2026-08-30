@@ -1,0 +1,22 @@
+[package]
+name = "device-tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "device_tests"
+path = "src/lib.rs"
+
+# `harness = false` so cargo runs the driver directly: device stdout streams
+# through uncaptured, and the process exit code is the test result.
+[[test]]
+name = "psp"
+path = "tests/psp.rs"
+harness = false
+
+[dependencies]
+# For `device_test::protocol` — the device emits with it, this parses with it,
+# so the two can't drift.
+psp-rt = { path = "../../toolchain/psp-rt" }
+psplink-connection = { path = "../../toolchain/psplink-connection" }

@@ -283,7 +283,7 @@ fn main() {
     }
     if session.stdout_tail.contains("#vme fatal") {
         eprintln!("error: device reports the VME plugin is unavailable — build it");
-        eprintln!("  (make -C kernel-plugin-vme), install psp_vme_kernel.prx to");
+        eprintln!("  (make -C plugins/kernel-plugin-vme), install psp_vme_kernel.prx to");
         eprintln!("  ms0:/seplugins (cargo run -p vme-install-host --release), and");
         eprintln!("  power-cycle the PSP.");
         std::process::exit(1);

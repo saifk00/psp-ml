@@ -52,13 +52,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "birdnet-host"
-version = "0.0.0"
-dependencies = [
- "psplink-connection",
-]
-
-[[package]]
 name = "birdnet-mel-benchmark"
 version = "0.1.0"
 dependencies = [
@@ -501,6 +494,13 @@ dependencies = [
  "serde_json",
  "syn",
  "vme-assembler",
+]
+
+[[package]]
+name = "pspbird-bench-host"
+version = "0.0.0"
+dependencies = [
+ "psplink-connection",
 ]
 
 [[package]]

@@ -68,7 +68,7 @@ fn read_plugin() -> Option<usize> {
     let fd = unsafe { sceIoOpen(SRC.as_ptr(), IoOpenFlags::RD_ONLY, 0) };
     if fd.0 < 0 {
         dprintln!("FATAL: cannot open host0:/psp_vme_kernel.prx");
-        dprintln!("  the host mounts kernel-plugin-vme/ as host0:; run `make -C kernel-plugin-vme` first");
+        dprintln!("  the host mounts kernel-plugin-vme/ as host0:; run `make -C plugins/kernel-plugin-vme` first");
         return None;
     }
     let size = unsafe { sceIoLseek(fd, 0, IoWhence::End) } as usize;

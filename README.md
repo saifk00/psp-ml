@@ -1,50 +1,60 @@
-# Inference for the PlayStation Portable
+# psp-ml
 
-An AOT tflite compiler and psplink-compatibly connection library in rust. Two pieces:
+Inference for the Sony PSP: a TFLite -> Rust AOT compiler, a `no_std`
+device runtime with VFPU kernels, a native USB link to psplink — and PSPBird,
+an app built on all three.
 
-- **A native Rust connection to a live PSP.** Run psplink on the device, and launch programs from ordinary rust and read the PSP's stdout
-- **A TFLite → Rust AOT compiler.** `psp-tc` reads a `.tflite` model and generates Rust inference
-  code — VFPU-accelerated conv2d/pooling/fully-connected kernels, static memory planning, no heap,
-  no interpreter — that you link into your own PSP crate from a normal `build.rs`. Currently runs
-  MNIST at 99% accuracy in ~15ms/image and BirdNET (hybrid) quantized int8/fp16 in about 5.6sec / audio clip
+## PSPBird
 
-## Quick start
+<!-- TODO: demo video/GIF -->
+
+Live bird-sound identification on a PSP. BirdNET v2.4, compiled to native
+VFPU code, listens on the microphone and classifies every 3 seconds of audio
+against a region-pruned species list (~3.9 s per window on hardware). Species
+photos are drawn for the leading detections.
+
+**[Download the latest release](https://github.com/saifk00/psp-ml/releases)** —
+unzip, copy `PSPBIRD/` to `ms0:/PSP/GAME/`, launch from the XMB. Requires
+custom firmware.
+
+To build and run it from source with a USB-connected PSP running psplink:
 
 ```bash
-cargo run -p mnist-bench-host --release
+uv run models/fetch.py                        # model weights + fixtures (one time)
+cargo run -p pspbird-host --release           # build, deploy, stream the log
+cargo run -p pspbird-host --release -- --pack DIR    # assemble a standalone install
+cargo run -p pspbird-install-host --release   # copy it onto the Memory Stick over USB
 ```
 
-One command: cross-compiles the device crate, deploys it to a PSP connected over USB, streams its
-stdout back, reports accuracy and per-op timing, and leaves nothing running on the device
-afterward. No separate build/install/run steps.
+The app lives in [`apps/pspbird/`](apps/pspbird/), including the benchmark
+harness (`pspbird-bench-host`) that verifies device output against a TFLite
+golden run.
 
-## The USB connection, on its own
+## The toolchain
 
-Instead of having to launch `usbhostfs_pc` in a separate shell, compile your PRX, then launch with `pspsh -e`, set up a `PSPConnection` in rust:
+- **`toolchain/psp-tc`** — TFLite → Rust compiler. Parses the model, lowers it
+  through an IR (quantization rewrite, fusion, shape inference, constant
+  folding, static memory planning), and emits Rust inference code with no
+  interpreter and no heap. Library API for `build.rs` use plus a CLI
+  (`psp-tc compile`, `psp-tc info`). Also includes `PspModelBuilder` for
+  hand-constructed graphs (PSPBird's custom STFT frontend) and runtime
+  weight slots (its swappable classifier).
+- **`toolchain/psp-rt`** — the `no_std` device runtime: VFPU kernels
+  (GEMM, conv2d, FFT, pooling, transcendentals), the `psp_rt::module!` entry
+  macro, print macros, tracked partition allocation, hardware-profiler
+  bindings.
+- **`toolchain/psplink-connection`** / **`toolchain/usbhostfs-sys`** — talk to
+  a PSP running psplink from ordinary Rust: mount host directories, load a
+  PRX, stream its stdout, get a real exit status. No `usbhostfs_pc`
+  subprocess, no TCP bridge.
+- **`toolchain/vme-emu`** / **`vme-emu-sys`** / **`psp-tc/vme-assembler`** —
+  a Verilog model of the Media Engine's VME array (silicon-calibrated), plus
+  an assembler that emits machine images for it.
+- **`plugins/`** — kernel-mode C PRXes: hardware performance counters
+  (`kernel-plugin`) and the VME job server (`kernel-plugin-vme`). Installed
+  to the Memory Stick once; see each Makefile.
 
-```rust
-let conn = PSPConnection::connect(prx_dir, prx_dir, Default::default())?;
-
-let outcome = conn.load_program(&format!("host1:{prx_name}"), |bytes| {
-    std::io::stdout().write_all(bytes).ok();
-})?;
-
-match outcome {
-    LoadOutcome::Success => println!("done"),
-    LoadOutcome::Panicked => println!("panicked"),
-    LoadOutcome::ShellError(v) | LoadOutcome::KernelError(v) => println!("error: {v:#x}"),
-}
-```
-
-`load_program` streams stdout live and only returns once psplink's shell channel reports the
-module's thread has actually exited (a real completion signal, not a load acknowledgement).
-
-## The compiler, on its own
-
-`psp-tc` turns a `.tflite` file into a Rust module — no runtime interpreter, no dynamic graph
-traversal, just generated code that calls straight into VFPU-accelerated kernels with all
-intermediate tensor storage planned statically at compile time. It's a normal `build.rs`
-dependency:
+### Using the compiler
 
 ```rust
 // device/build.rs
@@ -61,65 +71,70 @@ generated::init();
 generated::forward(&input, &mut output);
 ```
 
-The generated code is just Rust — profile it, feature-gate it, run it on your dev machine under
-`#[cfg(feature = "local")]` for fast iteration before ever touching hardware (every example here
-does exactly that), or link it into a larger PSP application alongside handwritten code.
+The generated code is plain Rust: it also compiles for the host (every crate
+here has a `local` feature for that), so models can be debugged natively
+before touching hardware.
+
+### Using the USB connection
+
+```rust
+let conn = PSPConnection::connect(prx_dir, prx_dir, Default::default())?;
+
+let outcome = conn.load_program(&format!("host1:{prx_name}"), |bytes| {
+    std::io::stdout().write_all(bytes).ok();
+})?;
+
+match outcome {
+    LoadOutcome::Success => println!("done"),
+    LoadOutcome::Panicked => println!("panicked"),
+    LoadOutcome::ShellError(v) | LoadOutcome::KernelError(v) => println!("error: {v:#x}"),
+}
+```
+
+`load_program` streams stdout live and only returns once psplink's shell
+channel reports the module's thread has exited.
 
 ## Structure
 
 ```
 psp-ml/
-├── psp-rt/                 # device-side no_std runtime: kernels, profiler, module! macro
-├── psp-tc/                 # TFLite -> Rust compiler (library + standalone `psp-tc` CLI)
-├── psplink-connection/     # safe API for talking to a PSP running psplink over USB
-├── usbhostfs-sys/          # raw FFI to the vendored USB/hostfs protocol implementation
-├── audio-recorder/         # PSP audio recording app
-├── examples/
-│   └── mnist-bench/
-│       ├── host/            # native binary: builds device/, deploys + runs it over USB
-│       └── device/          # the actual PSP crate (#![no_std], links against psp-rt)
-└── models/                  # training scripts
+├── apps/
+│   └── pspbird/            # the app: device crate, host runner, benchmark, installer
+├── toolchain/
+│   ├── psp-tc/             # TFLite -> Rust compiler (+ vme-assembler)
+│   ├── psp-rt/             # no_std device runtime and kernels
+│   ├── psplink-connection/ # USB link to psplink
+│   ├── usbhostfs-sys/      # vendored hostfs protocol FFI
+│   ├── vme-emu/ vme-emu-sys/  # Media Engine RTL model
+│   └── device-tests/       # on-hardware test runner (cargo test -p device-tests)
+├── plugins/                # kernel-mode PRXes (profiler, VME server)
+├── examples/               # host/device pairs: benchmarks, demos, diagnostics
+├── models/                 # fetch.py + reference/verification scripts
+└── docs/                   # engineering log and retrospective
 ```
 
-Every example is a `host/` + `device/` pair. `device/` is an ordinary PSP crate — if it needs
-a TFLite model, its own `build.rs` calls `psp-tc` to generate the inference code at build time.
-`host/` is a normal native binary: its `build.rs` cross-compiles the sibling `device/` crate
-into a `.prx` via the standard `cargo psp`, and its `main()` connects over USB
-(`psplink-connection`) and deploys it.
+Every example (and the app) is a `host/` + `device/` pair. `device/` is an
+ordinary PSP crate; `host/` is a native binary whose `build.rs` cross-compiles
+the sibling via the unmodified `cargo psp` and whose `main()` deploys it over
+USB. `cargo run -p <name>-host --release` is the whole loop.
 
 ## Setup
-- Install the PSP dev [SDK](https://pspdev.github.io/installation)
-    - I like to install it directly to the repo root and then source `.envrc`
-- Install `cargo-psp`: https://crates.io/crates/psp
 
-## Components
+- Install the [PSP SDK](https://pspdev.github.io/installation) — installing to
+  the repo root and sourcing `.envrc` works well
+- `cargo install cargo-psp`
+- libusb-1.0 dev headers (via pkg-config)
+- `uv run models/fetch.py` for the model assets (gitignored; ~100 MB)
 
-### psp-rt
+`cargo test` runs everything that needs neither hardware nor downloaded
+assets. `cargo test -p device-tests` runs the kernel checks on a connected
+PSP.
 
-The `no_std` runtime every device crate links against: VFPU-accelerated kernel
-implementations (conv2d, pooling, fully connected, etc.), the hardware profiler bindings, and
-the `psp_rt::module!` macro that PSP binaries use as their entry point. Most of this crate
-(`module!`, `print`, `profiler`) isn't ML-specific at all — it's the general PSP homebrew
-runtime; `kernels` is the one ML-specific module, used only by examples with a TFLite model.
+## Examples
 
-### psp-tc
-
-The TFLite -> Rust compiler. Parses TFLite models (via FlatBuffers), lowers them to an IR, and
-generates Rust inference code that calls into `psp-rt`'s kernels. Exposes both a library API
-(`psp_tc::compile_tflite`, what `device/build.rs` scripts call) and a standalone CLI
-(`psp-tc compile model.tflite -o src/`, `psp-tc info model.tflite`) for manual/diagnostic use.
-
-### psplink-connection / usbhostfs-sys
-
-Talks directly to a PSP running psplink over USB — no `usbhostfs_pc` subprocess, no TCP
-bridge. `usbhostfs-sys` is a vendored, refactored fork of `usbhostfs_pc`'s device-lifecycle and
-hostfs-protocol C code; `psplink-connection` is the safe Rust API on top
-(`PSPConnection::connect`/`load_program`/`disconnect`) that every `host/` crate's `main()` uses.
-
-### audio-recorder
-
-A standalone PSP application for recording audio via the microphone.
-
-### examples/mnist-bench
-
-Benchmark that runs MNIST inference on the PSP, measuring accuracy and throughput.
+`examples/` holds the benchmarks and diagnostics the toolchain was built
+against: `mnist-bench` (the first end-to-end model), `roofline` (memory/VFPU
+peaks), `fc-bench`/`gemv-bench` (kernel tuning), `fft-demo` (VFPU instruction
+behaviour), the `birdnet-*-benchmark` trio (frontend development), the VME
+suite, `profiler-*` (hardware counters), and `hello-psp`/`meminfo`/
+`audio-recorder`.

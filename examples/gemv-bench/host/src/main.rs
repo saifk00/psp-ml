@@ -17,10 +17,10 @@ fn main() {
         .to_str()
         .expect("PRX_PATH is not valid UTF-8");
 
-    let plugin_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../kernel-plugin");
+    let plugin_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../plugins/kernel-plugin");
     let plugin = plugin_dir.join("psp_ml_kernel.prx");
     if !plugin.exists() {
-        eprintln!("error: {} not found — run `make -C kernel-plugin` first", plugin.display());
+        eprintln!("error: {} not found — run `make -C plugins/kernel-plugin` first", plugin.display());
         std::process::exit(1);
     }
 

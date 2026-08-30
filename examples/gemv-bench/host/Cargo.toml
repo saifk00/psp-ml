@@ -7,4 +7,4 @@ name = "gemv-bench-host"
 path = "src/main.rs"
 
 [dependencies]
-psplink-connection = { path = "../../../psplink-connection" }
+psplink-connection = { path = "../../../toolchain/psplink-connection" }

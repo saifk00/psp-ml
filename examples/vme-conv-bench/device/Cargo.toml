@@ -8,10 +8,10 @@ name = "vme-conv-bench"
 path = "src/main.rs"
 
 [dependencies]
-psp-rt = { path = "../../../psp-rt" }
+psp-rt = { path = "../../../toolchain/psp-rt" }
 
 [target.'cfg(target_os = "psp")'.dependencies]
 psp = "0.3"
 
 [build-dependencies]
-psp-tc = { path = "../../../psp-tc" }
+psp-tc = { path = "../../../toolchain/psp-tc" }

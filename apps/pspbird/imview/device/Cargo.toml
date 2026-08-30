@@ -1,0 +1,16 @@
+[package]
+name = "pspbird-imview"
+edition = "2021"
+
+[[bin]]
+name = "pspbird-imview"
+path = "src/main.rs"
+
+[dependencies]
+# Only the `imfile` module: no model, no generated code (birdnet's build.rs
+# skips the compile for this feature set).
+birdnet = { path = "../../device", default-features = false, features = ["imfile"] }
+
+[target.'cfg(target_os = "psp")'.dependencies]
+psp = "0.3"
+psp-rt = { path = "../../../../toolchain/psp-rt" }
