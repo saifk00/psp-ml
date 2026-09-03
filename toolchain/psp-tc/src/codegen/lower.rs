@@ -17,9 +17,20 @@ struct Conv2dKernelParams {
     output: Tensor4d,
     stride: [usize; 2],
     padding: [usize; 4],
-    has_relu: bool,
+    act: Epilogue,
     /// Per-output-channel dequant scales when the filter is int8.
     weight_scales: Option<TensorId>,
+}
+
+/// Map an IR fused activation onto what the conv/GEMM kernels can apply in
+/// their store. Relu6 has no kernel support anywhere.
+fn conv_epilogue(act: Option<Activation>, i: usize, what: &str) -> Result<Epilogue, String> {
+    match act {
+        None => Ok(Epilogue::None),
+        Some(Activation::Relu) => Ok(Epilogue::Relu),
+        Some(Activation::Swish) => Ok(Epilogue::Swish),
+        Some(Activation::Relu6) => Err(format!("Op {i}: Relu6 not supported for {what}")),
+    }
 }
 
 /// Validate a Conv2d's tensors and collect the kernel parameters — shared
@@ -53,9 +64,7 @@ fn build_conv2d_params(
         ));
     }
 
-    if let Some(Activation::Relu6) = params.fused_activation {
-        return Err(format!("Op {i}: Relu6 not supported for Conv2d"));
-    }
+    let act = conv_epilogue(params.fused_activation, i, "Conv2d")?;
 
     Ok(Conv2dKernelParams {
         input: Tensor4d {
@@ -78,7 +87,7 @@ fn build_conv2d_params(
             params.pad_left,
             params.pad_right,
         ],
-        has_relu: matches!(params.fused_activation, Some(Activation::Relu)),
+        act,
         weight_scales,
     })
 }
@@ -364,7 +373,7 @@ fn lower_ops(
                     None => lower_conv2d_vfpu(conv2d),
                 }
             } else {
-                lower_conv2d_naive(conv2d)
+                lower_conv2d_naive(conv2d, i)?
             };
             ops.push(plan);
             continue;
@@ -422,6 +431,7 @@ fn lower_ops(
                     id: *output,
                     shape: [out_shape[0], out_shape[1], out_shape[2], out_shape[3]],
                 };
+                let act = conv_epilogue(params.fused_activation, i, "DepthwiseConv2d")?;
 
                 OpPlan {
                     scratch: vec![],
@@ -439,6 +449,7 @@ fn lower_ops(
                                 params.pad_right,
                             ],
                             output: out4,
+                            act,
                         }],
                     }],
                 }
@@ -457,8 +468,10 @@ fn lower_ops(
                 let out_features = *graph.tensor(*weights).shape.first().unwrap_or(&0);
                 let has_relu = matches!(fused_activation.fused_activation, Some(Activation::Relu));
 
-                if let Some(Activation::Relu6) = fused_activation.fused_activation {
-                    return Err(format!("Op {i}: Relu6 not supported for FullyConnected"));
+                if let Some(act @ (Activation::Relu6 | Activation::Swish)) =
+                    fused_activation.fused_activation
+                {
+                    return Err(format!("Op {i}: {act} not supported for FullyConnected"));
                 }
 
                 let name = if has_relu {
@@ -1086,18 +1099,21 @@ fn lower_ops(
     Ok(ops)
 }
 
-fn lower_conv2d_naive(conv2d: Conv2dKernelParams) -> OpPlan {
-    let base = if conv2d.has_relu {
-        "conv2d_relu"
-    } else {
-        "conv2d"
+fn lower_conv2d_naive(conv2d: Conv2dKernelParams, i: usize) -> Result<OpPlan, String> {
+    let has_relu = match conv2d.act {
+        Epilogue::None => false,
+        Epilogue::Relu => true,
+        Epilogue::Swish => {
+            return Err(format!("Op {i}: fused Swish needs the VFPU conv path"));
+        }
     };
+    let base = if has_relu { "conv2d_relu" } else { "conv2d" };
     let name = if conv2d.weight_scales.is_some() {
         format!("{base}_q8")
     } else {
         base.to_string()
     };
-    OpPlan {
+    Ok(OpPlan {
         scratch: vec![],
         sub_ops: vec![SubOpPlan {
             name,
@@ -1108,11 +1124,11 @@ fn lower_conv2d_naive(conv2d: Conv2dKernelParams) -> OpPlan {
                 stride: conv2d.stride,
                 padding: conv2d.padding,
                 output: conv2d.output,
-                has_relu: conv2d.has_relu,
+                has_relu,
                 weight_scales: conv2d.weight_scales,
             }],
         }],
-    }
+    })
 }
 
 /// `lower_conv2d_vfpu` with the weight repack hoisted to compile time:
@@ -1139,16 +1155,11 @@ fn lower_conv2d_vfpu_prepacked(
         return None;
     };
 
-    let [n, _, _, _] = conv2d.input.shape;
     let [co, kh, kw, ci] = conv2d.filter.shape;
-    let [_, ho, wo, _] = conv2d.output.shape;
-    let gemm_m = n * ho * wo;
     let gemm_k = kh * kw * ci;
     if len != co * gemm_k * 4 {
         return None;
     }
-    let k_padded = ceil_vfpu_q(gemm_k);
-    let m_padded = ceil_vfpu_q(gemm_m);
 
     // Repack B once, here, with the runtime crate's own packer so the two
     // cannot drift apart (same contract as lower_fc_vfpu).
@@ -1160,129 +1171,72 @@ fn lower_conv2d_vfpu_prepacked(
     psp_rt::kernels::pack_b_panel(&src, &mut packed, co, gemm_k);
     let packed_id = append_constant_f32(model, allocs, vec![packed.len()], &packed);
 
-    let scratch = vec![
-        // 0: im2col output
-        ScratchBuffer {
-            size: m_padded * k_padded,
-            load_from: None,
-        },
-        // 1/2: GEMM packing and accumulator scratch
-        ScratchBuffer {
-            size: psp_rt::kernels::gemm_ap_len(GEMM_MC, GEMM_KC),
-            load_from: None,
-        },
-        ScratchBuffer {
-            size: psp_rt::kernels::gemm_cp_len(GEMM_MC, co),
-            load_from: None,
-        },
-    ];
-
-    let mut sub_ops = vec![
-        SubOpPlan {
-            name: "im2col".into(),
-            kernels: vec![KernelCall::Im2colPadded {
-                input: conv2d.input,
-                kernel_size: [kh, kw],
-                stride: conv2d.stride,
-                padding: conv2d.padding,
-                output_hw: [ho, wo],
-                output: 0,
-            }],
-        },
-        SubOpPlan {
-            name: "gemm_vfpu".into(),
-            kernels: vec![KernelCall::GemmBtPacked {
-                a: GemmOperand::Scratch(0),
-                lda: k_padded,
-                b: GemmOperand::Tensor(packed_id),
-                output: conv2d.output.id,
-                m: gemm_m,
-                k: gemm_k,
-                n: co,
-                ap: 1,
-                cp: 2,
-                mc: GEMM_MC,
-                kc: GEMM_KC,
-            }],
-        },
-    ];
-
-    if conv2d.bias.is_some() || conv2d.has_relu {
-        let name = if conv2d.has_relu {
-            "bias_add_relu"
-        } else {
-            "bias_add"
-        };
-        let mut kernels = Vec::new();
-        if let Some(bias_id) = conv2d.bias {
-            kernels.push(KernelCall::BiasAdd {
-                output: conv2d.output.id,
-                bias: bias_id,
-                rows: gemm_m,
-                cols: co,
-            });
-        }
-        if conv2d.has_relu {
-            kernels.push(KernelCall::Relu {
-                output: conv2d.output.id,
-            });
-        }
-        sub_ops.push(SubOpPlan {
-            name: name.into(),
-            kernels,
-        });
-    }
-
-    Some(OpPlan { scratch, sub_ops })
+    Some(lower_conv2d_gemm(conv2d, GemmOperand::Tensor(packed_id), vec![]))
 }
 
 fn lower_conv2d_vfpu(conv2d: Conv2dKernelParams) -> OpPlan {
+    let [co, kh, kw, ci] = conv2d.filter.shape;
+    let gemm_k = kh * kw * ci;
+
+    // 0: weights repacked into the micro-kernel's B layout at run time
+    let b_panel = ScratchBuffer {
+        size: psp_rt::kernels::gemm_bp_len(co, gemm_k),
+        load_from: Some(ScratchLoad {
+            source: conv2d.filter.id,
+            copy: match conv2d.weight_scales {
+                Some(scales) => CopyStrategy::PackBDequantI8 {
+                    n: co,
+                    k: gemm_k,
+                    scales,
+                },
+                None => CopyStrategy::PackB { n: co, k: gemm_k },
+            },
+        }),
+    };
+    lower_conv2d_gemm(conv2d, GemmOperand::Scratch(0), vec![b_panel])
+}
+
+/// The GEMM half of a conv lowering, shared by the compile-time and
+/// run-time weight-pack paths: `output = act(A @ Bp^T + bias)` where `Bp`
+/// is the packed filter (`b`, with any scratch it lives in already in
+/// `scratch`) and A is the im2col of the input — or, for a 1x1 stride-1
+/// unpadded conv, the NHWC input itself.
+///
+/// That elision matters more than it looks: 59 of BirdNET's 61 im2cols are
+/// such copies, 164 ms and 8.5 MB of traffic that only re-laid out data
+/// `gemm_bt_packed` reads through `lda` just as well. The bias and
+/// activation go into the GEMM's store instead of two more passes.
+fn lower_conv2d_gemm(
+    conv2d: Conv2dKernelParams,
+    b: GemmOperand,
+    mut scratch: Vec<ScratchBuffer>,
+) -> OpPlan {
     let [n, _, _, ci] = conv2d.input.shape;
     let [co, kh, kw, _] = conv2d.filter.shape;
     let [_, ho, wo, _] = conv2d.output.shape;
 
     let gemm_m = n * ho * wo;
     let gemm_k = kh * kw * ci;
-    // im2col writes rows padded to a multiple of 4 and leaves the pad columns
-    // untouched; passing the logical `gemm_k` alongside this stride means the
-    // GEMM never reads them.
-    let k_padded = ceil_vfpu_q(gemm_k);
-    let m_padded = ceil_vfpu_q(gemm_m);
+    let (mc, kc) = gemm_blocking(gemm_m, gemm_k, co);
+    let mut sub_ops = Vec::new();
 
-    let scratch = vec![
-        // 0: im2col output
-        ScratchBuffer {
+    let is_plain_1x1 =
+        kh == 1 && kw == 1 && conv2d.stride == [1, 1] && conv2d.padding == [0; 4];
+    let (a, lda) = if is_plain_1x1 {
+        // Each NHWC pixel is already a K=Ci row of the GEMM.
+        (GemmOperand::Tensor(conv2d.input.id), ci)
+    } else {
+        // im2col writes rows padded to a multiple of 4 and leaves the pad
+        // columns untouched; passing the logical `gemm_k` alongside this
+        // stride means the GEMM never reads them.
+        let k_padded = ceil_vfpu_q(gemm_k);
+        let m_padded = ceil_vfpu_q(gemm_m);
+        scratch.push(ScratchBuffer {
             size: m_padded * k_padded,
             load_from: None,
-        },
-        // 1: weights repacked into the micro-kernel's B layout
-        ScratchBuffer {
-            size: psp_rt::kernels::gemm_bp_len(co, gemm_k),
-            load_from: Some(ScratchLoad {
-                source: conv2d.filter.id,
-                copy: match conv2d.weight_scales {
-                    Some(scales) => CopyStrategy::PackBDequantI8 {
-                        n: co,
-                        k: gemm_k,
-                        scales,
-                    },
-                    None => CopyStrategy::PackB { n: co, k: gemm_k },
-                },
-            }),
-        },
-        // 2/3: GEMM packing and accumulator scratch
-        ScratchBuffer {
-            size: psp_rt::kernels::gemm_ap_len(GEMM_MC, GEMM_KC),
-            load_from: None,
-        },
-        ScratchBuffer {
-            size: psp_rt::kernels::gemm_cp_len(GEMM_MC, co),
-            load_from: None,
-        },
-    ];
-
-    let mut sub_ops = vec![
-        SubOpPlan {
+        });
+        let im2col = scratch.len() - 1;
+        sub_ops.push(SubOpPlan {
             name: "im2col".into(),
             kernels: vec![KernelCall::Im2colPadded {
                 input: conv2d.input,
@@ -1290,54 +1244,83 @@ fn lower_conv2d_vfpu(conv2d: Conv2dKernelParams) -> OpPlan {
                 stride: conv2d.stride,
                 padding: conv2d.padding,
                 output_hw: [ho, wo],
-                output: 0,
+                output: im2col,
             }],
-        },
-        SubOpPlan {
-            name: "gemm_vfpu".into(),
-            kernels: vec![KernelCall::GemmBtPacked {
-                a: GemmOperand::Scratch(0),
-                lda: k_padded,
-                b: GemmOperand::Scratch(1),
-                output: conv2d.output.id,
-                m: gemm_m,
-                k: gemm_k,
-                n: co,
-                ap: 2,
-                cp: 3,
-                mc: GEMM_MC,
-                kc: GEMM_KC,
-            }],
-        },
-    ];
-
-    if conv2d.bias.is_some() || conv2d.has_relu {
-        let name = if conv2d.has_relu {
-            "bias_add_relu"
-        } else {
-            "bias_add"
-        };
-        let mut kernels = Vec::new();
-        if let Some(bias_id) = conv2d.bias {
-            kernels.push(KernelCall::BiasAdd {
-                output: conv2d.output.id,
-                bias: bias_id,
-                rows: gemm_m,
-                cols: co,
-            });
-        }
-        if conv2d.has_relu {
-            kernels.push(KernelCall::Relu {
-                output: conv2d.output.id,
-            });
-        }
-        sub_ops.push(SubOpPlan {
-            name: name.into(),
-            kernels,
         });
-    }
+        (GemmOperand::Scratch(im2col), k_padded)
+    };
+
+    // GEMM packing and accumulator scratch
+    scratch.push(ScratchBuffer {
+        size: psp_rt::kernels::gemm_ap_len(mc, kc),
+        load_from: None,
+    });
+    let ap = scratch.len() - 1;
+    scratch.push(ScratchBuffer {
+        size: psp_rt::kernels::gemm_fused_cp_len(mc, kc, gemm_k, co),
+        load_from: None,
+    });
+    let cp = scratch.len() - 1;
+
+    sub_ops.push(SubOpPlan {
+        name: "gemm_vfpu".into(),
+        kernels: vec![KernelCall::GemmBtPacked {
+            a,
+            lda,
+            b,
+            output: conv2d.output.id,
+            m: gemm_m,
+            k: gemm_k,
+            n: co,
+            ap,
+            cp,
+            mc,
+            kc,
+            bias: conv2d.bias,
+            act: conv2d.act,
+        }],
+    });
 
     OpPlan { scratch, sub_ops }
+}
+
+/// L1 blocking factors for `gemm_bt_packed_fused`, chosen per GEMM by
+/// estimating DRAM traffic for its two regimes and taking the cheaper.
+///
+/// - **Direct**: one k-block covering all of K (`kc` = K rounded up to the
+///   pack's multiple of 8). Each 4x8 tile is finished in registers and
+///   written once through the epilogue — no C slab to zero, re-read and
+///   unpack, which is the fixed per-tile cost that dragged BirdNET's small-K
+///   convs to 228-390 MFLOP/s against 612 for K > 128. `mc` is sized so the
+///   packed A block (`mc x kc` floats) stays at 8 KB, half the 16 KB D-cache,
+///   because it is re-read once per 8 output columns and must stay resident
+///   while the B panel streams past it. The price: the B panel is streamed
+///   from DRAM once per m-block, and with a long K the block is only a few
+///   rows, so a wide-N GEMM re-reads B many times.
+/// - **Slab**: the classic `(32, 64)` optimum from sweeping `examples/fc-bench`
+///   on hardware. B streams once per 32 rows; the `mc x n` partial-sum slab
+///   makes a read+write round trip per k-block.
+///
+/// The model counts only what leaves the cache: A and C are read/written
+/// once either way and cancel.
+fn gemm_blocking(m: usize, k: usize, n: usize) -> (usize, usize) {
+    /// Packed A block for the direct path, in floats (8 KB).
+    const A_BLOCK_FLOATS: usize = 2048;
+
+    let kc = (k + 7) & !7;
+    let mc = ((A_BLOCK_FLOATS / kc) & !3).max(4);
+    let direct_fits = mc * kc <= A_BLOCK_FLOATS;
+
+    let b_bytes = n * kc * 4;
+    let direct_bytes = b_bytes * m.div_ceil(mc);
+    let k_blocks = k.div_ceil(GEMM_KC);
+    let slab_bytes = b_bytes * m.div_ceil(GEMM_MC) + 2 * k_blocks * m * n * 4;
+
+    if direct_fits && direct_bytes <= slab_bytes {
+        (mc.min(256), kc)
+    } else {
+        (GEMM_MC, GEMM_KC)
+    }
 }
 
 /// L1 blocking factors for the VFPU GEMM, chosen by sweeping `examples/fc-bench`
@@ -1389,10 +1372,12 @@ fn lower_fc_vfpu(
         return Ok(None);
     }
 
-    let has_relu = match fused_activation.fused_activation {
-        Some(Activation::Relu) => true,
-        Some(Activation::Relu6) => return Err("Relu6 not supported for FullyConnected".into()),
-        None => false,
+    let act = match fused_activation.fused_activation {
+        Some(Activation::Relu) => Epilogue::Relu,
+        Some(act @ (Activation::Relu6 | Activation::Swish)) => {
+            return Err(format!("{act} not supported for FullyConnected"));
+        }
+        None => Epilogue::None,
     };
 
     // Repack B once, here, using the runtime crate's own packer so the two
@@ -1405,18 +1390,19 @@ fn lower_fc_vfpu(
     psp_rt::kernels::pack_b_panel(&src, &mut packed, n, k);
     let packed_id = append_constant_f32(model, allocs, vec![packed.len()], &packed);
 
+    let (mc, kc) = gemm_blocking(m, k, n);
     let scratch = vec![
         ScratchBuffer {
-            size: psp_rt::kernels::gemm_ap_len(GEMM_MC, GEMM_KC),
+            size: psp_rt::kernels::gemm_ap_len(mc, kc),
             load_from: None,
         },
         ScratchBuffer {
-            size: psp_rt::kernels::gemm_cp_len(GEMM_MC, n),
+            size: psp_rt::kernels::gemm_fused_cp_len(mc, kc, k, n),
             load_from: None,
         },
     ];
 
-    let mut sub_ops = vec![SubOpPlan {
+    let sub_ops = vec![SubOpPlan {
         name: "gemm_vfpu".into(),
         kernels: vec![KernelCall::GemmBtPacked {
             a: GemmOperand::Tensor(input),
@@ -1428,30 +1414,12 @@ fn lower_fc_vfpu(
             n,
             ap: 0,
             cp: 1,
-            mc: GEMM_MC,
-            kc: GEMM_KC,
+            mc,
+            kc,
+            bias,
+            act,
         }],
     }];
-
-    if bias.is_some() || has_relu {
-        let name = if has_relu { "bias_add_relu" } else { "bias_add" };
-        let mut kernels = Vec::new();
-        if let Some(bias_id) = bias {
-            kernels.push(KernelCall::BiasAdd {
-                output,
-                bias: bias_id,
-                rows: m,
-                cols: n,
-            });
-        }
-        if has_relu {
-            kernels.push(KernelCall::Relu { output });
-        }
-        sub_ops.push(SubOpPlan {
-            name: name.into(),
-            kernels,
-        });
-    }
 
     Ok(Some(OpPlan { scratch, sub_ops }))
 }
@@ -1930,14 +1898,11 @@ mod tests {
         let plan = lower(&mut model).unwrap();
         assert_eq!(plan.ops[0].scratch.len(), 3);
         assert_eq!(plan.ops[0].scratch[0].size, 21952);
-        assert_eq!(
-            plan.ops[0].scratch[1].size,
-            psp_rt::kernels::gemm_ap_len(GEMM_MC, GEMM_KC)
-        );
-        assert_eq!(
-            plan.ops[0].scratch[2].size,
-            psp_rt::kernels::gemm_cp_len(GEMM_MC, 8)
-        );
+        // K=25 fits one k-block, so the accumulator scratch is a single tile.
+        let (mc, kc) = gemm_blocking(784, 25, 8);
+        assert_eq!(kc, 32);
+        assert_eq!(plan.ops[0].scratch[1].size, psp_rt::kernels::gemm_ap_len(mc, kc));
+        assert_eq!(plan.ops[0].scratch[2].size, 32);
 
         // Conv2: M=196, K_pad=200 → im2col=196*200=39200
         let mut model = make_conv2d_model(14, 14, 8, 16, 5, 5, 2, 1, true, true);
@@ -2124,11 +2089,18 @@ mod tests {
     }
 
     #[test]
-    fn vfpu_gemm_keeps_bias_as_a_follow_on_sub_op() {
+    fn vfpu_gemm_folds_bias_into_the_store() {
         let mut model = make_fc_model(64, 128, 32, true);
         let plan = lower(&mut model).unwrap();
         let names: Vec<&str> = plan.ops[0].sub_ops.iter().map(|s| s.name.as_str()).collect();
-        assert_eq!(names, vec!["gemm_vfpu", "bias_add"]);
+        assert_eq!(names, vec!["gemm_vfpu"]);
+        match &plan.ops[0].sub_ops[0].kernels[0] {
+            KernelCall::GemmBtPacked { bias, act, .. } => {
+                assert!(bias.is_some());
+                assert_eq!(*act, Epilogue::None);
+            }
+            other => panic!("expected GemmBtPacked, got: {other:?}"),
+        }
     }
 
     #[test]
@@ -2254,12 +2226,83 @@ mod tests {
     }
 
     #[test]
-    fn conv2d_bias_relu_has_3_sub_ops() {
+    fn conv2d_bias_relu_goes_into_the_gemm_epilogue() {
         let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, true);
         let plan = lower(&mut model).unwrap();
-        assert_eq!(plan.ops[0].sub_ops.len(), 3);
+        assert_eq!(plan.ops[0].sub_ops.len(), 2);
         assert_eq!(plan.ops[0].sub_ops[0].name, "im2col");
         assert_eq!(plan.ops[0].sub_ops[1].name, "gemm_vfpu");
-        assert_eq!(plan.ops[0].sub_ops[2].name, "bias_add_relu");
+        match &plan.ops[0].sub_ops[1].kernels[0] {
+            KernelCall::GemmBtPacked { bias, act, .. } => {
+                assert!(bias.is_some());
+                assert_eq!(*act, Epilogue::Relu);
+            }
+            other => panic!("expected GemmBtPacked, got: {other:?}"),
+        }
+    }
+
+    /// A 1x1 stride-1 unpadded conv reads its NHWC input as the GEMM's A
+    /// operand directly: no im2col sub-op, no im2col scratch, `lda = Ci`.
+    #[test]
+    fn plain_1x1_conv_skips_im2col() {
+        let mut model = make_conv2d_model(6, 10, 12, 8, 1, 1, 0, 1, true, false);
+        let input_id = model.graph.inputs[0];
+        let plan = lower(&mut model).unwrap();
+        let names: Vec<&str> = plan.ops[0].sub_ops.iter().map(|s| s.name.as_str()).collect();
+        assert_eq!(names, vec!["gemm_vfpu"]);
+        assert_eq!(plan.ops[0].scratch.len(), 2, "only ap/cp scratch");
+        match &plan.ops[0].sub_ops[0].kernels[0] {
+            KernelCall::GemmBtPacked { a, lda, m, k, n, .. } => {
+                assert_eq!(*a, GemmOperand::Tensor(input_id));
+                assert_eq!((*lda, *m, *k, *n), (12, 60, 12, 8));
+            }
+            other => panic!("expected GemmBtPacked, got: {other:?}"),
+        }
+    }
+
+    /// A 1x1 conv with stride or padding still needs the im2col.
+    #[test]
+    fn strided_1x1_conv_keeps_im2col() {
+        let mut model = make_conv2d_model(6, 10, 12, 8, 1, 1, 0, 2, true, false);
+        let plan = lower(&mut model).unwrap();
+        assert_eq!(plan.ops[0].sub_ops[0].name, "im2col");
+    }
+
+    /// The fusion pass's `Swish` activation lands in the GEMM epilogue.
+    #[test]
+    fn fused_swish_becomes_a_gemm_epilogue() {
+        let mut model = make_conv2d_model(28, 28, 1, 8, 5, 5, 2, 1, true, false);
+        if let PspOp::Conv2d { params, .. } = &mut model.graph.ops[0] {
+            params.fused_activation = Some(Activation::Swish);
+        }
+        let plan = lower(&mut model).unwrap();
+        match &plan.ops[0].sub_ops[1].kernels[0] {
+            KernelCall::GemmBtPacked { act, .. } => assert_eq!(*act, Epilogue::Swish),
+            other => panic!("expected GemmBtPacked, got: {other:?}"),
+        }
+    }
+
+    /// Blocking: the direct path when the A block fits and B is not
+    /// re-streamed too often; the slab optimum otherwise (BirdNET shapes).
+    #[test]
+    fn gemm_blocking_cost_model() {
+        // Stem conv: K=64, narrow N — direct, 32-row A block.
+        assert_eq!(gemm_blocking(12288, 64, 24), (32, 64));
+        // Expand 1x1 with K=72, N=864 — direct (slab would round-trip a
+        // 384x864 slab twice).
+        assert_eq!(gemm_blocking(384, 72, 864), (28, 72));
+        // Project 1x1 with K=288, N=72: direct would stream B once per 4
+        // rows, so slab.
+        assert_eq!(gemm_blocking(384, 288, 72), (GEMM_MC, GEMM_KC));
+        // Long K: the A block cannot fit, slab.
+        assert_eq!(gemm_blocking(6, 1728, 1024), (GEMM_MC, GEMM_KC));
+        // Every direct choice really is a single k-block with an 8 KB block.
+        for k in [1, 8, 9, 24, 36, 72, 96, 108, 128, 192, 288, 512] {
+            let (mc, kc) = gemm_blocking(64, k, 8);
+            if kc != GEMM_KC || mc != GEMM_MC {
+                assert!(psp_rt::kernels::gemm_single_kblock(k, kc), "k={k}");
+                assert!(mc % 4 == 0 && mc * kc <= 2048, "k={k}: mc={mc} kc={kc}");
+            }
+        }
     }
 }

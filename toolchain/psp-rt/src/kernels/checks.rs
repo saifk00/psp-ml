@@ -52,7 +52,11 @@ fn approx_eq(a: &[f32], b: &[f32]) -> bool {
         return false;
     }
     for i in 0..a.len() {
-        let diff = if a[i] > b[i] { a[i] - b[i] } else { b[i] - a[i] };
+        let diff = if a[i] > b[i] {
+            a[i] - b[i]
+        } else {
+            b[i] - a[i]
+        };
         if diff > EPS {
             return false;
         }
@@ -72,15 +76,11 @@ fn test_relu() -> bool {
 fn test_bias_add() -> bool {
     // [3, 4] matrix + [4] bias
     let mut data = [
-        1.0f32, 2.0, 3.0, 4.0,
-        5.0, 6.0, 7.0, 8.0,
-        9.0, 10.0, 11.0, 12.0,
+        1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
     ];
     let bias = [0.1f32, 0.2, 0.3, 0.4];
     let expected = [
-        1.1f32, 2.2, 3.3, 4.4,
-        5.1, 6.2, 7.3, 8.4,
-        9.1, 10.2, 11.3, 12.4,
+        1.1f32, 2.2, 3.3, 4.4, 5.1, 6.2, 7.3, 8.4, 9.1, 10.2, 11.3, 12.4,
     ];
     kernels::bias_add(&mut data, &bias, 3, 4);
     approx_eq(&data, &expected)
@@ -89,16 +89,10 @@ fn test_bias_add() -> bool {
 fn test_matmul_bt_identity() -> bool {
     // A[4,4] @ I[4,4]^T = A
     let a = [
-        1.0f32, 2.0, 3.0, 4.0,
-        5.0, 6.0, 7.0, 8.0,
-        9.0, 10.0, 11.0, 12.0,
-        13.0, 14.0, 15.0, 16.0,
+        1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
     ];
     let b = [
-        1.0f32, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0,
+        1.0f32, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
     ];
     let mut c = [0.0f32; 16];
     kernels::matmul_bt(&a, &b, &mut c, 4, 4, 4);
@@ -112,16 +106,12 @@ fn test_matmul_bt_known() -> bool {
     // B: rows of [1,1,0,0, 0,0,0,0], [0,0,1,1, 0,0,0,0], etc.
     // C[i,j] = sum_k A[i,k] * B[j,k]
     let a = [
-        1.0f32, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-        0.0, 0.0, 3.0, 4.0, 0.0, 0.0, 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0, 5.0, 6.0, 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 7.0, 8.0,
+        1.0f32, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 5.0, 6.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 7.0, 8.0,
     ];
     let b = [
-        1.0f32, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0,
-        1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-        0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+        1.0f32, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
     ];
     // C[0,0] = 1*1 + 2*1 = 3
     // C[0,1] = 0
@@ -140,10 +130,7 @@ fn test_matmul_bt_known() -> bool {
     // C[3,2] = 8*1 = 8
     // C[3,3] = 7*1 = 7
     let expected = [
-        3.0f32, 0.0, 1.0, 2.0,
-        7.0, 0.0, 0.0, 0.0,
-        0.0, 11.0, 0.0, 0.0,
-        0.0, 15.0, 8.0, 7.0,
+        3.0f32, 0.0, 1.0, 2.0, 7.0, 0.0, 0.0, 0.0, 0.0, 11.0, 0.0, 0.0, 0.0, 15.0, 8.0, 7.0,
     ];
     let mut c = [0.0f32; 16];
     kernels::matmul_bt(&a, &b, &mut c, 4, 8, 4);
@@ -155,16 +142,11 @@ fn test_matmul_bt_non_aligned() -> bool {
     // Non-aligned dims test boundary tile handling
     // Use a simple reference: compute expected with naive triple loop
     let a: [f32; 30] = [
-        1.0, 2.0, 3.0, 4.0, 5.0, 6.0,
-        7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
-        0.5, 1.5, 2.5, 3.5, 4.5, 5.5,
-        -1.0, -2.0, -3.0, -4.0, -5.0, -6.0,
-        0.1, 0.2, 0.3, 0.4, 0.5, 0.6,
+        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 0.5, 1.5, 2.5, 3.5, 4.5,
+        5.5, -1.0, -2.0, -3.0, -4.0, -5.0, -6.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6,
     ];
     let b: [f32; 18] = [
-        1.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-        0.0, 1.0, 0.0, 1.0, 0.0, 1.0,
-        1.0, 1.0, 0.0, 0.0, 1.0, 1.0,
+        1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0,
     ];
     // Compute reference: C[i,j] = sum_k A[i,k] * B[j,k]
     let mut expected = [0.0f32; 15];
@@ -187,9 +169,13 @@ fn test_matmul_bt_tiled() -> bool {
     // m_tiles=2, k_tiles=2, n_tiles=1
     // Fill with sequential values, compare against matmul_bt
     let mut a = Aligned([0.0f32; 64]);
-    for i in 0..64 { a[i] = (i as f32) * 0.1; }
+    for i in 0..64 {
+        a[i] = (i as f32) * 0.1;
+    }
     let mut b = Aligned([0.0f32; 32]);
-    for i in 0..32 { b[i] = (i as f32) * 0.05 + 0.01; }
+    for i in 0..32 {
+        b[i] = (i as f32) * 0.05 + 0.01;
+    }
 
     let mut c_ref = [0.0f32; 32];
     kernels::matmul_bt(&a, &b, &mut c_ref, 8, 8, 4);
@@ -204,9 +190,13 @@ fn test_matmul_bt_tiled_large() -> bool {
     // A[16,20] @ B[8,20]^T = C[16,8]
     // m_tiles=4, k_tiles=5, n_tiles=2
     let mut a = Aligned([0.0f32; 320]);
-    for i in 0..320 { a[i] = ((i % 17) as f32) * 0.1 - 0.8; }
+    for i in 0..320 {
+        a[i] = ((i % 17) as f32) * 0.1 - 0.8;
+    }
     let mut b = Aligned([0.0f32; 160]);
-    for i in 0..160 { b[i] = ((i % 13) as f32) * 0.07 - 0.4; }
+    for i in 0..160 {
+        b[i] = ((i % 13) as f32) * 0.07 - 0.4;
+    }
 
     let mut c_ref = [0.0f32; 128];
     kernels::matmul_bt(&a, &b, &mut c_ref, 16, 20, 8);
@@ -221,10 +211,7 @@ fn test_im2col_simple() -> bool {
     // [1,4,4,1] input, [3,3] kernel, no padding, stride 1
     // Output: [1*2*2, 9] = [4, 9]
     let input: [f32; 16] = [
-        1.0, 2.0, 3.0, 4.0,
-        5.0, 6.0, 7.0, 8.0,
-        9.0, 10.0, 11.0, 12.0,
-        13.0, 14.0, 15.0, 16.0,
+        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
     ];
     let mut col = [0.0f32; 36]; // 4 rows × 9 cols
     kernels::im2col(
@@ -248,10 +235,7 @@ fn test_im2col_with_padding() -> bool {
     // [1,4,4,1] input, [3,3] kernel, padding [1,1], stride 1
     // Output: [1*4*4, 9] = [16, 9]
     let input: [f32; 16] = [
-        1.0, 2.0, 3.0, 4.0,
-        5.0, 6.0, 7.0, 8.0,
-        9.0, 10.0, 11.0, 12.0,
-        13.0, 14.0, 15.0, 16.0,
+        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
     ];
     let mut col = [0.0f32; 144]; // 16 rows × 9 cols
     kernels::im2col(
@@ -278,7 +262,9 @@ fn test_im2col_padded_vs_im2col() -> bool {
     // im2col_padded output: [16, 20]
     // First 18 cols should match, cols 18-19 should be zero
     let mut input = [0.0f32; 32];
-    for i in 0..32 { input[i] = (i as f32) * 0.1 + 0.05; }
+    for i in 0..32 {
+        input[i] = (i as f32) * 0.1 + 0.05;
+    }
 
     let mut col_ref = [0.0f32; 288]; // 16 * 18
     kernels::im2col(
@@ -338,11 +324,15 @@ fn test_conv2d_via_im2col_vs_naive() -> bool {
 
     // Generate deterministic input
     let mut input = [0.0f32; 72]; // 1*6*6*2
-    for i in 0..72 { input[i] = ((i % 11) as f32) * 0.1 - 0.5; }
+    for i in 0..72 {
+        input[i] = ((i % 11) as f32) * 0.1 - 0.5;
+    }
 
     // Generate deterministic filters: [Co, Kh, Kw, Ci] = [4, 3, 3, 2]
     let mut filter = [0.0f32; 72]; // 4*3*3*2
-    for i in 0..72 { filter[i] = ((i % 7) as f32) * 0.05 - 0.15; }
+    for i in 0..72 {
+        filter[i] = ((i % 7) as f32) * 0.05 - 0.15;
+    }
 
     let bias = [0.1f32, -0.2, 0.05, 0.3];
 
@@ -412,13 +402,17 @@ fn test_conv2d_via_im2col_vs_naive() -> bool {
 /// Explicit zero-pad + VALID conv must equal the kernel's own padding.
 ///
 /// `ir::fuse` rewrites `Pad`+`Conv` into a single padded conv, so the two
-/// formulations have to agree *exactly* — adding a zero tap is exact in IEEE
-/// 754, so this is a bit-equality check, not an approximate one.
+/// formulations have to agree. Adding a zero tap is exact in IEEE 754, but
+/// the two runs don't take the same kernel at the border: the padded input
+/// has full 3x3 windows everywhere (the register-resident 8-lane kernel,
+/// which sums on two accumulator chains), while the kernel-padded run gives
+/// its partial edge windows to the generic 16/4-lane kernel (one chain). So
+/// the border pixels can differ in the last bit — hence a 1e-5 relative
+/// tolerance rather than bit equality.
 ///
 /// Shaped like BirdNET's 4th depthwise ([1,6,16,C] stride 2, 3x3). The channel
-/// counts matter: `depthwise_conv2d` hands `vfma_inplace` a chunk of `C`, and
-/// that takes the `lv.q` path only for `chunk >= 16` (`blocks = n / 16`). C=4
-/// exercises the scalar tail only, C=16 the vector path only, C=20 both.
+/// counts matter: C=4 exercises the quad path only, C=16 the 8-lane and
+/// 16-lane paths, C=20 those plus the 4-lane remainder.
 fn test_depthwise_padding_matches_explicit_pad() -> bool {
     const H: usize = 6;
     const W: usize = 16;
@@ -428,9 +422,8 @@ fn test_depthwise_padding_matches_explicit_pad() -> bool {
     const WO: usize = (W + 2 - K) / S + 1;
     const CMAX: usize = 20;
 
-    // `depthwise_conv2d` reaches `vfma_inplace`, which uses `lv.q` unguarded
-    // once a chunk is 16 wide. Every slice it takes starts at a multiple of `c`
-    // floats, so aligning these five bases aligns all of them.
+    // `depthwise_conv2d` only takes its VFPU path on 16-byte-aligned tensors
+    // with `c % 4 == 0`; these five bases make every slice it takes aligned.
     let mut inp = Aligned([0.0f32; H * W * CMAX]);
     let mut filt = Aligned([0.0f32; K * K * CMAX]);
     let mut padded = Aligned([0.0f32; (H + 2) * (W + 2) * CMAX]);
@@ -446,24 +439,38 @@ fn test_depthwise_padding_matches_explicit_pad() -> bool {
         }
 
         naive::pad(
-            &inp[..H * W * c], [1, H, W, c],
-            &mut padded[..(H + 2) * (W + 2) * c], [1, H + 2, W + 2, c],
+            &inp[..H * W * c],
+            [1, H, W, c],
+            &mut padded[..(H + 2) * (W + 2) * c],
+            [1, H + 2, W + 2, c],
             [[0, 0], [1, 1], [1, 1], [0, 0]],
         );
         kernels::depthwise_conv2d(
-            &padded[..(H + 2) * (W + 2) * c], [1, H + 2, W + 2, c],
-            &filt[..K * K * c], [1, K, K, c],
-            None, [S, S], [0, 0, 0, 0],
-            &mut a[..HO * WO * c], [1, HO, WO, c],
+            &padded[..(H + 2) * (W + 2) * c],
+            [1, H + 2, W + 2, c],
+            &filt[..K * K * c],
+            [1, K, K, c],
+            None,
+            [S, S],
+            [0, 0, 0, 0],
+            &mut a[..HO * WO * c],
+            [1, HO, WO, c],
+            kernels::Epilogue::None,
         );
         kernels::depthwise_conv2d(
-            &inp[..H * W * c], [1, H, W, c],
-            &filt[..K * K * c], [1, K, K, c],
-            None, [S, S], [1, 1, 1, 1],
-            &mut b[..HO * WO * c], [1, HO, WO, c],
+            &inp[..H * W * c],
+            [1, H, W, c],
+            &filt[..K * K * c],
+            [1, K, K, c],
+            None,
+            [S, S],
+            [1, 1, 1, 1],
+            &mut b[..HO * WO * c],
+            [1, HO, WO, c],
+            kernels::Epilogue::None,
         );
 
-        if a[..HO * WO * c] != b[..HO * WO * c] {
+        if !approx_eq_tol(&a[..HO * WO * c], &b[..HO * WO * c], 1e-5) {
             return false;
         }
     }
@@ -497,7 +504,11 @@ fn test_pow_const_matches_libm() -> bool {
     kernels::pow_const(&inp, &mut got, C);
     for i in 0..N {
         let want = libm::powf(inp[i], C);
-        let d = if got[i] > want { got[i] - want } else { want - got[i] };
+        let d = if got[i] > want {
+            got[i] - want
+        } else {
+            want - got[i]
+        };
         // vlog2/vexp2 are hardware approximations; scale the bound by the value.
         let tol = 1e-3 * if want > 1.0 { want } else { 1.0 };
         if !(d <= tol) {
@@ -760,6 +771,423 @@ fn test_fir_decimate_impulse_and_dc() -> bool {
     true
 }
 
+/// Relative/absolute tolerance for the VFPU transcendental approximations
+/// (`vexp2`, `vrcp`): same bound `test_pow_const_matches_libm` uses.
+fn approx_eq_tol(a: &[f32], b: &[f32], rel: f32) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    for i in 0..a.len() {
+        let mag = if b[i].abs() > 1.0 { b[i].abs() } else { 1.0 };
+        let d = (a[i] - b[i]).abs();
+        if !(d <= rel * mag) {
+            return false;
+        }
+    }
+    true
+}
+
+fn pseudo(i: usize, salt: usize) -> f32 {
+    (((i * 7919 + salt * 104729) % 1009) as f32 / 504.5) - 1.0
+}
+
+/// The fused GEMM epilogue must equal the unfused GEMM followed by scalar
+/// bias + activation, on both its paths: single k-block (tile goes straight
+/// from registers to C through `store_tile_4x8`) and multi k-block (slab
+/// accumulation, epilogue applied on the unpack).
+///
+/// Shapes are chosen for partial tiles on every axis: m not a multiple of 4,
+/// n not a multiple of 8 (but of 4, so rows stay quad-aligned for the VFPU
+/// store), k not a multiple of 8.
+fn test_gemm_fused_epilogue_matches_unfused() -> bool {
+    // Direct path: k=36 -> 10 k-tiles, kc=40 covers it in one block.
+    const M1: usize = 13;
+    const K1: usize = 36;
+    const N1: usize = 20;
+    let mut a = Aligned([0.0f32; M1 * K1]);
+    let mut b = [0.0f32; N1 * K1];
+    let mut bias = Aligned([0.0f32; N1]);
+    for (i, v) in a.iter_mut().enumerate() {
+        *v = pseudo(i, 1);
+    }
+    for (i, v) in b.iter_mut().enumerate() {
+        *v = pseudo(i, 2);
+    }
+    for (i, v) in bias.iter_mut().enumerate() {
+        *v = pseudo(i, 3);
+    }
+    let mut bp = Aligned([0.0f32; 3 * 10 * 32]);
+    kernels::pack_b_panel(&b, &mut bp, N1, K1);
+    let mut ap = Aligned([0.0f32; 4 * 10 * 16]);
+    let mut cp = Aligned([0.0f32; 4 * 3 * 32]);
+    let mut plain = Aligned([0.0f32; M1 * N1]);
+    kernels::gemm_bt_packed(
+        &a, K1, &bp, &mut plain, &mut ap, &mut cp, M1, K1, N1, 16, 40,
+    );
+    for act in [
+        kernels::Epilogue::None,
+        kernels::Epilogue::Relu,
+        kernels::Epilogue::Swish,
+    ] {
+        let mut want = [0.0f32; M1 * N1];
+        for r in 0..M1 {
+            for c in 0..N1 {
+                want[r * N1 + c] = kernels::apply_epilogue(plain[r * N1 + c] + bias[c], act);
+            }
+        }
+        let mut got = Aligned([0.0f32; M1 * N1]);
+        kernels::gemm_bt_packed_fused(
+            &a,
+            K1,
+            &bp,
+            &mut got,
+            &mut ap,
+            &mut cp,
+            M1,
+            K1,
+            N1,
+            16,
+            40,
+            Some(&bias),
+            act,
+        );
+        if !approx_eq_tol(&got, &want, 1e-3) {
+            return false;
+        }
+    }
+
+    // Slab path: k=300 -> 76 k-tiles over kc=64 (16 tiles per block).
+    const M2: usize = 9;
+    const K2: usize = 300;
+    const N2: usize = 16;
+    let mut a = Aligned([0.0f32; M2 * K2]);
+    let mut b = [0.0f32; N2 * K2];
+    for (i, v) in a.iter_mut().enumerate() {
+        *v = pseudo(i, 4);
+    }
+    for (i, v) in b.iter_mut().enumerate() {
+        *v = pseudo(i, 5);
+    }
+    let mut bp = Aligned([0.0f32; 2 * 76 * 32]);
+    kernels::pack_b_panel(&b, &mut bp, N2, K2);
+    let mut ap = Aligned([0.0f32; 2 * 16 * 16]);
+    let mut cp = Aligned([0.0f32; 2 * 2 * 32]);
+    let mut plain = Aligned([0.0f32; M2 * N2]);
+    kernels::gemm_bt_packed(&a, K2, &bp, &mut plain, &mut ap, &mut cp, M2, K2, N2, 8, 64);
+    for act in [
+        kernels::Epilogue::None,
+        kernels::Epilogue::Relu,
+        kernels::Epilogue::Swish,
+    ] {
+        let mut want = [0.0f32; M2 * N2];
+        for r in 0..M2 {
+            for c in 0..N2 {
+                want[r * N2 + c] = kernels::apply_epilogue(plain[r * N2 + c] + bias[c], act);
+            }
+        }
+        let mut got = Aligned([0.0f32; M2 * N2]);
+        kernels::gemm_bt_packed_fused(
+            &a,
+            K2,
+            &bp,
+            &mut got,
+            &mut ap,
+            &mut cp,
+            M2,
+            K2,
+            N2,
+            8,
+            64,
+            Some(&bias[..N2]),
+            act,
+        );
+        if !approx_eq_tol(&got, &want, 1e-3) {
+            return false;
+        }
+    }
+    true
+}
+
+/// A 1x1 conv fed straight from its NHWC input must equal the im2col route:
+/// `lda` = channels, no copy. Same check the compiler relies on when it
+/// elides the im2col scratch.
+fn test_gemm_lda_equals_im2col_for_1x1() -> bool {
+    const HW: usize = 10;
+    const CI: usize = 12;
+    const CO: usize = 8;
+    let mut x = Aligned([0.0f32; HW * CI]);
+    for (i, v) in x.iter_mut().enumerate() {
+        *v = pseudo(i, 6);
+    }
+    let mut w = [0.0f32; CO * CI];
+    for (i, v) in w.iter_mut().enumerate() {
+        *v = pseudo(i, 7);
+    }
+    let mut col = Aligned([0.0f32; HW * CI]);
+    kernels::im2col_padded(
+        &x,
+        [1, 1, HW, CI],
+        [1, 1],
+        [1, 1],
+        [0, 0, 0, 0],
+        [1, HW],
+        &mut col,
+    );
+    let mut bp = Aligned([0.0f32; 1 * 4 * 32]);
+    kernels::pack_b_panel(&w, &mut bp, CO, CI);
+    let mut ap = Aligned([0.0f32; 3 * 4 * 16]);
+    let mut cp = Aligned([0.0f32; 32]);
+    let mut via_col = Aligned([0.0f32; HW * CO]);
+    let mut direct = Aligned([0.0f32; HW * CO]);
+    kernels::gemm_bt_packed(
+        &col,
+        CI,
+        &bp,
+        &mut via_col,
+        &mut ap,
+        &mut cp,
+        HW,
+        CI,
+        CO,
+        12,
+        16,
+    );
+    kernels::gemm_bt_packed(
+        &x,
+        CI,
+        &bp,
+        &mut direct,
+        &mut ap,
+        &mut cp,
+        HW,
+        CI,
+        CO,
+        12,
+        16,
+    );
+    via_col.0 == direct.0
+}
+
+/// Fused depthwise (bias + activation in the store) against the reference
+/// with the activation applied afterwards. C=20 covers one 16-lane group and
+/// one quad group; stride 2 with padding covers edge pixels with fewer taps.
+fn test_depthwise_fused_activation_matches_ref() -> bool {
+    const H: usize = 5;
+    const W: usize = 9;
+    const C: usize = 20;
+    const K: usize = 3;
+    let mut inp = Aligned([0.0f32; H * W * C]);
+    let mut filt = Aligned([0.0f32; K * K * C]);
+    let mut bias = Aligned([0.0f32; C]);
+    for (i, v) in inp.iter_mut().enumerate() {
+        *v = pseudo(i, 8);
+    }
+    for (i, v) in filt.iter_mut().enumerate() {
+        *v = pseudo(i, 9);
+    }
+    for (i, v) in bias.iter_mut().enumerate() {
+        *v = pseudo(i, 10);
+    }
+    for (stride, ho, wo) in [
+        (1usize, H, W),
+        (2, (H + 2 - K) / 2 + 1, (W + 2 - K) / 2 + 1),
+    ] {
+        let mut want = Aligned([0.0f32; H * W * C]);
+        kernels::depthwise_conv2d_ref(
+            &inp,
+            [1, H, W, C],
+            &filt,
+            [1, K, K, C],
+            Some(&bias),
+            [stride, stride],
+            [1, 1, 1, 1],
+            &mut want[..ho * wo * C],
+            [1, ho, wo, C],
+        );
+        for act in [
+            kernels::Epilogue::None,
+            kernels::Epilogue::Relu,
+            kernels::Epilogue::Swish,
+        ] {
+            let mut got = Aligned([0.0f32; H * W * C]);
+            kernels::depthwise_conv2d(
+                &inp,
+                [1, H, W, C],
+                &filt,
+                [1, K, K, C],
+                Some(&bias),
+                [stride, stride],
+                [1, 1, 1, 1],
+                &mut got[..ho * wo * C],
+                [1, ho, wo, C],
+                act,
+            );
+            let mut want_act = [0.0f32; H * W * C];
+            for i in 0..ho * wo * C {
+                want_act[i] = kernels::apply_epilogue(want[i], act);
+            }
+            if !approx_eq_tol(&got[..ho * wo * C], &want_act[..ho * wo * C], 1e-3) {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+/// A 128-channel shape takes `depthwise_conv2d`'s whole-pixel chunk with a
+/// narrow (4-column) strip, so interior runs, strip boundaries and the
+/// single-pixel edge columns all get exercised; must match the reference
+/// for every activation and both strides, with the padding rows that make
+/// some pixels one- or two-row windows.
+fn test_depthwise_wide_pixel_strips_match_ref() -> bool {
+    extern crate alloc;
+    use alloc::vec::Vec;
+    const H: usize = 5;
+    const W: usize = 16;
+    const C: usize = 128;
+    const K: usize = 3;
+    // Heap buffers (160 KB would be a lot of stack on the device), trimmed
+    // to a 16-byte boundary so the VFPU path is the one under test.
+    fn aligned(len: usize, seed: usize) -> Vec<f32> {
+        let mut v: Vec<f32> = (0..len + 4).map(|i| pseudo(i, seed)).collect();
+        let skip = (16 - (v.as_ptr() as usize % 16)) % 16 / 4;
+        v.drain(..skip);
+        v.truncate(len);
+        v
+    }
+    let inp = aligned(H * W * C, 12);
+    let filt = aligned(K * K * C, 13);
+    let bias = aligned(C, 14);
+    for (stride, ho, wo) in [
+        (1usize, H, W),
+        (2, (H + 2 - K) / 2 + 1, (W + 2 - K) / 2 + 1),
+    ] {
+        let mut want = aligned(ho * wo * C, 0);
+        kernels::depthwise_conv2d_ref(
+            &inp,
+            [1, H, W, C],
+            &filt,
+            [1, K, K, C],
+            Some(&bias),
+            [stride, stride],
+            [1, 1, 1, 1],
+            &mut want,
+            [1, ho, wo, C],
+        );
+        for act in [
+            kernels::Epilogue::None,
+            kernels::Epilogue::Relu,
+            kernels::Epilogue::Swish,
+        ] {
+            let mut got = aligned(ho * wo * C, 0);
+            kernels::depthwise_conv2d(
+                &inp,
+                [1, H, W, C],
+                &filt,
+                [1, K, K, C],
+                Some(&bias),
+                [stride, stride],
+                [1, 1, 1, 1],
+                &mut got,
+                [1, ho, wo, C],
+                act,
+            );
+            let want_act: Vec<f32> = want
+                .iter()
+                .map(|&v| kernels::apply_epilogue(v, act))
+                .collect();
+            if !approx_eq_tol(&got, &want_act, 1e-3) {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+/// Row-streaming `reduce_mean_hw` against the direct per-channel mean.
+fn test_reduce_mean_hw_matches_direct() -> bool {
+    const N: usize = 7;
+    const C: usize = 12;
+    let mut x = Aligned([0.0f32; N * C]);
+    for (i, v) in x.iter_mut().enumerate() {
+        *v = pseudo(i, 11);
+    }
+    let mut got = Aligned([0.0f32; C]);
+    kernels::reduce_mean_hw(&x, &mut got);
+    let mut want = [0.0f32; C];
+    for ch in 0..C {
+        let mut sum = 0.0f32;
+        for i in 0..N {
+            sum += x[i * C + ch];
+        }
+        want[ch] = sum / N as f32;
+    }
+    approx_eq(&got, &want)
+}
+
+/// `binary_add` / `binary_mul` on every broadcast shape: full, scalar, row.
+fn test_binary_broadcast_matches_scalar() -> bool {
+    const LEN: usize = 24;
+    let mut a = Aligned([0.0f32; LEN]);
+    let mut b = Aligned([0.0f32; LEN]);
+    for (i, v) in a.iter_mut().enumerate() {
+        *v = pseudo(i, 12);
+    }
+    for (i, v) in b.iter_mut().enumerate() {
+        *v = pseudo(i, 13);
+    }
+    for b_len in [LEN, 1usize, 8, 6] {
+        let mut add = Aligned([0.0f32; LEN]);
+        let mut mul = Aligned([0.0f32; LEN]);
+        kernels::binary_add(&a, &b[..b_len], &mut add, b_len);
+        kernels::binary_mul(&a, &b[..b_len], &mut mul, b_len);
+        for i in 0..LEN {
+            let bi = b[i % b_len];
+            if add[i] != a[i] + bi || mul[i] != a[i] * bi {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+/// VFPU FIR against the scalar definition, on aligned and unaligned input,
+/// factors 2 and 3, including the edges that stay scalar.
+fn test_fir_decimate_matches_scalar() -> bool {
+    const LEN: usize = 160;
+    const T: usize = 31;
+    let mut x = Aligned([0.0f32; LEN]);
+    for (i, v) in x.iter_mut().enumerate() {
+        *v = pseudo(i, 14);
+    }
+    let mut taps = [0.0f32; T];
+    for (i, v) in taps.iter_mut().enumerate() {
+        *v = pseudo(i, 15);
+    }
+    let center = (T - 1) / 2;
+    for skew in [0usize, 1, 3] {
+        let input = &x[skew..];
+        for factor in [2usize, 3] {
+            let n_out = input.len() / factor;
+            let mut y = Aligned([0.0f32; LEN]);
+            kernels::fir_decimate(input, &taps, &mut y[..n_out], factor);
+            for n in 0..n_out {
+                let mut want = 0.0f32;
+                for (t, &h) in taps.iter().enumerate() {
+                    let idx = n * factor + t;
+                    if idx >= center && idx - center < input.len() {
+                        want += h * input[idx - center];
+                    }
+                }
+                if (y[n] - want).abs() > 1e-4 {
+                    return false;
+                }
+            }
+        }
+    }
+    true
+}
+
 device_checks! {
     // Every kernel has a scalar fallback in the same signature, so the whole
     // suite is meaningful on both runners.
@@ -781,9 +1209,15 @@ device_checks! {
         test_fir_decimate_impulse_and_dc,
         test_square_pow_matches_mul_then_pow,
         test_fc_cb_matches_dense,
+        test_gemm_fused_epilogue_matches_unfused,
+        test_gemm_lda_equals_im2col_for_1x1,
+        test_depthwise_fused_activation_matches_ref,
+        test_depthwise_wide_pixel_strips_match_ref,
+        test_reduce_mean_hw_matches_direct,
+        test_binary_broadcast_matches_scalar,
+        test_fir_decimate_matches_scalar,
     ],
     device: [
         test_vtfm4_e_form_is_row_dots,
     ],
 }
-

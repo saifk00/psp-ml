@@ -733,7 +733,8 @@ mod tests {
 
         assert_eq!(generated.stats.output_size_floats, 511 * 96);
         // Arena: just the FC-CB intermediate (square_pow writes the output
-        // static). The dense slice of the same subgraph needs 2.2 MiB.
+        // static); a lone buffer at offset 0 picks up no cache skew. The
+        // dense slice of the same subgraph needs 2.2 MiB.
         assert_eq!(generated.stats.arena_size_floats, 511 * 96);
         // Blob: band meta + coefficients — ~1.8 KiB vs 387 KiB dense.
         assert!(

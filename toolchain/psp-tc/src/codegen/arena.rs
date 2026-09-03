@@ -92,10 +92,11 @@ pub fn extract_tensor_refs(kernel: &KernelCall) -> Vec<TensorRef> {
             if let Some(b) = bias { refs.push(r(*b)); }
             refs.push(w(*output));
         }
-        KernelCall::GemmBtPacked { a, b, output, .. } => {
+        KernelCall::GemmBtPacked { a, b, bias, output, .. } => {
             // ap/cp are ScratchIds, handled separately; so are scratch operands
             if let GemmOperand::Tensor(id) = a { refs.push(r(*id)); }
             if let GemmOperand::Tensor(id) = b { refs.push(r(*id)); }
+            if let Some(b) = bias { refs.push(r(*b)); }
             refs.push(w(*output));
         }
         KernelCall::FullyConnectedStreamed { input, bias, output, .. } => {
@@ -304,8 +305,38 @@ pub struct ArenaLayout {
 
 const ALIGN_FLOATS: usize = 4; // 4 × f32 = 16 bytes
 
+/// One way of the PSP's D-cache, in floats: addresses this far apart map to
+/// the same cache set. Measured on hardware (2026-09-03): the cache is 16 KB
+/// (a stride-64 working-set sweep is flat to 16 KB and falls off a cliff at
+/// 20 KB) and 2-way set-associative with 8 KB ways (two lines 8 KB apart
+/// stay resident, a third thrashes; four lines 4 KB apart stay resident, a
+/// fifth thrashes). So the aliasing period is 8 KB, not the cache size.
+const DCACHE_WAY_FLOATS: usize = 2048;
+/// One cache line, in floats.
+const DCACHE_LINE_FLOATS: usize = 16;
+
 fn align_up(val: usize, align: usize) -> usize {
     (val + align - 1) & !(align - 1)
+}
+
+/// Skew an arena offset by one cache line per cache way (8 KB) so that
+/// buffers the first-fit packer places at multiples of the way size stop
+/// landing on the same cache sets.
+///
+/// Tight packing puts large tensors at offsets that are exact multiples of
+/// the cache size: the sizes are 4-aligned products of power-of-two-ish shape
+/// dims, so the free-list boundaries line up with the cache. An elementwise
+/// op reading two such tensors and writing a third then thrashes one set
+/// per line — BirdNET's residual add at op 29 took 3.0 D-misses per element
+/// against 0.19 for the same op with skewed inputs (a 72-cycle DRAM stall
+/// each; 39.7 ms → 5.6 ms, measured).
+///
+/// The map is monotone with slope ≥ 1 (`f(b) - f(a) >= b - a`), so buffers
+/// that were disjoint stay disjoint and buffers that deliberately share an
+/// offset still do; it keeps 16-byte alignment; and it costs one line per
+/// 8 KB of arena (75 KiB on BirdNET's 9.5 MB arena).
+fn cache_skew(offset_floats: usize) -> usize {
+    offset_floats + DCACHE_LINE_FLOATS * (offset_floats / DCACHE_WAY_FLOATS)
 }
 
 /// Build the list of items that need arena slots from intermediate tensors
@@ -366,6 +397,8 @@ fn pack_arena(items: &mut [PackItem]) -> ArenaLayout {
     let mut free_list: Vec<(usize, usize)> = Vec::new();
     // Track assigned items so we can free them when they die
     let mut assigned: Vec<(usize, usize, usize)> = Vec::new(); // (offset, size, last_op)
+    // End of the arena in skewed coordinates (see `cache_skew` below).
+    let mut skewed_end = 0usize;
     let mut offsets = HashMap::new();
     let mut arena_end: usize = 0;
 
@@ -425,10 +458,18 @@ fn pack_arena(items: &mut [PackItem]) -> ArenaLayout {
 
         offsets.insert(item.slot.clone(), offset);
         assigned.push((offset, needed, item.last_op));
+        skewed_end = skewed_end.max(cache_skew(offset) + needed);
     }
 
+    // Packing is done in tight coordinates; the skew is applied on the way
+    // out so the free-list arithmetic above never sees it. The arena ends
+    // where the last skewed buffer ends (not at `cache_skew(arena_end)`,
+    // which would pad a line when the tight end sits on a way boundary).
+    for off in offsets.values_mut() {
+        *off = cache_skew(*off);
+    }
     ArenaLayout {
-        arena_size_floats: arena_end,
+        arena_size_floats: skewed_end,
         offsets,
     }
 }
@@ -493,4 +534,62 @@ pub fn compute_and_pack(plan: &CodegenPlan) -> ArenaLayout {
     let mut items = build_pack_items(plan, &liveness, &excluded);
 
     pack_arena(&mut items)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn item(id: usize, size_floats: usize, first_op: usize, last_op: usize) -> PackItem {
+        PackItem {
+            slot: ArenaSlot::Tensor(id),
+            size_floats,
+            first_op,
+            last_op,
+        }
+    }
+
+    /// Two live-together cache-sized tensors pack back to back; the second
+    /// must not sit exactly one cache way after the first.
+    #[test]
+    fn cache_sized_neighbours_are_skewed_apart() {
+        let mut items = vec![item(0, DCACHE_WAY_FLOATS, 0, 2), item(1, DCACHE_WAY_FLOATS, 1, 2)];
+        let layout = pack_arena(&mut items);
+        let a = layout.offsets[&ArenaSlot::Tensor(0)];
+        let b = layout.offsets[&ArenaSlot::Tensor(1)];
+        assert_eq!(a, 0);
+        assert_eq!(b, DCACHE_WAY_FLOATS + DCACHE_LINE_FLOATS);
+        assert_ne!((b - a) % DCACHE_WAY_FLOATS, 0, "same cache set");
+        assert!(b + DCACHE_WAY_FLOATS <= layout.arena_size_floats);
+    }
+
+    /// The skew must keep every buffer inside the arena, disjoint from the
+    /// others it overlaps in time, and 16-byte aligned.
+    #[test]
+    fn skew_preserves_disjointness_alignment_and_bounds() {
+        let sizes = [8192, 100, 16384, 4, 8192, 3000, 8192 * 3, 12];
+        let mut items: Vec<PackItem> = sizes
+            .iter()
+            .enumerate()
+            .map(|(i, &s)| item(i, s, i, i + 2))
+            .collect();
+        let layout = pack_arena(&mut items);
+        for a in &items {
+            let oa = layout.offsets[&a.slot];
+            assert_eq!(oa % ALIGN_FLOATS, 0);
+            assert!(oa + a.size_floats <= layout.arena_size_floats);
+            for b in &items {
+                if a.slot == b.slot || a.last_op < b.first_op || b.last_op < a.first_op {
+                    continue;
+                }
+                let ob = layout.offsets[&b.slot];
+                assert!(
+                    oa + a.size_floats <= ob || ob + b.size_floats <= oa,
+                    "{:?} and {:?} overlap",
+                    a.slot,
+                    b.slot
+                );
+            }
+        }
+    }
 }

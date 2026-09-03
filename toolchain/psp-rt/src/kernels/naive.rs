@@ -80,15 +80,23 @@ pub fn conv2d_relu(
     output: &mut [f32],
     output_shape: [usize; 4],
 ) {
-    conv2d(input, input_shape, filter, filter_shape, bias, stride, padding, output, output_shape);
+    conv2d(
+        input,
+        input_shape,
+        filter,
+        filter_shape,
+        bias,
+        stride,
+        padding,
+        output,
+        output_shape,
+    );
     for val in output.iter_mut() {
         if *val < 0.0 {
             *val = 0.0;
         }
     }
 }
-
-
 
 /// Reshape (copy)
 pub fn reshape(input: &[f32], output: &mut [f32]) {
@@ -133,7 +141,6 @@ pub fn fully_connected(
     }
 }
 
-
 // ─── Element-wise binary ops ────────────────────────────────────
 
 macro_rules! binary_op_kernel {
@@ -158,8 +165,8 @@ macro_rules! binary_op_kernel {
     };
 }
 
-binary_op_kernel!(binary_add, |a: f32, b: f32| a + b);
-binary_op_kernel!(binary_mul, |a: f32, b: f32| a * b);
+// `binary_add` / `binary_mul` live in the parent module: they have VFPU
+// paths and a divide-free row broadcast.
 binary_op_kernel!(binary_sub, |a: f32, b: f32| a - b);
 binary_op_kernel!(binary_div, |a: f32, b: f32| a / b);
 binary_op_kernel!(binary_max, |a: f32, b: f32| if a > b { a } else { b });
@@ -274,7 +281,15 @@ pub fn conv2d_relu_q8(
     output_shape: [usize; 4],
 ) {
     conv2d_q8(
-        input, input_shape, filter, filter_shape, scales, bias, stride, padding, output,
+        input,
+        input_shape,
+        filter,
+        filter_shape,
+        scales,
+        bias,
+        stride,
+        padding,
+        output,
         output_shape,
     );
     for v in output.iter_mut() {
@@ -330,22 +345,6 @@ pub fn reduce_min(input: &[f32], output: &mut [f32]) {
     output[0] = val;
 }
 
-/// Reduce mean over all dims except the last (channel dim).
-///
-/// Input has N*C elements (NHWC flattened), output has C elements.
-/// Each output[c] = mean of input[c, c+C, c+2C, ...].
-pub fn reduce_mean_hw(input: &[f32], output: &mut [f32]) {
-    let c = output.len();
-    let n = input.len() / c;
-    for ch in 0..c {
-        let mut sum = 0.0f32;
-        for i in 0..n {
-            sum += input[i * c + ch];
-        }
-        output[ch] = sum / n as f32;
-    }
-}
-
 /// Reverse elements along a specified axis (up to 4D).
 pub fn reverse_v2(input: &[f32], input_shape: &[usize], output: &mut [f32], axis: usize) {
     let ndim = input_shape.len();
@@ -362,8 +361,7 @@ pub fn reverse_v2(input: &[f32], input_shape: &[usize], output: &mut [f32], axis
                 for i3 in 0..s[3] {
                     let mut d = [i0, i1, i2, i3];
                     d[axis_4d] = s[axis_4d] - 1 - d[axis_4d];
-                    let in_idx =
-                        i0 * s[1] * s[2] * s[3] + i1 * s[2] * s[3] + i2 * s[3] + i3;
+                    let in_idx = i0 * s[1] * s[2] * s[3] + i1 * s[2] * s[3] + i2 * s[3] + i3;
                     let out_idx =
                         d[0] * s[1] * s[2] * s[3] + d[1] * s[2] * s[3] + d[2] * s[3] + d[3];
                     output[out_idx] = input[in_idx];
@@ -410,8 +408,7 @@ pub fn transpose(
                     dst[p[1]] = src[1];
                     dst[p[2]] = src[2];
                     dst[p[3]] = src[3];
-                    let in_idx =
-                        i0 * is[1] * is[2] * is[3] + i1 * is[2] * is[3] + i2 * is[3] + i3;
+                    let in_idx = i0 * is[1] * is[2] * is[3] + i1 * is[2] * is[3] + i2 * is[3] + i3;
                     let out_idx = dst[0] * os[1] * os[2] * os[3]
                         + dst[1] * os[2] * os[3]
                         + dst[2] * os[3]
@@ -422,7 +419,6 @@ pub fn transpose(
         }
     }
 }
-
 
 /// Zero-pad an NHWC tensor.
 ///
@@ -488,18 +484,30 @@ pub fn strided_slice(
         resolved_stride[d] = stride;
 
         resolved_begin[d] = if begin_mask & (1 << d) != 0 {
-            if stride > 0 { 0 } else { len - 1 }
+            if stride > 0 {
+                0
+            } else {
+                len - 1
+            }
         } else {
             let mut v = begin[d];
-            if v < 0 { v += len; }
+            if v < 0 {
+                v += len;
+            }
             v
         };
 
         resolved_end[d] = if end_mask & (1 << d) != 0 {
-            if stride > 0 { len } else { -1 }
+            if stride > 0 {
+                len
+            } else {
+                -1
+            }
         } else {
             let mut v = end[d];
-            if v < 0 { v += len; }
+            if v < 0 {
+                v += len;
+            }
             v
         };
     }
@@ -532,7 +540,9 @@ pub fn strided_slice(
         loop {
             // Skip shrunk dimensions
             if shrink_axis_mask & (1 << d) != 0 {
-                if d == 0 { return; }
+                if d == 0 {
+                    return;
+                }
                 d -= 1;
                 continue;
             }
@@ -547,7 +557,9 @@ pub fn strided_slice(
             }
             // Reset this dimension and carry to next
             coord[d] = resolved_begin[d];
-            if d == 0 { return; }
+            if d == 0 {
+                return;
+            }
             d -= 1;
         }
     }
@@ -636,12 +648,7 @@ pub fn rfft_pack(input: &[f32], output: &mut [f32], n: usize) {
 /// - `twiddles`: `half_size` interleaved [cos, -sin] pairs
 /// - `n_complex`: total number of complex elements
 /// - `half_size`: butterfly half-size for this stage (1, 2, 4, ..., n_complex/2)
-pub fn fft_butterfly_stage(
-    data: &mut [f32],
-    twiddles: &[f32],
-    n_complex: usize,
-    half_size: usize,
-) {
+pub fn fft_butterfly_stage(data: &mut [f32], twiddles: &[f32], n_complex: usize, half_size: usize) {
     let full_size = half_size * 2;
     let num_groups = n_complex / full_size;
     for group in 0..num_groups {
@@ -729,8 +736,9 @@ pub fn rfft_unpack(data: &[f32], twiddles: &[f32], output: &mut [f32], n: usize)
 #[cfg(test)]
 mod tests {
     extern crate alloc;
-    use alloc::{vec, vec::Vec};
     use super::*;
+    use crate::kernels::{binary_add, binary_mul};
+    use alloc::{vec, vec::Vec};
 
     #[test]
     fn test_binary_add_same_shape() {
