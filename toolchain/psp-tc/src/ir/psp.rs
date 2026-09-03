@@ -303,6 +303,10 @@ pub struct Conv2dParams {
 pub enum Activation {
     Relu,
     Relu6,
+    /// `x * sigmoid(x)`. Never comes from TFLite (it has no such fused
+    /// activation); `ir::fuse` sets it when a conv's only consumer is a
+    /// `Swish` op, so the backend can run it in the conv's store.
+    Swish,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -692,6 +696,7 @@ impl std::fmt::Display for Activation {
         match self {
             Activation::Relu => write!(f, "Relu"),
             Activation::Relu6 => write!(f, "Relu6"),
+            Activation::Swish => write!(f, "Swish"),
         }
     }
 }

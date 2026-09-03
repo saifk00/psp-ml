@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 
 use super::graph::DType;
-use super::psp::{PspModel, PspOp};
+use super::psp::{Activation, PspModel, PspOp};
 use crate::ir::graph::TensorId;
 
 /// Fusion rules that need folded constants and inferred shapes.
@@ -230,6 +230,76 @@ pub fn fuse(model: &mut PspModel) {
     if count > 0 {
         eprintln!("fuse: fused {} Logistic+Mul chains into Swish", count);
     }
+    let count = fuse_conv_swish(model);
+    if count > 0 {
+        eprintln!("fuse: fused {} Swish ops into the preceding conv", count);
+    }
+}
+
+/// Fold `Conv2d/DepthwiseConv2d(… → t)` + `Swish(t → o)` into the conv as
+/// `fused_activation = Swish`, writing `o` directly.
+///
+/// The convs are lowered to a GEMM (or the depthwise kernel) whose store
+/// already applies the bias and an optional ReLU; swish costs the same
+/// kernel four more VFPU ops per quad while the tile is still in registers,
+/// versus a separate pass that re-reads and re-writes the whole tensor from
+/// DRAM. BirdNET has 44 of these after every conv (213 ms of `swish` passes
+/// on top of 176 ms of `bias_add` passes at the 3783 ms baseline).
+///
+/// Only fires when the conv output has the swish as its sole consumer, the
+/// conv has no other fused activation, and nobody asked for `t` itself.
+fn fuse_conv_swish(model: &mut PspModel) -> usize {
+    let consumers = consumer_map(model);
+    let producers = producer_map(model);
+    let mut to_remove: Vec<usize> = Vec::new();
+    // (conv op index, new output tensor)
+    let mut rewrites: Vec<(usize, TensorId)> = Vec::new();
+
+    for (idx, op) in model.graph.ops.iter().enumerate() {
+        let PspOp::Swish { input: t, output: o } = op else {
+            continue;
+        };
+        let Some(&conv_idx) = producers.get(t) else {
+            continue;
+        };
+        let params = match &model.graph.ops[conv_idx] {
+            PspOp::Conv2d { params, output, .. }
+            | PspOp::DepthwiseConv2d { params, output, .. }
+                if output == t =>
+            {
+                params
+            }
+            _ => continue,
+        };
+        if params.fused_activation.is_some() {
+            continue;
+        }
+        if consumers.get(t).map(|c| c.len()) != Some(1) {
+            continue;
+        }
+        if model.graph.outputs.contains(t) {
+            continue;
+        }
+        rewrites.push((conv_idx, *o));
+        to_remove.push(idx);
+    }
+
+    let count = rewrites.len();
+    for (conv_idx, new_out) in rewrites {
+        match &mut model.graph.ops[conv_idx] {
+            PspOp::Conv2d { params, output, .. }
+            | PspOp::DepthwiseConv2d { params, output, .. } => {
+                params.fused_activation = Some(Activation::Swish);
+                *output = new_out;
+            }
+            _ => unreachable!("rewrite target was checked to be a conv"),
+        }
+    }
+    to_remove.sort_unstable();
+    for idx in to_remove.into_iter().rev() {
+        model.graph.ops.remove(idx);
+    }
+    count
 }
 
 /// Fuse `Logistic(x → s)` + `Mul(x, s → o)` into `Swish(x → o)`.
@@ -525,6 +595,66 @@ mod tests {
             }
             other => panic!("expected a depthwise conv, got {other:?}"),
         }
+    }
+
+    /// Conv(x -> t) + Swish(t -> o) becomes Conv(x -> o) with Swish fused.
+    #[test]
+    fn swish_folds_into_the_preceding_conv() {
+        let mut g = Graph::<PspOp>::new();
+        let x = g.add_tensor(vec![1, 8, 8, 4], DType::F32, TensorKind::Input);
+        g.inputs.push(x);
+        let w = g.add_tensor(vec![8, 1, 1, 4], DType::F32, TensorKind::Constant { offset: 0, len: 128 });
+        let t = g.add_tensor(vec![1, 8, 8, 8], DType::F32, TensorKind::Intermediate);
+        let o = g.add_tensor(vec![1, 8, 8, 8], DType::F32, TensorKind::Output);
+        g.outputs.push(o);
+        g.ops.push(PspOp::Conv2d {
+            input: x,
+            weights: w,
+            bias: None,
+            output: t,
+            weight_scales: None,
+            params: Conv2dParams { kernel_h: 1, kernel_w: 1, stride_h: 1, stride_w: 1, ..conv_params() },
+        });
+        g.ops.push(PspOp::Swish { input: t, output: o });
+
+        let mut model = PspModel { graph: g, model_data: vec![] };
+        assert_eq!(fuse_conv_swish(&mut model), 1);
+        assert_eq!(model.graph.ops.len(), 1, "the Swish should be gone");
+        match &model.graph.ops[0] {
+            PspOp::Conv2d { output, params, .. } => {
+                assert_eq!(*output, o, "the conv must now write the swish's output");
+                assert_eq!(params.fused_activation, Some(Activation::Swish));
+            }
+            other => panic!("expected a conv, got {other:?}"),
+        }
+    }
+
+    /// The pre-activation tensor is needed elsewhere, so the Swish stays.
+    #[test]
+    fn swish_is_not_folded_when_the_conv_output_has_another_reader() {
+        let mut g = Graph::<PspOp>::new();
+        let x = g.add_tensor(vec![1, 8, 8, 4], DType::F32, TensorKind::Input);
+        g.inputs.push(x);
+        let w = g.add_tensor(vec![8, 1, 1, 4], DType::F32, TensorKind::Constant { offset: 0, len: 128 });
+        let t = g.add_tensor(vec![1, 8, 8, 8], DType::F32, TensorKind::Intermediate);
+        let s = g.add_tensor(vec![1, 8, 8, 8], DType::F32, TensorKind::Intermediate);
+        let o = g.add_tensor(vec![1, 8, 8, 8], DType::F32, TensorKind::Output);
+        g.outputs.push(o);
+        g.ops.push(PspOp::Conv2d {
+            input: x,
+            weights: w,
+            bias: None,
+            output: t,
+            weight_scales: None,
+            params: Conv2dParams { kernel_h: 1, kernel_w: 1, stride_h: 1, stride_w: 1, ..conv_params() },
+        });
+        g.ops.push(PspOp::Swish { input: t, output: s });
+        // The residual add reads the pre-activation value too.
+        g.ops.push(PspOp::ElementWise { op: BinaryOp::Add, input_a: t, input_b: s, output: o });
+
+        let mut model = PspModel { graph: g, model_data: vec![] };
+        assert_eq!(fuse_conv_swish(&mut model), 0);
+        assert_eq!(model.graph.ops.len(), 3);
     }
 
     /// Channel padding has no conv equivalent, so it must be left alone.

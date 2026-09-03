@@ -1289,6 +1289,8 @@ fn render_kernel_call(
             cp,
             mc,
             kc,
+            bias,
+            act,
         } => {
             let operand = |o: &GemmOperand| match o {
                 GemmOperand::Tensor(id) => writer.read(*id),
@@ -1302,11 +1304,20 @@ fn render_kernel_call(
             let output_expr = writer.write(*output);
             let ap_ident = Ident::new(&format!("scratch_{op_idx}_{ap}"), Span::call_site());
             let cp_ident = Ident::new(&format!("scratch_{op_idx}_{cp}"), Span::call_site());
+            let bias_tok = match bias {
+                Some(b) => {
+                    let b_expr = writer.read(*b);
+                    quote!(Some(#b_expr))
+                }
+                None => quote!(None),
+            };
+            let act_tok = epilogue_tokens(*act);
             quote! {
-                gemm_bt_packed(
+                gemm_bt_packed_fused(
                     #a_expr, #lda, #b_expr, #output_expr,
                     #ap_ident, #cp_ident,
-                    #m, #k, #n, #mc, #kc
+                    #m, #k, #n, #mc, #kc,
+                    #bias_tok, #act_tok
                 );
             }
         }
@@ -1643,6 +1654,7 @@ fn render_kernel_call(
             stride,
             padding,
             output,
+            act,
         } => {
             let input_expr = writer.read(input.id);
             let input_shape_tok = shape_tokens(&input.shape);
@@ -1661,6 +1673,7 @@ fn render_kernel_call(
                 None => quote!(None),
             };
 
+            let act_tok = epilogue_tokens(*act);
             quote! {
                 depthwise_conv2d(
                     #input_expr, #input_shape_tok,
@@ -1668,7 +1681,8 @@ fn render_kernel_call(
                     #bias_tok,
                     [#sh, #sw],
                     [#pt, #pb, #pl, #pr],
-                    #output_expr, #output_shape_tok
+                    #output_expr, #output_shape_tok,
+                    #act_tok
                 );
             }
         }
@@ -1956,6 +1970,16 @@ fn render_op_metadata(plan: &CodegenPlan) -> TokenStream {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/// The `psp_rt::kernels::Epilogue` variant for a plan `Epilogue` (the
+/// prelude globs `psp_rt::kernels::*`).
+fn epilogue_tokens(act: Epilogue) -> TokenStream {
+    match act {
+        Epilogue::None => quote!(Epilogue::None),
+        Epilogue::Relu => quote!(Epilogue::Relu),
+        Epilogue::Swish => quote!(Epilogue::Swish),
+    }
+}
 
 fn shape_tokens(shape: &[usize]) -> TokenStream {
     quote!([#(#shape),*])

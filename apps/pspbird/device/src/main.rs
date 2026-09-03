@@ -180,10 +180,11 @@ fn report_hw_profile(
     psp_rt::dprintln!("=== hardware profile: {} total cpu cycles ===", total);
     psp_rt::dprintln!("op  %cyc  Mcycles  i-miss  d-miss  cop0-stall  mem-stall  name");
 
-    // Selection sort over indices: no allocator, and 15 passes over 271 entries
-    // is nothing next to the inference itself.
+    // Selection sort over indices: no allocator, and NUM_OPS passes over
+    // NUM_OPS entries is nothing next to the inference itself. Every op is
+    // listed (profiling is opt-in) so the tail is available too.
     let mut used = [false; generated::NUM_OPS];
-    for _ in 0..20 {
+    for _ in 0..generated::NUM_OPS {
         let mut best = usize::MAX;
         for i in 0..generated::NUM_OPS {
             if !used[i] && (best == usize::MAX || profile[i].cpuck > profile[best].cpuck) {

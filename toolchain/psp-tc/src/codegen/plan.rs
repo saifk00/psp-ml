@@ -193,6 +193,16 @@ pub struct SubOpPlan {
     pub kernels: Vec<KernelCall>,
 }
 
+/// What a GEMM / depthwise kernel applies to each output element as it is
+/// stored, so the activation never becomes a separate pass over the tensor.
+/// Mirrors `psp_rt::kernels::Epilogue`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Epilogue {
+    None,
+    Relu,
+    Swish,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum KernelCall {
     DepthwiseConv2d {
@@ -202,6 +212,7 @@ pub enum KernelCall {
         stride: [usize; 2],
         padding: [usize; 4],
         output: Tensor4d,
+        act: Epilogue,
     },
     Conv2d {
         input: Tensor4d,
@@ -269,10 +280,15 @@ pub enum KernelCall {
     /// into `psp_rt::kernels`' micro-kernel layout, so there is no runtime
     /// weight shuffling. `ap`/`cp` are the packing and accumulator scratch.
     /// Measured 19.7x over the batched-GEMV path at BirdNET's mel shape.
+    ///
+    /// `bias` (per output column) and `act` are applied in the kernel's
+    /// store; `mc`/`kc` are per-op L1 blocking factors (see `gemm_blocking`
+    /// in `lower`).
     GemmBtPacked {
         a: GemmOperand,
         /// A's row stride, which may exceed `k` (im2col pads rows to a
-        /// multiple of 4 and leaves those columns stale).
+        /// multiple of 4 and leaves those columns stale), or be the channel
+        /// count of an NHWC tensor fed straight in for a 1x1 conv.
         lda: usize,
         b: GemmOperand,
         output: TensorId,
@@ -283,6 +299,8 @@ pub enum KernelCall {
         cp: ScratchId,
         mc: usize,
         kc: usize,
+        bias: Option<TensorId>,
+        act: Epilogue,
     },
 
     /// FullyConnected whose weight matrix is streamed from the weight file in
